@@ -1,0 +1,65 @@
+@{
+    ViewData["Title"] = "داشبورد مشتری";
+    var open = (int)ViewBag.OpenRequestsCount;
+    var booked = (int)ViewBag.BookedRequestsCount;
+    var completed = (int)ViewBag.CompletedOrdersCount;
+    var active = (int)ViewBag.ActiveOrdersCount;
+}
+
+<div class="container py-4">
+    <div class="d-flex justify-content-between align-items-center mb-4">
+        <div>
+            <h1 class="fw-800 mb-0">داشبورد من</h1>
+            <p class="text-muted mb-0">خلاصه فعالیت‌های شما</p>
+        </div>
+        <a asp-controller="ServiceRequests" asp-action="Create" class="btn btn-brand">+ ثبت درخواست جدید</a>
+    </div>
+
+    <div class="row g-3 mb-4">
+        <div class="col-6 col-lg-3">
+            <div class="stat-card">
+                <div class="stat-value">@open</div>
+                <div class="stat-label">درخواست باز</div>
+            </div>
+        </div>
+        <div class="col-6 col-lg-3">
+            <div class="stat-card" style="border-inline-start-color: var(--secondary);">
+                <div class="stat-value">@booked</div>
+                <div class="stat-label">در حال انجام</div>
+            </div>
+        </div>
+        <div class="col-6 col-lg-3">
+            <div class="stat-card" style="border-inline-start-color: #F59E0B;">
+                <div class="stat-value">@active</div>
+                <div class="stat-label">سفارش فعال</div>
+            </div>
+        </div>
+        <div class="col-6 col-lg-3">
+            <div class="stat-card" style="border-inline-start-color: #15803D;">
+                <div class="stat-value">@completed</div>
+                <div class="stat-label">سفارش تکمیل‌شده</div>
+            </div>
+        </div>
+    </div>
+
+    <div class="row g-4">
+        <div class="col-lg-6">
+            <div class="dashboard-card">
+                <div class="d-flex justify-content-between align-items-center mb-3">
+                    <h5 class="fw-800 mb-0">درخواست‌های اخیر</h5>
+                    <a asp-action="MyRequests" class="btn btn-sm btn-outline-brand">همه ←</a>
+                </div>
+                <p class="text-muted small mb-0">درخواست‌های خود را اینجا مدیریت کنید.</p>
+            </div>
+        </div>
+        <div class="col-lg-6">
+            <div class="dashboard-card">
+                <div class="d-flex justify-content-between align-items-center mb-3">
+                    <h5 class="fw-800 mb-0">سفارش‌های اخیر</h5>
+                    <a asp-action="MyOrders" class="btn btn-sm btn-outline-brand">همه ←</a>
+                </div>
+                <p class="text-muted small mb-0">سفارش‌های فعال و تکمیل‌شده.</p>
+            </div>
+        </div>
+    </div>
+</div>

@@ -1,0 +1,123 @@
+@model PagedResult<ServiceRequestDto>
+@using HomeServices.Shared.Common
+@{
+    ViewData["Title"] = "درخواست‌های باز";
+    var categories = ViewBag.Categories as IReadOnlyList<CategoryDto> ?? Array.Empty<CategoryDto>();
+    var filter = ViewBag.CurrentFilter as ServiceRequestFilterDto ?? new ServiceRequestFilterDto();
+}
+
+<div class="container py-4">
+    <div class="d-flex justify-content-between align-items-end mb-4">
+        <div>
+            <h1 class="fw-800 mb-0">درخواست‌های خدمات</h1>
+            <p class="text-muted mb-0">@Model.TotalCount درخواست باز</p>
+        </div>
+        <a asp-action="Create" class="btn btn-brand">+ ثبت درخواست جدید</a>
+    </div>
+
+    <div class="row g-4">
+        <div class="col-lg-3">
+            <div class="dashboard-card">
+                <h6 class="fw-800 mb-3">🔍 فیلترها</h6>
+                <form method="get" class="vstack gap-3">
+                    <div>
+                        <label class="form-label small fw-600">جستجو</label>
+                        <input type="text" name="search" value="@filter.SearchTerm" class="form-control form-control-sm" />
+                    </div>
+                    <div>
+                        <label class="form-label small fw-600">دسته‌بندی</label>
+                        <select name="categoryId" class="form-select form-select-sm" asp-items="@(new SelectList(categories, "Id", "Name", filter.CategoryId))">
+                            <option value="">همه</option>
+                        </select>
+                    </div>
+                    <div>
+                        <label class="form-label small fw-600">شهر</label>
+                        <input type="text" name="city" value="@filter.City" class="form-control form-control-sm" />
+                    </div>
+                    <div>
+                        <label class="form-label small fw-600">فوریت</label>
+                        <select name="urgency" class="form-select form-select-sm">
+                            <option value="">همه</option>
+                            @foreach (UrgencyLevel u in Enum.GetValues(typeof(UrgencyLevel)))
+                            {
+                                <option value="@u" selected="@(filter.Urgency == u)">@u.ToDisplay()</option>
+                            }
+                        </select>
+                    </div>
+                    <button type="submit" class="btn btn-brand btn-sm">اعمال فیلتر</button>
+                    <a asp-action="Index" class="btn btn-outline-brand btn-sm">پاک کردن</a>
+                </form>
+            </div>
+        </div>
+
+        <div class="col-lg-9">
+            @if (!Model.Items.Any())
+            {
+                <div class="empty-state dashboard-card">
+                    <div class="icon">📋</div>
+                    <h5 class="fw-800">درخواستی یافت نشد</h5>
+                </div>
+            }
+            else
+            {
+                <div class="vstack gap-3">
+                    @foreach (var r in Model.Items)
+                    {
+                        <div class="dashboard-card">
+                            <div class="d-flex justify-content-between align-items-start gap-3 flex-wrap">
+                                <div class="flex-grow-1">
+                                    <div class="d-flex align-items-center gap-2 mb-1">
+                                        <a asp-action="Details" asp-route-id="@r.Id" class="fw-800 fs-5">@r.Title</a>
+                                        <span class="badge-soft @(r.Urgency == UrgencyLevel.Emergency ? "badge-warning-soft" : "badge-info-soft")">@r.Urgency.ToDisplay()</span>
+                                    </div>
+                                    <p class="text-muted small mb-2">@(r.Description.Length > 120 ? r.Description.Substring(0, 120) + "..." : r.Description)</p>
+                                    <div class="d-flex gap-3 flex-wrap small text-muted">
+                                        @if (!string.IsNullOrEmpty(r.CategoryName))
+                                        {
+                                            <span>🏷️ @r.CategoryName</span>
+                                        }
+                                        @if (!string.IsNullOrEmpty(r.City))
+                                        {
+                                            <span>📍 @r.City</span>
+                                        }
+                                        <span>💬 @r.ProposalCount پیشنهاد</span>
+                                        <span>🕒 @r.CreatedAt.ToPersianDate()</span>
+                                    </div>
+                                </div>
+                                <div class="text-start">
+                                    <a asp-action="Details" asp-route-id="@r.Id" class="btn btn-sm btn-outline-brand">مشاهده جزئیات</a>
+                                </div>
+                            </div>
+                        </div>
+                    }
+                </div>
+
+                @if (Model.TotalPages > 1)
+                {
+                    <nav class="mt-4">
+                        <ul class="pagination justify-content-center">
+                            <li class="page-item @(Model.HasPreviousPage ? "" : "disabled")">
+                                <a class="page-link" asp-action="Index" asp-route-page="@(Model.PageNumber-1)">→ قبلی</a>
+                            </li>
+                            @for (int i = 1; i <= Model.TotalPages; i++)
+                            {
+                                <li class="page-item @(i == Model.PageNumber ? "active" : "")">
+                                    <a class="page-link" asp-action="Index" asp-route-page="@i">@i</a>
+                                </li>
+                            }
+                            <li class="page-item @(Model.HasNextPage ? "" : "disabled")">
+                                <a class="page-link" asp-action="Index" asp-route-page="@(Model.PageNumber+1)">بعدی ←</a>
+                            </li>
+                        </ul>
+                    </nav>
+                }
+            }
+        </div>
+    </div>
+</div>
+
+@section Scripts {
+    <script>
+        // Simple Persian-date helper for display (today's date falls back to relative).
+    </script>
+}

@@ -1,0 +1,114 @@
+@model IReadOnlyList<ProposalDto>
+@using HomeServices.Application.Dtos
+@{
+    ViewData["Title"] = "مقایسه پیشنهادها";
+    var request = ViewBag.Request as ServiceRequestDto;
+    var experts = ViewBag.Experts as IDictionary<Guid, ExpertProfileDto?> ?? new Dictionary<Guid, ExpertProfileDto?>();
+    var canChoose = request != null && !request.AcceptedProposalId.HasValue;
+}
+
+<div class="container py-4">
+    <nav aria-label="breadcrumb" class="small mb-3">
+        <a asp-controller="Home" asp-action="Index">خانه</a> /
+        <a asp-controller="ServiceRequests" asp-action="Details" asp-route-id="@request?.Id">@request?.Title</a> /
+        <span class="text-muted">مقایسه پیشنهادها</span>
+    </nav>
+
+    <div class="d-flex justify-content-between align-items-center mb-4">
+        <div>
+            <h1 class="fw-800 mb-0">مقایسه پیشنهادها</h1>
+            <p class="text-muted mb-0">@request?.Title</p>
+        </div>
+        @if (!canChoose)
+        {
+            <span class="badge-soft badge-success-soft">✅ پیشنهاد انتخاب شده است</span>
+        }
+    </div>
+
+    @if (!Model.Any())
+    {
+        <div class="empty-state dashboard-card">
+            <div class="icon">⏳</div>
+            <h5 class="fw-800">هنوز پیشنهادی ثبت نشده</h5>
+            <p class="text-muted">به محض ارسال پیشنهاد توسط کارشناسان، در این صفحه نمایش داده می‌شود.</p>
+        </div>
+    }
+    else
+    {
+        <div class="row g-3 row-cols-1 row-cols-md-2 row-cols-xl-3">
+            @foreach (var p in Model)
+            {
+                var expert = experts.ContainsKey(p.ExpertId) ? experts[p.ExpertId] : null;
+                var isAccepted = p.Status == ProposalStatus.Accepted;
+                <div class="col">
+                    <div class="compare-card @(isAccepted ? "selected" : "")">
+                        @if (isAccepted)
+                        {
+                            <span class="badge-soft badge-success-soft mb-2 d-inline-block">✅ انتخاب شده</span>
+                        }
+                        else if (p.Status == ProposalStatus.Rejected)
+                        {
+                            <span class="badge-soft badge-warning-soft mb-2 d-inline-block">رد شده</span>
+                        }
+
+                        <div class="d-flex gap-3 mb-3">
+                            <span class="pro-avatar">@(p.ExpertBusinessName?.FirstOrDefault() ?? (expert?.BusinessName.FirstOrDefault() ?? 'P'))</span>
+                            <div>
+                                <a asp-controller="Experts" asp-action="Details" asp-route-id="@expert?.Id" class="fw-800 d-block">@(p.ExpertBusinessName ?? expert?.BusinessName ?? "کارشناس")</a>
+                                @if (expert != null)
+                                {
+                                    <div class="rating-stars small">
+                                        <span>@(expert.RatingAverage.ToString("0.0")) ★</span>
+                                        <span class="text-muted">(@expert.ReviewCount نظر)</span>
+                                    </div>
+                                    <small class="text-muted">@expert.JobsCompleted کار · @expert.City</small>
+                                }
+                            </div>
+                        </div>
+
+                        <div class="vstack gap-2 small">
+                            <div class="d-flex justify-content-between">
+                                <span class="text-muted">قیمت پیشنهادی</span>
+                                <span class="price-tag">@p.Price.ToString("N0") ت</span>
+                            </div>
+                            @if (p.EstimatedDurationHours.HasValue)
+                            {
+                                <div class="d-flex justify-content-between">
+                                    <span class="text-muted">مدت تخمینی</span>
+                                    <span>@p.EstimatedDurationHours ساعت</span>
+                                </div>
+                            }
+                            @if (p.AvailableStartDate.HasValue)
+                            {
+                                <div class="d-flex justify-content-between">
+                                    <span class="text-muted">شروع کار</span>
+                                    <span>@p.AvailableStartDate.Value.ToPersianDate()</span>
+                                </div>
+                            }
+                            @if (expert != null)
+                            {
+                                <div class="d-flex justify-content-between">
+                                    <span class="text-muted">زمان پاسخگویی</span>
+                                    <span>@(expert.ResponseTimeMinutes ?? 0) دقیقه</span>
+                                </div>
+                            }
+                        </div>
+
+                        @if (!string.IsNullOrEmpty(p.Message))
+                        {
+                            <div class="bg-soft rounded p-2 mt-3 small">@p.Message</div>
+                        }
+
+                        @if (canChoose && p.Status == ProposalStatus.Pending)
+                        {
+                            <form asp-action="Accept" asp-route-proposalId="@p.Id" asp-route-requestId="@p.RequestId" method="post"
+                                  onsubmit="return confirm('این پیشنهاد را انتخاب می‌کنید؟ پس از انتخاب، سفارش ایجاد می‌شود.');">
+                                <button type="submit" class="btn btn-brand w-100 mt-3">انتخاب این پیشنهاد</button>
+                            </form>
+                        }
+                    </div>
+                </div>
+            }
+        </div>
+    }
+</div>

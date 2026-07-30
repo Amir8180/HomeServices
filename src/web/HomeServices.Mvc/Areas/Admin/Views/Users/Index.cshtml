@@ -1,0 +1,54 @@
+@using HomeServices.Mvc.Extensions
+@model IReadOnlyList<HomeServices.Shared.Dtos.UserDto>
+@{
+    ViewData["Title"] = "مدیریت کاربران";
+}
+
+<div class="admin-card">
+    <p class="text-muted small mb-3">@Model.Count کاربر ثبت‌شده</p>
+    <div class="table-responsive">
+        <table class="admin-table">
+            <thead>
+                <tr>
+                    <th>نام</th>
+                    <th>ایمیل</th>
+                    <th>موبایل</th>
+                    <th>نقش</th>
+                    <th>وضعیت</th>
+                    <th>تاریخ عضویت</th>
+                    <th></th>
+                </tr>
+            </thead>
+            <tbody>
+                @if (!Model.Any())
+                {
+                    <tr><td colspan="7" class="text-center text-muted py-4">کاربری یافت نشد</td></tr>
+                }
+                else
+                {
+                    foreach (var u in Model)
+                    {
+                        <tr>
+                            <td class="fw-700">@u.FullName</td>
+                            <td>@u.Email</td>
+                            <td>@(u.PhoneNumber ?? "—")</td>
+                            <td><span class="badge-soft badge-info-soft">@u.UserType</span></td>
+                            <td>
+                                @if (u.IsActive) { <span class="badge-soft badge-success-soft">فعال</span> }
+                                else { <span class="badge-soft badge-warning-soft">غیرفعال</span> }
+                            </td>
+                            <td class="small text-muted">@u.CreatedAt.ToPersianDate()</td>
+                            <td>
+                                <form asp-action="ToggleStatus" asp-route-id="@u.Id" method="post">
+                                    <button type="submit" class="btn btn-sm @(u.IsActive ? "btn-outline-warning" : "btn-success")">
+                                        @(u.IsActive ? "تعلیق" : "فعال‌سازی")
+                                    </button>
+                                </form>
+                            </td>
+                        </tr>
+                    }
+                }
+            </tbody>
+        </table>
+    </div>
+</div>

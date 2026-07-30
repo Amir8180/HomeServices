@@ -1,0 +1,105 @@
+@model CreateServiceRequestViewModel
+@{
+    ViewData["Title"] = "ثبت درخواست";
+}
+
+<div class="container py-4">
+    <div class="row justify-content-center">
+        <div class="col-lg-9">
+            <div class="dashboard-card">
+                <div class="text-center mb-4">
+                    <h2 class="fw-800 mb-1">📝 ثبت درخواست خدمت</h2>
+                    <p class="text-muted mb-0">جزئیات درخواست خود را وارد کنید تا کارشناسان پیشنهاد بدهند.</p>
+                </div>
+
+                <form asp-action="Create" method="post" enctype="multipart/form-data">
+                    <div asp-validation-summary="All" class="text-danger mb-3"></div>
+
+                    <div class="row g-3">
+                        <div class="col-md-8">
+                            <label asp-for="CategoryId" class="form-label">دسته‌بندی خدمت *</label>
+                            <select asp-for="CategoryId" class="form-select" asp-items="@(new SelectList(Model.Categories, "Id", "Name"))">
+                                <option value="">انتخاب کنید...</option>
+                            </select>
+                            <span asp-validation-for="CategoryId" class="text-danger small"></span>
+                        </div>
+                        <div class="col-md-4">
+                            <label asp-for="ServiceId" class="form-label">خدمت خاص (اختیاری)</label>
+                            <input asp-for="ServiceId" type="number" class="form-control" />
+                        </div>
+                    </div>
+
+                    <div class="mt-3">
+                        <label asp-for="Title" class="form-label">عنوان درخواست *</label>
+                        <input asp-for="Title" class="form-control" placeholder="مثلاً تعمیر نشتی لوله زیر سینک" />
+                        <span asp-validation-for="Title" class="text-danger small"></span>
+                    </div>
+
+                    <div class="mt-3">
+                        <label asp-for="Description" class="form-label">توضیحات کامل *</label>
+                        <textarea asp-for="Description" class="form-control" rows="5" placeholder="مشکل، زمان مناسب، جزئیات و..."></textarea>
+                        <span asp-validation-for="Description" class="text-danger small"></span>
+                    </div>
+
+                    <div class="row g-3 mt-1">
+                        <div class="col-md-6">
+                            <label asp-for="Address" class="form-label">آدرس</label>
+                            <input asp-for="Address" class="form-control" placeholder="خیابان، پلاک و..." />
+                        </div>
+                        <div class="col-md-3">
+                            <label asp-for="City" class="form-label">شهر</label>
+                            <input asp-for="City" class="form-control" placeholder="تهران" />
+                        </div>
+                        <div class="col-md-3">
+                            <label asp-for="ZipCode" class="form-label">کد پستی</label>
+                            <input asp-for="ZipCode" class="form-control" />
+                        </div>
+                    </div>
+
+                    <div class="row g-3 mt-1">
+                        <div class="col-md-4">
+                            <label asp-for="Urgency" class="form-label">فوریت</label>
+                            <select asp-for="Urgency" class="form-select" asp-items="Html.GetEnumSelectList<UrgencyLevel>()"></select>
+                        </div>
+                        <div class="col-md-4">
+                            <label asp-for="PreferredDate" class="form-label">تاریخ ترجیحی</label>
+                            <input asp-for="PreferredDate" type="date" class="form-control" />
+                        </div>
+                        <div class="col-md-4">
+                            <label asp-for="IsHomeOwner" class="form-label d-block">مالک منزل</label>
+                            <div class="form-check form-switch fs-5 mt-2">
+                                <input asp-for="IsHomeOwner" class="form-check-input" type="checkbox" checked />
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="row g-3 mt-1">
+                        <div class="col-md-6">
+                            <label asp-for="BudgetMin" class="form-label">حداقل بودجه (تومان)</label>
+                            <input asp-for="BudgetMin" type="number" class="form-control" />
+                        </div>
+                        <div class="col-md-6">
+                            <label asp-for="BudgetMax" class="form-label">حداکثر بودجه (تومان)</label>
+                            <input asp-for="BudgetMax" type="number" class="form-control" />
+                        </div>
+                    </div>
+
+                    <div class="mt-3">
+                        <label asp-for="Images" class="form-label">تصاویر (اختیاری، حداکثر ۵ فایل)</label>
+                        <input asp-for="Images" type="file" class="form-control" multiple accept="image/*" />
+                        <small class="text-muted">عکس از مشکل یا محل کار می‌تواند به کارشناسان کمک کند.</small>
+                    </div>
+
+                    <div class="d-flex gap-2 mt-4">
+                        <button type="submit" class="btn btn-brand btn-lg flex-grow-1">ثبت درخواست</button>
+                        <a asp-controller="Home" asp-action="Index" class="btn btn-outline-brand btn-lg">انصراف</a>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+</div>
+
+@section Scripts {
+    @{await Html.RenderPartialAsync("_ValidationScriptsPartial");}
+}

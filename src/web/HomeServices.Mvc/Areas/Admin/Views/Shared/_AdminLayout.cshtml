@@ -1,0 +1,106 @@
+@using System.Security.Claims
+@{
+    var fullName = Context.User.FindFirst(ClaimTypes.Name)?.Value ?? "مدیر";
+    var controller = ViewContext.RouteData.Values["controller"]?.ToString() ?? "";
+}
+
+<!DOCTYPE html>
+<html lang="fa" dir="rtl">
+<head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>@ViewData["Title"] - پنل مدیریت خدمات منزل</title>
+    <link rel="stylesheet" href="~/lib/bootstrap/dist/css/bootstrap.rtl.min.css" />
+    <link href="https://cdn.jsdelivr.net/gh/rastikerdar/vazirmatn@v33.003/Vazirmatn-font-face.css" rel="stylesheet" />
+    <link rel="stylesheet" href="~/css/site.css" asp-append-version="true" />
+    <link rel="stylesheet" href="~/css/admin.css" asp-append-version="true" />
+</head>
+<body class="admin-body">
+    <div class="admin-wrapper">
+        <!-- Sidebar -->
+        <aside class="admin-sidebar" id="sidebar">
+            <div class="sidebar-header">
+                <span class="brand-icon">🏠</span>
+                <div>
+                    <div class="sidebar-title">پنل مدیریت</div>
+                    <div class="sidebar-sub">خدمات منزل</div>
+                </div>
+            </div>
+
+            <nav class="sidebar-nav">
+                <a asp-action="Index" asp-controller="Dashboard" class="sidebar-link @(controller == "Dashboard" ? "active" : "")">
+                    <span>📊</span> داشبورد
+                </a>
+                <a asp-action="Index" asp-controller="Requests" class="sidebar-link @(controller == "Requests" ? "active" : "")">
+                    <span>📋</span> درخواست‌ها
+                </a>
+                <a asp-action="Index" asp-controller="Services" class="sidebar-link @(controller == "Services" ? "active" : "")">
+                    <span>🛠️</span> خدمات
+                </a>
+                <a asp-action="Index" asp-controller="Categories" class="sidebar-link @(controller == "Categories" ? "active" : "")">
+                    <span>🗂️</span> دسته‌بندی‌ها
+                </a>
+                <a asp-action="Index" asp-controller="Experts" class="sidebar-link @(controller == "Experts" ? "active" : "")">
+                    <span>🔧</span> کارشناسان
+                </a>
+                <a asp-action="Index" asp-controller="Reviews" class="sidebar-link @(controller == "Reviews" ? "active" : "")">
+                    <span>⭐</span> نظرات
+                </a>
+                <a asp-action="Index" asp-controller="Users" class="sidebar-link @(controller == "Users" ? "active" : "")">
+                    <span>👥</span> کاربران
+                </a>
+                <a asp-action="Index" asp-controller="Settings" class="sidebar-link @(controller == "Settings" ? "active" : "")">
+                    <span>⚙️</span> تنظیمات
+                </a>
+            </nav>
+
+            <div class="sidebar-footer">
+                <a asp-controller="Home" asp-action="Index" class="sidebar-link">
+                    <span>🌐</span> مشاهده سایت
+                </a>
+                <form asp-controller="Account" asp-action="Logout" method="post">
+                    <button type="submit" class="sidebar-link text-danger w-100 text-start border-0 bg-transparent">
+                        <span>🚪</span> خروج
+                    </button>
+                </form>
+            </div>
+        </aside>
+
+        <!-- Main -->
+        <div class="admin-main">
+            <header class="admin-topbar">
+                <button class="btn btn-sm btn-outline-brand d-lg-none" type="button" onclick="document.getElementById('sidebar').classList.toggle('open')">
+                    ☰ منو
+                </button>
+                <h1 class="admin-page-title">@ViewData["Title"]</h1>
+                <div class="admin-user">
+                    <span class="pro-avatar" style="width:36px;height:36px;font-size:1rem;">@(fullName.FirstOrDefault())</span>
+                    <span class="d-none d-md-inline">@fullName</span>
+                </div>
+            </header>
+
+            <main class="admin-content">
+                @if (TempData["Success"] != null)
+                {
+                    <div class="alert alert-success alert-dismissible fade show py-2" role="alert">
+                        ✅ @TempData["Success"]
+                        <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+                    </div>
+                }
+                @if (TempData["Error"] != null)
+                {
+                    <div class="alert alert-danger alert-dismissible fade show py-2" role="alert">
+                        @TempData["Error"]
+                        <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+                    </div>
+                }
+                @RenderBody()
+            </main>
+        </div>
+    </div>
+
+    <script src="~/lib/jquery/dist/jquery.min.js"></script>
+    <script src="~/lib/bootstrap/dist/js/bootstrap.bundle.min.js"></script>
+    @await RenderSectionAsync("Scripts", required: false)
+</body>
+</html>

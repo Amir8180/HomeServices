@@ -1,0 +1,89 @@
+@model PagedResult<ExpertProfileDto>
+@{
+    ViewData["Title"] = "مدیریت کارشناسان";
+    var filter = (ExpertProfileFilterDto)ViewBag.CurrentFilter;
+}
+
+<form method="get" class="admin-filters">
+    <div class="row g-2 align-items-end">
+        <div class="col-md-5">
+            <label class="form-label small">جستجو</label>
+            <input name="search" value="@filter.SearchTerm" class="form-control form-control-sm" placeholder="نام کسب‌وکار..." />
+        </div>
+        <div class="col-md-4">
+            <label class="form-label small">وضعیت تأیید</label>
+            <select name="approved" class="form-select form-select-sm">
+                <option value="" selected="@(filter.IsApproved == null)">همه</option>
+                <option value="true" selected="@(filter.IsApproved == true)">تأییدشده</option>
+                <option value="false" selected="@(filter.IsApproved == false)">در انتظار</option>
+            </select>
+        </div>
+        <div class="col-md-3">
+            <button type="submit" class="btn btn-brand btn-sm w-100">فیلتر</button>
+        </div>
+    </div>
+</form>
+
+<div class="admin-card">
+    <div class="table-responsive">
+        <table class="admin-table">
+            <thead>
+                <tr>
+                    <th>کسب‌وکار</th>
+                    <th>شهر</th>
+                    <th>امتیاز</th>
+                    <th>کارها</th>
+                    <th>تأیید</th>
+                    <th>وضعیت</th>
+                    <th></th>
+                </tr>
+            </thead>
+            <tbody>
+                @if (!Model.Items.Any())
+                {
+                    <tr><td colspan="7" class="text-center text-muted py-4">کارشناسی یافت نشد</td></tr>
+                }
+                else
+                {
+                    foreach (var e in Model.Items)
+                    {
+                        <tr>
+                            <td>
+                                <div class="d-flex align-items-center gap-2">
+                                    @if (!string.IsNullOrEmpty(e.LogoUrl))
+                                    {
+                                        <img src="@e.LogoUrl" style="width:32px;height:32px;border-radius:50%;object-fit:cover;" />
+                                    }
+                                    else
+                                    {
+                                        <span class="pro-avatar" style="width:32px;height:32px;font-size:.9rem;">@(e.BusinessName.FirstOrDefault())</span>
+                                    }
+                                    <span class="fw-700">@e.BusinessName</span>
+                                </div>
+                            </td>
+                            <td>@(e.City ?? "—")</td>
+                            <td><span class="rating-stars">★</span> @e.RatingAverage.ToString("0.0") (@e.ReviewCount)</td>
+                            <td>@e.JobsCompleted</td>
+                            <td>
+                                @if (e.IsApproved) { <span class="badge-soft badge-success-soft">تأییدشده</span> }
+                                else { <span class="badge-soft badge-warning-soft">در انتظار</span> }
+                            </td>
+                            <td>
+                                @if (e.IsActive) { <span class="badge-soft badge-success-soft">فعال</span> }
+                                else { <span class="badge-soft badge-warning-soft">غیرفعال</span> }
+                            </td>
+                            <td>
+                                <a asp-controller="Experts" asp-action="Details" asp-route-id="@e.Id" class="btn btn-sm btn-outline-brand">مشاهده</a>
+                                <form asp-action="ToggleApproval" asp-route-id="@e.Id" method="post" class="d-inline">
+                                    <button type="submit" class="btn btn-sm @(e.IsApproved ? "btn-outline-warning" : "btn-success")">
+                                        @(e.IsApproved ? "لغو تأیید" : "تأیید")
+                                    </button>
+                                </form>
+                            </td>
+                        </tr>
+                    }
+                }
+            </tbody>
+        </table>
+    </div>
+</div>

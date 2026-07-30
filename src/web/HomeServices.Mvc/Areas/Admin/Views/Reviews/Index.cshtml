@@ -1,0 +1,110 @@
+@using HomeServices.Mvc.Extensions
+@model PagedResult<ReviewDto>
+@{
+    ViewData["Title"] = "مدیریت نظرات";
+    var filter = (ReviewFilterDto)ViewBag.CurrentFilter;
+}
+
+<form method="get" class="admin-filters">
+    <div class="row g-2 align-items-end">
+        <div class="col-md-6">
+            <label class="form-label small">وضعیت</label>
+            <select name="status" class="form-select form-select-sm">
+                <option value="">همه</option>
+                @foreach (ReviewStatus s in Enum.GetValues(typeof(ReviewStatus)))
+                {
+                    <option value="@s" selected="@(filter.Status == s)">@s.ToDisplay()</option>
+                }
+            </select>
+        </div>
+        <div class="col-md-4">
+            <label class="form-label small">حداقل امتیاز</label>
+            <select name="minRating" class="form-select form-select-sm">
+                <option value="">همه</option>
+                @for (int i = 1; i <= 5; i++)
+                {
+                    <option value="@i" selected="@(filter.MinRating == i)">@i ستاره به بالا</option>
+                }
+            </select>
+        </div>
+        <div class="col-md-2">
+            <button type="submit" class="btn btn-brand btn-sm w-100">فیلتر</button>
+        </div>
+    </div>
+</form>
+
+<div class="admin-card">
+    <div class="table-responsive">
+        <table class="admin-table">
+            <thead>
+                <tr>
+                    <th>مشتری</th>
+                    <th>کارشناس</th>
+                    <th>امتیاز</th>
+                    <th>نظر</th>
+                    <th>وضعیت</th>
+                    <th>تاریخ</th>
+                    <th></th>
+                </tr>
+            </thead>
+            <tbody>
+                @if (!Model.Items.Any())
+                {
+                    <tr><td colspan="7" class="text-center text-muted py-4">نظری یافت نشد</td></tr>
+                }
+                else
+                {
+                    foreach (var r in Model.Items)
+                    {
+                        <tr>
+                            <td>@r.CustomerName</td>
+                            <td>@r.ExpertBusinessName</td>
+                            <td><span class="rating-stars">@("★".PadLeft(r.Rating, '★'))</span></td>
+                            <td class="small" style="max-width:280px;">@(string.IsNullOrEmpty(r.Comment) ? "—" : (r.Comment.Length > 80 ? r.Comment.Substring(0, 80) + "..." : r.Comment))</td>
+                            <td><span class="badge-soft @r.Status.ReviewStatusClass()">@r.Status.ToDisplay()</span></td>
+                            <td class="small text-muted">@r.CreatedAt.ToPersianDate()</td>
+                            <td>
+                                <div class="d-flex gap-1">
+                                    @if (r.Status != ReviewStatus.Approved)
+                                    {
+                                        <form asp-action="UpdateStatus" asp-route-id="@r.Id" asp-route-status="@ReviewStatus.Approved" method="post">
+                                            <button type="submit" class="btn btn-sm btn-success">تأیید</button>
+                                        </form>
+                                    }
+                                    @if (r.Status != ReviewStatus.Rejected)
+                                    {
+                                        <form asp-action="UpdateStatus" asp-route-id="@r.Id" asp-route-status="@ReviewStatus.Rejected" method="post">
+                                            <button type="submit" class="btn btn-sm btn-outline-warning">رد</button>
+                                        </form>
+                                    }
+                                    <form asp-action="Delete" asp-route-id="@r.Id" method="post"
+                                          onsubmit="return confirm('حذف شود؟');">
+                                        <button type="submit" class="btn btn-sm btn-outline-danger">حذف</button>
+                                    </form>
+                                </div>
+                            </td>
+                        </tr>
+                    }
+                }
+            </tbody>
+        </table>
+    </div>
+
+    @{
+        var totalPages = (int)Math.Ceiling((double)Model.TotalCount / Model.PageSize);
+        if (totalPages > 1)
+        {
+            <nav class="mt-3">
+                <ul class="pagination pagination-sm justify-content-center">
+                    @for (int i = 1; i <= totalPages; i++)
+                    {
+                        <li class="page-item @(i == Model.PageNumber ? "active" : "")">
+                            <a class="page-link" asp-action="Index" asp-route-page="@i"
+                               asp-route-status="@filter.Status" asp-route-minRating="@filter.MinRating">@i</a>
+                        </li>
+                    }
+                </ul>
+            </nav>
+        }
+    }
+</div>

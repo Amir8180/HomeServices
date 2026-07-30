@@ -1,0 +1,124 @@
+@using HomeServices.Domain.Enums
+@{
+    ViewData["Title"] = "داشبورد کارشناس";
+    var profile = (ExpertProfileDto)ViewBag.Profile;
+    var openProposals = (int)ViewBag.OpenProposalsCount;
+    var acceptedProposals = (int)ViewBag.AcceptedProposalsCount;
+    var activeOrders = (int)ViewBag.ActiveOrdersCount;
+    var completedOrders = (int)ViewBag.CompletedOrdersCount;
+    var pendingPayout = (decimal)ViewBag.PendingPayout;
+    var jobs = (IReadOnlyList<OrderDto>)ViewBag.ActiveOrders;
+}
+
+<div class="container py-4">
+    <div class="d-flex justify-content-between align-items-center mb-4 flex-wrap gap-2">
+        <div>
+            <h1 class="fw-800 mb-0">سلام، @profile.BusinessName 👋</h1>
+            <p class="text-muted mb-0">خلاصه فعالیت‌های کارشناسی شما</p>
+        </div>
+        <a asp-action="OpenRequests" class="btn btn-brand">مشاهده درخواست‌های باز</a>
+    </div>
+
+    @if (!profile.IsApproved)
+    {
+        <div class="alert alert-warning d-flex align-items-center gap-2">
+            <span>⏳</span>
+            <div>پروفایل شما در انتظار تأیید مدیر است. تا قبل از تأیید، درخواست‌ها را می‌بینید اما سفارش‌ها فعال نمی‌شوند.</div>
+        </div>
+    }
+
+    <div class="row g-3 mb-4">
+        <div class="col-6 col-lg-3">
+            <a asp-action="MyProposals" class="text-decoration-none">
+                <div class="stat-card">
+                    <div class="stat-value">@openProposals</div>
+                    <div class="stat-label">پیشنهاد در انتظار</div>
+                </div>
+            </a>
+        </div>
+        <div class="col-6 col-lg-3">
+            <div class="stat-card" style="border-inline-start-color: var(--secondary);">
+                <div class="stat-value">@acceptedProposals</div>
+                <div class="stat-label">پیشنهاد پذیرفته‌شده</div>
+            </div>
+        </div>
+        <div class="col-6 col-lg-3">
+            <a asp-action="MyJobs" class="text-decoration-none">
+                <div class="stat-card" style="border-inline-start-color: #F59E0B;">
+                    <div class="stat-value">@activeOrders</div>
+                    <div class="stat-label">سفارش فعال</div>
+                </div>
+            </a>
+        </div>
+        <div class="col-6 col-lg-3">
+            <div class="stat-card" style="border-inline-start-color: #15803D;">
+                <div class="stat-value">@completedOrders</div>
+                <div class="stat-label">کار تکمیل‌شده</div>
+            </div>
+        </div>
+    </div>
+
+    <div class="row g-4">
+        <div class="col-lg-4">
+            <div class="dashboard-card h-100">
+                <div class="d-flex align-items-center gap-3 mb-3">
+                    <div class="pro-avatar" style="width:64px;height:64px;font-size:1.6rem;">@(profile.BusinessName.FirstOrDefault())</div>
+                    <div>
+                        <h5 class="fw-800 mb-0">@profile.BusinessName</h5>
+                        @if (profile.RatingAverage > 0)
+                        {
+                            <div class="rating-stars">★★★★★ <span class="text-muted small">@profile.RatingAverage.ToString("0.0") (@profile.ReviewCount نظر)</span></div>
+                        }
+                        else
+                        {
+                            <span class="text-muted small">بدون امتیاز</span>
+                        }
+                    </div>
+                </div>
+                <ul class="list-unstyled vstack gap-2 mb-0 small">
+                    <li class="d-flex justify-content-between"><span class="text-muted">شهر:</span> <span>@(profile.City ?? "—")</span></li>
+                    <li class="d-flex justify-content-between"><span class="text-muted">کارهای انجام‌شده:</span> <span>@profile.JobsCompleted</span></li>
+                    <li class="d-flex justify-content-between"><span class="text-muted">وضعیت:</span>
+                        @if (profile.IsActive)
+                        {
+                            <span class="badge-soft badge-success-soft">فعال</span>
+                        }
+                        else
+                        {
+                            <span class="badge-soft badge-warning-soft">غیرفعال</span>
+                        }
+                    </li>
+                </ul>
+                <a asp-action="Profile" class="btn btn-sm btn-outline-brand mt-3 w-100">ویرایش پروفایل</a>
+            </div>
+        </div>
+
+        <div class="col-lg-8">
+            <div class="dashboard-card">
+                <div class="d-flex justify-content-between align-items-center mb-3">
+                    <h5 class="fw-800 mb-0">سفارش‌های فعال</h5>
+                    <a asp-action="MyJobs" class="btn btn-sm btn-outline-brand">همه ←</a>
+                </div>
+                @if (!jobs.Any())
+                {
+                    <p class="text-muted small mb-0">در حال حاضر سفارش فعالی ندارید.</p>
+                }
+                else
+                {
+                    <div class="vstack gap-2">
+                        @foreach (var o in jobs)
+                        {
+                            <div class="d-flex justify-content-between align-items-center border-bottom pb-2">
+                                <div>
+                                    <a asp-controller="Orders" asp-action="Details" asp-route-id="@o.Id" class="fw-700">@o.RequestTitle</a>
+                                    <div class="small text-muted">@o.OrderNumber · @o.TotalAmount.ToString("N0") تومان</div>
+                                </div>
+                                <span class="badge-soft @o.Status.StatusClass()">@o.Status.ToDisplay()</span>
+                            </div>
+                        }
+                    </div>
+                }
+            </div>
+        </div>
+    </div>
+</div>

@@ -1,0 +1,118 @@
+@{
+    ViewData["Title"] = "داشبورد";
+    var openReq = (int)ViewBag.OpenRequestsCount;
+    var inProg = (int)ViewBag.InProgressRequestsCount;
+    var completed = (int)ViewBag.CompletedOrdersCount;
+    var totalOrders = (int)ViewBag.TotalOrdersCount;
+    var pendingReviews = (int)ViewBag.PendingReviewsCount;
+    var pendingExperts = (int)ViewBag.PendingExpertsCount;
+    var servicesCount = (int)ViewBag.ServicesCount;
+    var categoriesCount = (int)ViewBag.CategoriesCount;
+    var revenue = (decimal)ViewBag.TotalRevenue;
+}
+
+<div class="row g-3 mb-4">
+    <div class="col-6 col-xl-3">
+        <div class="admin-stat">
+            <div class="d-flex justify-content-between align-items-start">
+                <div>
+                    <div class="stat-value">@openReq</div>
+                    <div class="stat-label">درخواست باز</div>
+                </div>
+                <div class="stat-icon">📋</div>
+            </div>
+        </div>
+    </div>
+    <div class="col-6 col-xl-3">
+        <div class="admin-stat" style="border-inline-start-color: #F59E0B;">
+            <div class="d-flex justify-content-between align-items-start">
+                <div>
+                    <div class="stat-value">@inProg</div>
+                    <div class="stat-label">در حال انجام</div>
+                </div>
+                <div class="stat-icon">🔨</div>
+            </div>
+        </div>
+    </div>
+    <div class="col-6 col-xl-3">
+        <div class="admin-stat" style="border-inline-start-color: var(--secondary);">
+            <div class="d-flex justify-content-between align-items-start">
+                <div>
+                    <div class="stat-value">@totalOrders</div>
+                    <div class="stat-label">کل سفارش‌ها</div>
+                </div>
+                <div class="stat-icon">📦</div>
+            </div>
+        </div>
+    </div>
+    <div class="col-6 col-xl-3">
+        <div class="admin-stat" style="border-inline-start-color: #15803D;">
+            <div class="d-flex justify-content-between align-items-start">
+                <div>
+                    <div class="stat-value">@revenue.ToString("N0")</div>
+                    <div class="stat-label">درآمد (تومان)</div>
+                </div>
+                <div class="stat-icon">💰</div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<div class="row g-3 mb-4">
+    <div class="col-6 col-xl-3">
+        <div class="admin-stat">
+            <div class="d-flex justify-content-between align-items-start">
+                <div>
+                    <div class="stat-value">@completed</div>
+                    <div class="stat-label">سفارش تکمیل‌شده</div>
+                </div>
+                <div class="stat-icon">✅</div>
+            </div>
+        </div>
+    </div>
+    <div class="col-6 col-xl-3">
+        <a asp-controller="Reviews" asp-action="Index" asp-route-status="@ReviewStatus.Pending" class="text-decoration-none">
+            <div class="admin-stat" style="border-inline-start-color: #F59E0B;">
+                <div class="d-flex justify-content-between align-items-start">
+                    <div>
+                        <div class="stat-value">@pendingReviews</div>
+                        <div class="stat-label">نظر در انتظار بررسی</div>
+                    </div>
+                    <div class="stat-icon">⭐</div>
+                </div>
+            </div>
+        </a>
+    </div>
+    <div class="col-6 col-xl-3">
+        <a asp-controller="Experts" asp-action="Index" asp-route-approved="false" class="text-decoration-none">
+            <div class="admin-stat" style="border-inline-start-color: var(--secondary);">
+                <div class="d-flex justify-content-between align-items-start">
+                    <div>
+                        <div class="stat-value">@pendingExperts</div>
+                        <div class="stat-label">کارشناس در انتظار تأیید</div>
+                    </div>
+                    <div class="stat-icon">🔧</div>
+                </div>
+            </div>
+        </a>
+    </div>
+    <div class="col-6 col-xl-3">
+        <div class="admin-stat" style="border-inline-start-color: #15803D;">
+            <div class="d-flex justify-content-between align-items-start">
+                <div>
+                    <div class="stat-value">@servicesCount</div>
+                    <div class="stat-label">خدمات فعال</div>
+                </div>
+                <div class="stat-icon">🛠️</div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<div class="admin-card">
+    <h5 class="admin-card-title">به پنل مدیریت خوش آمدید 👋</h5>
+    <p class="text-muted mb-0">
+        از منوی کناری برای مدیریت درخواست‌ها، خدمات، دسته‌بندی‌ها، کارشناسان، نظرات، کاربران و تنظیمات سایت استفاده کنید.
+        @categoriesCount دسته‌بندی و @servicesCount خدمت در حال حاضر در سایت فعال است.
+    </p>
+</div>

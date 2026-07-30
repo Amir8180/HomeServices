@@ -1,0 +1,39 @@
+@{
+    ViewData["Title"] = "نحوه کار";
+}
+
+<div class="container py-5">
+    <div class="text-center mb-5">
+        <h1 class="fw-800">چگونه کار می‌کند؟</h1>
+        <p class="lead text-muted">یک فرایند ساده و شفاف برای دریافت بهترین خدمات منزل.</p>
+    </div>
+
+    <div class="row g-4 mb-5">
+        <div class="col-md-4">
+            <div class="dashboard-card text-center h-100">
+                <div class="step-number mx-auto">۱</div>
+                <h4 class="fw-800">درخواست ثبت کنید</h4>
+                <p class="text-muted mb-0">نوع خدمت مورد نظر، توضیحات و آدرس خود را وارد کنید. می‌توانید عکس هم اضافه کنید.</p>
+            </div>
+        </div>
+        <div class="col-md-4">
+            <div class="dashboard-card text-center h-100">
+                <div class="step-number mx-auto">۲</div>
+                <h4 class="fw-800">پیشنهادها را دریافت کنید</h4>
+                <p class="text-muted mb-0">کارشناسان مرتبط، پیشنهاد قیمت و زمان خود را برای شما ارسال می‌کنند.</p>
+            </div>
+        </div>
+        <div class="col-md-4">
+            <div class="dashboard-card text-center h-100">
+                <div class="step-number mx-auto">۳</div>
+                <h4 class="fw-800">انتخاب و رزرو</h4>
+                <p class="text-muted mb-0">پیشنهادها را مقایسه کنید، بهترین کارشناس را انتخاب و سفارش دهید.</p>
+            </div>
+        </div>
+    </div>
+
+    <div class="dashboard-card text-center">
+        <h4 class="fw-800 mb-3">آماده شروع هستید؟</h4>
+        <a asp-controller="ServiceRequests" asp-action="Create" class="btn btn-brand btn-lg">ثبت اولین درخواست</a>
+    </div>
+</div>

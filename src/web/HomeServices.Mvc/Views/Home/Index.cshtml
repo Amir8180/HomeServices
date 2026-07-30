@@ -1,0 +1,154 @@
+@model HomeViewModel
+@{
+    ViewData["Title"] = "خانه";
+}
+
+@* ---------------- Hero ---------------- *@
+<section class="hero">
+    <div class="container">
+        <div class="row align-items-center g-4">
+            <div class="col-lg-7">
+                <h1>کارشناسان باکیفیت برای<br /><span class="text-brand">خانه‌تان</span> پیدا کنید</h1>
+                <p class="lead">درخواست خود را ثبت کنید، پیشنهاد کارشناسان را مقایسه کنید و بهترین را انتخاب کنید.</p>
+                <div class="d-flex gap-2 flex-wrap">
+                    <a asp-controller="ServiceRequests" asp-action="Create" class="btn btn-brand btn-lg">ثبت درخواست خدمت</a>
+                    <a asp-controller="Services" asp-action="Index" class="btn btn-outline-brand btn-lg">مشاهده خدمات</a>
+                </div>
+            </div>
+            <div class="col-lg-5">
+                <div class="search-box">
+                    <label class="form-label fw-800">جستجوی سریع خدمت</label>
+                    <form asp-controller="Services" asp-action="Index" method="get" class="vstack gap-2">
+                        <input type="text" name="search" class="form-control form-control-lg" placeholder="مثلاً لوله‌کشی، نظافت، برق‌کاری..." />
+                        <select name="categoryId" class="form-select form-select-lg" asp-items="@(new SelectList(Model.Categories, "Id", "Name"))">
+                            <option value="">همه دسته‌بندی‌ها</option>
+                        </select>
+                        <button type="submit" class="btn btn-brand btn-lg">🔍 جستجو</button>
+                    </form>
+                </div>
+            </div>
+        </div>
+    </div>
+</section>
+
+@* ---------------- Categories ---------------- *@
+<section class="container my-5 py-4">
+    <div class="text-center mb-4">
+        <h2 class="section-title">دسته‌بندی خدمات</h2>
+        <p class="section-subtitle">هر چه نیاز دارید، در یک کلیک</p>
+    </div>
+    <div class="row g-3 row-cols-2 row-cols-md-3 row-cols-lg-5">
+        @foreach (var cat in Model.Categories)
+        {
+            <div class="col">
+                <a asp-controller="Services" asp-action="Index" asp-route-categoryId="@cat.Id" class="category-tile">
+                    <span class="icon">@(cat.IconUrl ?? "🛠️")</span>
+                    <span class="name">@cat.Name</span>
+                </a>
+            </div>
+        }
+    </div>
+</section>
+
+@* ---------------- How it works ---------------- *@
+<section class="steps-section">
+    <div class="container">
+        <div class="text-center mb-5">
+            <h2 class="section-title">چگونه کار می‌کند؟</h2>
+            <p class="section-subtitle">در سه گام ساده خدمت بگیرید</p>
+        </div>
+        <div class="row g-4 text-center">
+            <div class="col-md-4">
+                <div class="step-number mx-auto">۱</div>
+                <h5 class="fw-800">درخواست ثبت کنید</h5>
+                <p class="text-muted">نوع خدمت، توضیحات و آدرس خود را وارد کنید.</p>
+            </div>
+            <div class="col-md-4">
+                <div class="step-number mx-auto">۲</div>
+                <h5 class="fw-800">پیشنهادها را مقایسه کنید</h5>
+                <p class="text-muted">کارشناسان پیشنهاد می‌دهند؛ قیمت و امتیاز را ببینید.</p>
+            </div>
+            <div class="col-md-4">
+                <div class="step-number mx-auto">۳</div>
+                <h5 class="fw-800">بهترین را انتخاب کنید</h5>
+                <p class="text-muted">پیشنهاد مناسب را تأیید و سفارش کنید.</p>
+            </div>
+        </div>
+    </div>
+</section>
+
+@* ---------------- Popular services ---------------- *@
+@if (Model.PopularServices.Any())
+{
+    <section class="container my-5 py-4">
+        <div class="d-flex justify-content-between align-items-end mb-4">
+            <div>
+                <h2 class="section-title mb-0">خدمات محبوب</h2>
+                <p class="section-subtitle mb-0">پرطرفدارترین خدمات ما</p>
+            </div>
+            <a asp-controller="Services" asp-action="Index" class="btn btn-sm btn-outline-brand">همه خدمات ←</a>
+        </div>
+        <div class="row g-4 row-cols-1 row-cols-md-2 row-cols-lg-3">
+            @foreach (var svc in Model.PopularServices)
+            {
+                <div class="col">
+                    <div class="card-service">
+                        <div class="card-thumb">🛠️</div>
+                        <div class="card-body">
+                            <a asp-controller="Services" asp-action="Details" asp-route-id="@svc.Id" class="card-title-link">@svc.Title</a>
+                            <p class="card-meta mt-1 mb-2">@(svc.CategoryName ?? "خدمت عمومی")</p>
+                            <div class="d-flex justify-content-between align-items-center">
+                                @if (svc.BasePrice.HasValue)
+                                {
+                                    <span class="price-tag">@svc.BasePrice.Value.ToString("N0") تومان</span>
+                                }
+                                else
+                                {
+                                    <span class="card-meta">قیمت توافقی</span>
+                                }
+                                <a asp-controller="ServiceRequests" asp-action="Create" asp-route-serviceId="@svc.Id" class="btn btn-sm btn-outline-brand">درخواست</a>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            }
+        </div>
+    </section>
+}
+
+@* ---------------- Top experts ---------------- *@
+@if (Model.TopExperts.Any())
+{
+    <section class="container my-5 py-4">
+        <div class="d-flex justify-content-between align-items-end mb-4">
+            <div>
+                <h2 class="section-title mb-0">کارشناسان برتر</h2>
+                <p class="section-subtitle mb-0">مورد اعتمادترین متخصصان</p>
+            </div>
+            <a asp-controller="Experts" asp-action="Index" class="btn btn-sm btn-outline-brand">همه کارشناسان ←</a>
+        </div>
+        <div class="row g-4 row-cols-1 row-cols-md-2 row-cols-lg-3">
+            @foreach (var expert in Model.TopExperts)
+            {
+                <div class="col">
+                    <div class="card-pro p-3 h-100">
+                        <div class="d-flex gap-3">
+                            <span class="pro-avatar">@(expert.BusinessName?.FirstOrDefault() ?? 'P')</span>
+                            <div>
+                                <a asp-controller="Experts" asp-action="Details" asp-route-id="@expert.Id" class="card-title-link">@expert.BusinessName</a>
+                                <div class="rating-stars small">
+                                    @for (int i = 1; i <= 5; i++)
+                                    {
+                                        <span>@(i <= Math.Round(expert.RatingAverage) ? "★" : "☆")</span>
+                                    }
+                                    <span class="text-muted">@expert.RatingAverage.ToString("0.0") (@expert.ReviewCount)</span>
+                                </div>
+                                <div class="card-meta">@expert.City · @expert.JobsCompleted کار انجام شده</div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            }
+        </div>
+    </section>
+}

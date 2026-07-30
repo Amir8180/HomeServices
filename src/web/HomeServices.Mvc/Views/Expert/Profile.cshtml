@@ -1,0 +1,121 @@
+@model ExpertProfileViewModel
+@using HomeServices.Mvc.Extensions
+@{
+    ViewData["Title"] = "پروفایل کارشناس";
+    var portfolio = ViewBag.Portfolio as IReadOnlyList<ExpertPortfolioImageDto> ?? Array.Empty<ExpertPortfolioImageDto>();
+    var categoryList = new MultiSelectList(Model.Categories, "Id", "Name", Model.CategoryIds);
+}
+
+<div class="container py-4">
+    <div class="mb-4">
+        <h1 class="fw-800 mb-0">پروفایل کارشناس</h1>
+        <p class="text-muted mb-0">اطلاعات کسب‌وکار و نمونه‌کارهای خود را مدیریت کنید</p>
+    </div>
+
+    <div class="row g-4">
+        <div class="col-lg-7">
+            <div class="dashboard-card">
+                <h5 class="fw-800 mb-3">اطلاعات کسب‌وکار</h5>
+                <form asp-action="Profile" method="post">
+                    <input type="hidden" asp-for="Id" />
+                    <div class="mb-3">
+                        <label asp-for="BusinessName" class="form-label"></label>
+                        <input asp-for="BusinessName" class="form-control" />
+                        <span asp-validation-for="BusinessName" class="text-danger small"></span>
+                    </div>
+                    <div class="mb-3">
+                        <label asp-for="Bio" class="form-label"></label>
+                        <textarea asp-for="Bio" class="form-control" rows="3" placeholder="درباره خدمات و تجربه خود توضیح دهید..."></textarea>
+                        <span asp-validation-for="Bio" class="text-danger small"></span>
+                    </div>
+                    <div class="row g-3">
+                        <div class="col-md-6">
+                            <label asp-for="City" class="form-label"></label>
+                            <input asp-for="City" class="form-control" />
+                            <span asp-validation-for="City" class="text-danger small"></span>
+                        </div>
+                        <div class="col-md-6">
+                            <label asp-for="ServiceArea" class="form-label"></label>
+                            <input asp-for="ServiceArea" class="form-control" placeholder="محدوده خدمات‌دهی" />
+                            <span asp-validation-for="ServiceArea" class="text-danger small"></span>
+                        </div>
+                    </div>
+                    <div class="row g-3 mt-0">
+                        <div class="col-md-6">
+                            <label asp-for="BusinessHours" class="form-label"></label>
+                            <input asp-for="BusinessHours" class="form-control" placeholder="مثلاً: شنبه-پنجشنبه ۸-۲۰" />
+                            <span asp-validation-for="BusinessHours" class="text-danger small"></span>
+                        </div>
+                        <div class="col-md-6">
+                            <label asp-for="ResponseTimeMinutes" class="form-label"></label>
+                            <div class="input-group">
+                                <input asp-for="ResponseTimeMinutes" class="form-control" type="number" min="1" />
+                                <span class="input-group-text">دقیقه</span>
+                            </div>
+                            <span asp-validation-for="ResponseTimeMinutes" class="text-danger small"></span>
+                        </div>
+                    </div>
+                    <div class="mt-3">
+                        <label class="form-label">دسته‌بندی‌های تخصص</label>
+                        <select asp-for="CategoryIds" asp-items="categoryList" class="form-select" size="6" multiple></select>
+                        <div class="form-text small">برای انتخاب چندتایی، کلید Ctrl را نگه دارید.</div>
+                    </div>
+                    <div class="mt-3">
+                        <div class="form-check form-switch">
+                            <input asp-for="IsActive" class="form-check-input" type="checkbox" role="switch" />
+                            <label asp-for="IsActive" class="form-check-label">پروفایل فعال (قابل نمایش در نتایج)</label>
+                        </div>
+                    </div>
+                    <button type="submit" class="btn btn-brand mt-4">ذخیره تغییرات</button>
+                </form>
+            </div>
+        </div>
+
+        <div class="col-lg-5">
+            <div class="dashboard-card mb-4">
+                <h5 class="fw-800 mb-3">افزودن نمونه‌کار</h5>
+                <form asp-action="AddPortfolioImage" method="post" enctype="multipart/form-data">
+                    <div class="mb-3">
+                        <label class="form-label">تصویر نمونه‌کار</label>
+                        <input name="Image" type="file" class="form-control" accept="image/*" required />
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label">عنوان (اختیاری)</label>
+                        <input name="Title" class="form-control" maxlength="150" placeholder="مثلاً: بازسازی آشپزخانه" />
+                    </div>
+                    <button type="submit" class="btn btn-outline-brand w-100">بارگذاری تصویر</button>
+                </form>
+            </div>
+
+            <div class="dashboard-card">
+                <h5 class="fw-800 mb-3">نمونه‌کارها (@portfolio.Count)</h5>
+                @if (!portfolio.Any())
+                {
+                    <p class="text-muted small mb-0">هنوز نمونه‌کاری بارگذاری نکرده‌اید.</p>
+                }
+                else
+                {
+                    <div class="row g-2">
+                        @foreach (var img in portfolio)
+                        {
+                            <div class="col-6">
+                                <div class="portfolio-thumb position-relative">
+                                    <img src="@(img.ThumbnailUrl ?? img.ImageUrl)" alt="@img.Title" class="img-fluid rounded" style="width:100%;height:120px;object-fit:cover;" />
+                                    <form asp-action="DeletePortfolioImage" asp-route-id="@img.Id" method="post"
+                                          onsubmit="return confirm('این تصویر حذف شود؟');"
+                                          style="position:absolute;top:4px;left:4px;">
+                                        <button type="submit" class="btn btn-sm btn-danger rounded-circle py-0 px-2">×</button>
+                                    </form>
+                                    @if (!string.IsNullOrEmpty(img.Title))
+                                    {
+                                        <div class="small text-truncate mt-1">@img.Title</div>
+                                    }
+                                </div>
+                            </div>
+                        }
+                    </div>
+                }
+            </div>
+        </div>
+    </div>
+</div>

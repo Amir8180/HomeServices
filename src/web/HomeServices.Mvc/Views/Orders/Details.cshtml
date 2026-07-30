@@ -1,0 +1,102 @@
+@model OrderDto
+@using System.Security.Claims
+@{
+    ViewData["Title"] = $"سفارش {Model.OrderNumber}";
+    var userIdStr = User.FindFirst(ClaimTypes.NameIdentifier)?.Value;
+    var isCustomer = Model.CustomerId.ToString() == userIdStr;
+    var isCompleted = Model.Status == OrderStatus.Completed;
+}
+
+<div class="container py-4">
+    <nav aria-label="breadcrumb" class="small mb-3">
+        <a asp-controller="Home" asp-action="Index">خانه</a> /
+        <a asp-controller="Customer" asp-action="MyOrders">سفارش‌های من</a> /
+        <span class="text-muted">@Model.OrderNumber</span>
+    </nav>
+
+    <div class="row g-4">
+        <div class="col-lg-8">
+            <div class="dashboard-card">
+                <div class="d-flex justify-content-between align-items-start flex-wrap gap-2 mb-3">
+                    <div>
+                        <h2 class="fw-800 mb-1">سفارش @Model.OrderNumber</h2>
+                        <p class="text-muted mb-0">@Model.RequestTitle</p>
+                    </div>
+                    <span class="badge-soft @Model.Status.StatusClass()">@Model.Status.ToDisplay()</span>
+                </div>
+
+                <hr />
+
+                <div class="row g-3">
+                    <div class="col-md-6">
+                        <small class="text-muted d-block">مبلغ سفارش</small>
+                        <span class="price-tag fs-5">@Model.TotalAmount.ToString("N0") تومان</span>
+                    </div>
+                    <div class="col-md-6">
+                        <small class="text-muted d-block">تاریخ ثبت</small>
+                        <span>@Model.CreatedAt.ToPersianDate()</span>
+                    </div>
+                    @if (Model.ScheduledDate.HasValue)
+                    {
+                        <div class="col-md-6">
+                            <small class="text-muted d-block">تاریخ زمان‌بندی</small>
+                            <span>@Model.ScheduledDate.Value.ToPersianDate()</span>
+                        </div>
+                    }
+                    @if (Model.CompletedDate.HasValue)
+                    {
+                        <div class="col-md-6">
+                            <small class="text-muted d-block">تاریخ تکمیل</small>
+                            <span>@Model.CompletedDate.Value.ToPersianDate()</span>
+                        </div>
+                    }
+                    @if (!string.IsNullOrEmpty(Model.Notes))
+                    {
+                        <div class="col-12">
+                            <small class="text-muted d-block">یادداشت</small>
+                            <span>@Model.Notes</span>
+                        </div>
+                    }
+                </div>
+
+                @if (!string.IsNullOrEmpty(Model.ExpertBusinessName))
+                {
+                    <hr />
+                    <h6 class="fw-800 mb-2">کارشناس</h6>
+                    <div class="d-flex align-items-center gap-3">
+                        <span class="pro-avatar">@(Model.ExpertBusinessName.FirstOrDefault())</span>
+                        <span class="fw-600">@Model.ExpertBusinessName</span>
+                    </div>
+                }
+            </div>
+        </div>
+
+        <div class="col-lg-4">
+            <div class="dashboard-card">
+                <h6 class="fw-800 mb-3">عملیات</h6>
+
+                @if (isCustomer && Model.Status == OrderStatus.PendingPayment)
+                {
+                    <form asp-action="Pay" asp-route-id="@Model.Id" method="post"
+                          onsubmit="return confirm('پرداخت @Model.TotalAmount.ToString("N0") تومان را تأیید می‌کنید؟ (درگاه نمایشی)');">
+                        <button type="submit" class="btn btn-brand w-100 mb-2">💳 پرداخت آنلاین</button>
+                    </form>
+                }
+
+                @if (isCompleted && isCustomer)
+                {
+                    <a asp-controller="Reviews" asp-action="Create" asp-route-orderId="@Model.Id" class="btn btn-secondary-brand w-100 mb-2">
+                        ⭐ ثبت نظر و امتیاز
+                    </a>
+                }
+
+                <a asp-controller="ServiceRequests" asp-action="Details" asp-route-id="@Model.RequestId" class="btn btn-outline-brand w-100 mb-2">مشاهده درخواست</a>
+
+                <div class="small text-muted mt-3">
+                    <div class="d-flex justify-content-between"><span>شماره سفارش:</span><span>@Model.OrderNumber</span></div>
+                    <div class="d-flex justify-content-between"><span>شناسه:</span><span>#@Model.Id</span></div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>

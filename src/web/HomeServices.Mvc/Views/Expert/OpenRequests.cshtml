@@ -1,0 +1,119 @@
+@using HomeServices.Domain.Enums
+@model PagedResult<ServiceRequestDto>
+@{
+    ViewData["Title"] = "درخواست‌های باز";
+    var categories = (IReadOnlyList<CategoryDto>)ViewBag.Categories;
+    var myIds = ViewBag.MyProposalRequestIds as HashSet<int> ?? new HashSet<int>();
+    var filter = (ServiceRequestFilterDto)ViewBag.CurrentFilter;
+}
+
+<div class="container py-4">
+    <div class="mb-4">
+        <h1 class="fw-800 mb-0">درخواست‌های باز</h1>
+        <p class="text-muted mb-0">درخواست‌هایی که منتظر دریافت پیشنهاد هستند</p>
+    </div>
+
+    <form method="get" class="dashboard-card mb-4">
+        <div class="row g-2 align-items-end">
+            <div class="col-md-4">
+                <label class="form-label small">جستجو</label>
+                <input name="search" value="@filter.SearchTerm" class="form-control" placeholder="عنوان یا توضیحات..." />
+            </div>
+            <div class="col-md-3">
+                <label class="form-label small">دسته‌بندی</label>
+                <select name="categoryId" class="form-select" asp-items="@(new SelectList(categories, "Id", "Name", filter.CategoryId))">
+                    <option value="">همه</option>
+                </select>
+            </div>
+            <div class="col-md-2">
+                <label class="form-label small">شهر</label>
+                <input name="city" value="@filter.City" class="form-control" placeholder="شهر" />
+            </div>
+            <div class="col-md-2">
+                <label class="form-label small">فوریت</label>
+                <select name="urgency" class="form-select">
+                    <option value="">همه</option>
+                    @foreach (UrgencyLevel u in Enum.GetValues(typeof(UrgencyLevel)))
+                    {
+                        <option value="@u" selected="@(filter.Urgency == u)">@u.ToDisplay()</option>
+                    }
+                </select>
+            </div>
+            <div class="col-md-1">
+                <button type="submit" class="btn btn-brand w-100">فیلتر</button>
+            </div>
+        </div>
+    </form>
+
+    @if (!Model.Items.Any())
+    {
+        <div class="empty-state dashboard-card">
+            <div class="icon">🔍</div>
+            <h5 class="fw-800">درخواستی یافت نشد</h5>
+            <p class="text-muted">فیلترها را تغییر دهید یا بعداً بررسی کنید.</p>
+        </div>
+    }
+    else
+    {
+        <div class="vstack gap-3">
+            @foreach (var r in Model.Items)
+            {
+                <div class="dashboard-card">
+                    <div class="d-flex justify-content-between align-items-start gap-3 flex-wrap">
+                        <div class="flex-grow-1">
+                            <div class="d-flex align-items-center gap-2 mb-1 flex-wrap">
+                                <a asp-controller="ServiceRequests" asp-action="Details" asp-route-id="@r.Id" class="fw-800 fs-5">@r.Title</a>
+                                <span class="badge-soft badge-info-soft">@r.Urgency.ToDisplay()</span>
+                                @if (myIds.Contains(r.Id))
+                                {
+                                    <span class="badge-soft badge-success-soft">پیشنهاد داده‌اید</span>
+                                }
+                            </div>
+                            <p class="text-muted small mb-2">@(r.Description.Length > 140 ? r.Description.Substring(0, 140) + "..." : r.Description)</p>
+                            <div class="d-flex gap-3 flex-wrap small text-muted">
+                                @if (!string.IsNullOrEmpty(r.CategoryName)) { <span>🏷️ @r.CategoryName</span> }
+                                @if (!string.IsNullOrEmpty(r.City)) { <span>📍 @r.City</span> }
+                                @if (r.BudgetMin.HasValue || r.BudgetMax.HasValue)
+                                {
+                                    <span>💰 @(@r.BudgetMin?.ToString("N0") ?? "—") - @(r.BudgetMax?.ToString("N0") ?? "—") تومان</span>
+                                }
+                                <span>🕒 @r.CreatedAt.ToPersianDate()</span>
+                            </div>
+                        </div>
+                        <div class="d-flex flex-column gap-1">
+                            @if (myIds.Contains(r.Id))
+                            {
+                                <a asp-action="MyProposals" class="btn btn-sm btn-outline-brand">پیشنهادهای من</a>
+                            }
+                            else
+                            {
+                                <a asp-action="CreateProposal" asp-route-requestId="@r.Id" class="btn btn-sm btn-brand">ارسال پیشنهاد</a>
+                            }
+                            <a asp-controller="ServiceRequests" asp-action="Details" asp-route-id="@r.Id" class="btn btn-sm btn-link">جزئیات</a>
+                        </div>
+                    </div>
+                </div>
+            }
+        </div>
+
+        var totalPages = (int)Math.Ceiling((double)Model.TotalCount / Model.PageSize);
+        if (totalPages > 1)
+        {
+            <nav class="mt-4">
+                <ul class="pagination justify-content-center">
+                    @for (int i = 1; i <= totalPages; i++)
+                    {
+                        <li class="page-item @(i == Model.PageNumber ? "active" : "")">
+                            <a class="page-link" asp-action="OpenRequests"
+                               asp-route-page="@i"
+                               asp-route-categoryId="@filter.CategoryId"
+                               asp-route-search="@filter.SearchTerm"
+                               asp-route-city="@filter.City"
+                               asp-route-urgency="@filter.Urgency">@i</a>
+                        </li>
+                    }
+                </ul>
+            </nav>
+        }
+    }
+</div>

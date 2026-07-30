@@ -1,0 +1,68 @@
+@model ServiceDto
+@{
+    ViewData["Title"] = Model.Title;
+}
+
+<div class="container py-4">
+    <nav aria-label="breadcrumb" class="small mb-3">
+        <a asp-controller="Home" asp-action="Index">خانه</a> /
+        <a asp-controller="Services" asp-action="Index">خدمات</a> /
+        <span class="text-muted">@Model.Title</span>
+    </nav>
+
+    <div class="row g-4">
+        <div class="col-lg-8">
+            <div class="dashboard-card">
+                <div class="card-thumb mb-3" style="height:240px;border-radius:var(--radius);">🛠️</div>
+                <div class="d-flex align-items-center gap-2 flex-wrap mb-2">
+                    @if (!string.IsNullOrEmpty(Model.CategoryName))
+                    {
+                        <span class="badge-soft badge-brand">@Model.CategoryName</span>
+                    }
+                    @if (Model.IsFixedPrice)
+                    {
+                        <span class="badge-soft badge-info-soft">قیمت ثابت</span>
+                    }
+                    else
+                    {
+                        <span class="badge-soft badge-warning-soft">نیازمند پیشنهاد</span>
+                    }
+                </div>
+                <h1 class="fw-800 mb-2">@Model.Title</h1>
+
+                @if (!string.IsNullOrEmpty(Model.Description))
+                {
+                    <h6 class="fw-800 mt-3 mb-2">شرح خدمت</h6>
+                    <p>@Model.Description</p>
+                }
+
+                @if (Model.EstimatedDurationMinutes.HasValue)
+                {
+                    <div class="mt-3">
+                        <small class="text-muted d-block">مدت تخمینی</small>
+                        <span>⏱️ حدود @(Model.EstimatedDurationMinutes.Value / 60) ساعت و @(Model.EstimatedDurationMinutes.Value % 60) دقیقه</span>
+                    </div>
+                }
+            </div>
+        </div>
+
+        <div class="col-lg-4">
+            <div class="dashboard-card text-center">
+                @if (Model.BasePrice.HasValue)
+                {
+                    <small class="text-muted d-block">شروع از</small>
+                    <div class="price-tag fs-3 my-2">@Model.BasePrice.Value.ToString("N0") <span class="fs-6">تومان</span></div>
+                }
+                else
+                {
+                    <div class="fs-5 my-2">قیمت توافقی</div>
+                }
+                <a asp-controller="ServiceRequests" asp-action="Create" asp-route-serviceId="@Model.Id" class="btn btn-brand w-100 mt-2">📝 ثبت درخواست</a>
+                @if (!Model.IsFixedPrice)
+                {
+                    <small class="text-muted d-block mt-2">قیمت نهایی پس از دریافت پیشنهاد کارشناسان مشخص می‌شود.</small>
+                }
+            </div>
+        </div>
+    </div>
+</div>

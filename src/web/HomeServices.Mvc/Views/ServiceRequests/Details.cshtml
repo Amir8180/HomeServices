@@ -1,0 +1,122 @@
+@model ServiceRequestDto
+@using System.Security.Claims
+@{
+    ViewData["Title"] = Model.Title;
+    var userIdStr = User.FindFirst(ClaimTypes.NameIdentifier)?.Value;
+    var isOwner = userIdStr != null && Model.CustomerId.ToString() == userIdStr;
+    var isExpert = User.IsInRole("Expert");
+    var isAdmin = User.IsInRole("Admin");
+}
+
+<div class="container py-4">
+    <div class="row g-4">
+        <div class="col-lg-8">
+            <div class="dashboard-card">
+                <div class="d-flex justify-content-between align-items-start flex-wrap gap-2 mb-3">
+                    <div>
+                        <nav aria-label="breadcrumb" class="small mb-2">
+                            <a asp-controller="Home" asp-action="Index">خانه</a> /
+                            <a asp-action="Index">درخواست‌ها</a> /
+                            <span class="text-muted">جزئیات</span>
+                        </nav>
+                        <h2 class="fw-800 mb-1">@Model.Title</h2>
+                        <span class="badge-soft badge-brand">@Model.Status.ToDisplay()</span>
+                        <span class="badge-soft @(Model.Urgency == UrgencyLevel.Emergency ? "badge-warning-soft" : "badge-info-soft")">@Model.Urgency.ToDisplay()</span>
+                    </div>
+                    <div>
+                        @if (isOwner && (Model.Status == RequestStatus.Open || Model.Status == RequestStatus.Quoted))
+                        {
+                            <form asp-action="Cancel" asp-route-id="@Model.Id" method="post" class="d-inline"
+                                  onsubmit="return confirm('آیا از لغو این درخواست مطمئن هستید؟');">
+                                <button type="submit" class="btn btn-outline-brand btn-sm">لغو درخواست</button>
+                            </form>
+                        }
+                    </div>
+                </div>
+
+                <hr />
+
+                <h6 class="fw-800 mb-2">📋 توضیحات</h6>
+                <p>@Model.Description</p>
+
+                <div class="row g-3 mt-1">
+                    @if (!string.IsNullOrEmpty(Model.CategoryName))
+                    {
+                        <div class="col-md-6">
+                            <small class="text-muted d-block">دسته‌بندی</small>
+                            <span>🏷️ @Model.CategoryName</span>
+                        </div>
+                    }
+                    @if (!string.IsNullOrEmpty(Model.ServiceTitle))
+                    {
+                        <div class="col-md-6">
+                            <small class="text-muted d-block">خدمت</small>
+                            <span>@Model.ServiceTitle</span>
+                        </div>
+                    }
+                    @if (!string.IsNullOrEmpty(Model.City) || !string.IsNullOrEmpty(Model.Address))
+                    {
+                        <div class="col-md-6">
+                            <small class="text-muted d-block">موقعیت</small>
+                            <span>📍 @Model.City @Model.Address</span>
+                        </div>
+                    }
+                    @if (Model.PreferredDate.HasValue)
+                    {
+                        <div class="col-md-6">
+                            <small class="text-muted d-block">تاریخ ترجیحی</small>
+                            <span>📅 @Model.PreferredDate.Value.ToPersianDate()</span>
+                        </div>
+                    }
+                    @if (Model.BudgetMin.HasValue || Model.BudgetMax.HasValue)
+                    {
+                        <div class="col-md-6">
+                            <small class="text-muted d-block">بودجه</small>
+                            <span>💰 از @((Model.BudgetMin ?? 0).ToString("N0")) تا @((Model.BudgetMax ?? 0).ToString("N0")) تومان</span>
+                        </div>
+                    }
+                    <div class="col-md-6">
+                        <small class="text-muted d-block">تاریخ ثبت</small>
+                        <span>🕒 @Model.CreatedAt.ToPersianDate()</span>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <div class="col-lg-4">
+            <div class="dashboard-card">
+                <h6 class="fw-800 mb-3">عملیات</h6>
+                @if (isOwner && (Model.Status == RequestStatus.Open || Model.Status == RequestStatus.Quoted))
+                {
+                    <a asp-controller="Proposals" asp-action="Compare" asp-route-requestId="@Model.Id" class="btn btn-brand w-100 mb-2">
+                        💬 مشاهده و مقایسه پیشنهادها (@Model.ProposalCount)
+                    </a>
+                }
+                else
+                {
+                    <div class="alert alert-soft bg-soft mb-2 small">تاکنون @Model.ProposalCount پیشنهاد ثبت شده است.</div>
+                }
+
+                @if (isExpert && Model.Status == RequestStatus.Open)
+                {
+                    <a asp-controller="Expert" asp-action="CreateProposal" asp-route-requestId="@Model.Id" class="btn btn-secondary-brand w-100">
+                        ✏️ ارسال پیشنهاد
+                    </a>
+                }
+
+                @if (Model.AcceptedProposalId.HasValue)
+                {
+                    <div class="alert alert-success small mt-2 mb-0">✅ این درخواست دارای پیشنهاد انتخاب‌شده است.</div>
+                }
+            </div>
+
+            @if (isAdmin)
+            {
+                <div class="dashboard-card mt-3">
+                    <h6 class="fw-800 mb-2">ابزار مدیریت</h6>
+                    <a asp-area="Admin" asp-controller="RequestsManagement" asp-action="Details" asp-route-id="@Model.Id" class="btn btn-sm btn-outline-brand w-100">مدیریت درخواست</a>
+                </div>
+            }
+        </div>
+    </div>
+</div>

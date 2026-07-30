@@ -1,0 +1,67 @@
+@using HomeServices.Mvc.Extensions
+@model ServiceRequestDto
+@{
+    ViewData["Title"] = "جزئیات درخواست";
+}
+
+<div class="admin-card">
+    <div class="d-flex justify-content-between align-items-start flex-wrap gap-2 mb-3">
+        <div>
+            <h4 class="fw-800 mb-1">@Model.Title</h4>
+            <div class="d-flex gap-2 flex-wrap">
+                <span class="badge-soft @Model.Status.StatusClass()">@Model.Status.ToDisplay()</span>
+                <span class="badge-soft badge-info-soft">@Model.Urgency.ToDisplay()</span>
+                <span class="badge-soft badge-success-soft">💬 @Model.ProposalCount پیشنهاد</span>
+            </div>
+        </div>
+        <a asp-action="Index" class="btn btn-sm btn-outline-brand">← بازگشت</a>
+    </div>
+
+    <div class="row g-3">
+        <div class="col-md-8">
+            <h6 class="fw-800">توضیحات</h6>
+            <p>@Model.Description</p>
+        </div>
+        <div class="col-md-4">
+            <ul class="list-unstyled vstack gap-2 small">
+                <li class="d-flex justify-content-between"><span class="text-muted">دسته‌بندی:</span> <span>@Model.CategoryName</span></li>
+                <li class="d-flex justify-content-between"><span class="text-muted">خدمت:</span> <span>@(Model.ServiceTitle ?? "—")</span></li>
+                <li class="d-flex justify-content-between"><span class="text-muted">شهر:</span> <span>@(Model.City ?? "—")</span></li>
+                <li class="d-flex justify-content-between"><span class="text-muted">آدرس:</span> <span>@(Model.Address ?? "—")</span></li>
+                <li class="d-flex justify-content-between"><span class="text-muted">بودجه:</span> <span>@(@Model.BudgetMin?.ToString("N0") ?? "—") - @(Model.BudgetMax?.ToString("N0") ?? "—")</span></li>
+                <li class="d-flex justify-content-between"><span class="text-muted">تاریخ ترجیحی:</span> <span>@(Model.PreferredDate?.ToPersianDate() ?? "—")</span></li>
+                <li class="d-flex justify-content-between"><span class="text-muted">تاریخ ثبت:</span> <span>@Model.CreatedAt.ToPersianDate()</span></li>
+            </ul>
+        </div>
+    </div>
+
+    @if (Model.Images.Any())
+    {
+        <h6 class="fw-800 mt-4">تصاویر</h6>
+        <div class="d-flex gap-2 flex-wrap">
+            @foreach (var img in Model.Images)
+            {
+                <img src="@(img.ThumbnailUrl ?? img.ImageUrl)" class="rounded" style="width:120px;height:90px;object-fit:cover;" alt="request image" />
+            }
+        </div>
+    }
+</div>
+
+<div class="admin-card">
+    <h6 class="fw-800 mb-3">تغییر وضعیت درخواست</h6>
+    <form asp-action="UpdateStatus" method="post" class="row g-2 align-items-end">
+        <input type="hidden" name="id" value="@Model.Id" />
+        <div class="col-md-8">
+            <label class="form-label small">وضعیت جدید</label>
+            <select name="status" class="form-select form-select-sm">
+                @foreach (RequestStatus s in Enum.GetValues(typeof(RequestStatus)))
+                {
+                    <option value="@s" selected="@(Model.Status == s)">@s.ToDisplay()</option>
+                }
+            </select>
+        </div>
+        <div class="col-md-4">
+            <button type="submit" class="btn btn-brand btn-sm w-100">اعمال وضعیت</button>
+        </div>
+    </form>
+</div>

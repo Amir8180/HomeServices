@@ -1,0 +1,92 @@
+@using HomeServices.Domain.Enums
+@model IReadOnlyList<OrderDto>
+@{
+    ViewData["Title"] = "سفارش‌های من";
+    var active = Model.Where(o => o.Status == OrderStatus.Paid || o.Status == OrderStatus.Scheduled || o.Status == OrderStatus.InProgress).ToList();
+    var done = Model.Where(o => o.Status == OrderStatus.Completed).ToList();
+}
+
+<div class="container py-4">
+    <div class="mb-4">
+        <h1 class="fw-800 mb-0">سفارش‌های من</h1>
+        <p class="text-muted mb-0">@Model.Count سفارش</p>
+    </div>
+
+    <div class="dashboard-card mb-4">
+        <h5 class="fw-800 mb-3">سفارش‌های فعال (@active.Count)</h5>
+        @if (!active.Any())
+        {
+            <p class="text-muted small mb-0">سفارش فعالی ندارید.</p>
+        }
+        else
+        {
+            <div class="table-responsive">
+                <table class="table align-middle mb-0">
+                    <thead>
+                        <tr>
+                            <th>شماره سفارش</th>
+                            <th>درخواست</th>
+                            <th>مبلغ</th>
+                            <th>تاریخ شروع</th>
+                            <th>وضعیت</th>
+                            <th></th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        @foreach (var o in active)
+                        {
+                            <tr>
+                                <td class="fw-700">@o.OrderNumber</td>
+                                <td>@o.RequestTitle</td>
+                                <td class="text-secondary-brand fw-700">@o.TotalAmount.ToString("N0")</td>
+                                <td class="small text-muted">@(o.ScheduledDate?.ToPersianDate() ?? "—")</td>
+                                <td><span class="badge-soft @o.Status.StatusClass()">@o.Status.ToDisplay()</span></td>
+                                <td>
+                                    <div class="d-flex gap-1 flex-wrap justify-content-end">
+                                        <a asp-controller="Orders" asp-action="Details" asp-route-id="@o.Id" class="btn btn-sm btn-outline-brand">جزئیات</a>
+                                        @if (o.Status == OrderStatus.Paid || o.Status == OrderStatus.Scheduled)
+                                        {
+                                            <form asp-action="UpdateOrderStatus" asp-route-id="@o.Id" asp-route-status="@OrderStatus.InProgress" method="post">
+                                                <button type="submit" class="btn btn-sm btn-brand">شروع کار</button>
+                                            </form>
+                                        }
+                                        else if (o.Status == OrderStatus.InProgress)
+                                        {
+                                            <form asp-action="UpdateOrderStatus" asp-route-id="@o.Id" asp-route-status="@OrderStatus.Completed" method="post"
+                                                  onsubmit="return confirm('کار را تکمیل شده علامت بزنید؟');">
+                                                <button type="submit" class="btn btn-sm btn-success">تکمیل کار</button>
+                                            </form>
+                                        }
+                                    </div>
+                                </td>
+                            </tr>
+                        }
+                    </tbody>
+                </table>
+            </div>
+        }
+    </div>
+
+    <div class="dashboard-card">
+        <h5 class="fw-800 mb-3">کارهای تکمیل‌شده (@done.Count)</h5>
+        @if (!done.Any())
+        {
+            <p class="text-muted small mb-0">هنوز کاری را تکمیل نکرده‌اید.</p>
+        }
+        else
+        {
+            <div class="vstack gap-2">
+                @foreach (var o in done)
+                {
+                    <div class="d-flex justify-content-between align-items-center border-bottom pb-2">
+                        <div>
+                            <a asp-controller="Orders" asp-action="Details" asp-route-id="@o.Id" class="fw-700">@o.RequestTitle</a>
+                            <div class="small text-muted">@o.OrderNumber · @o.TotalAmount.ToString("N0") تومان</div>
+                        </div>
+                        <span class="badge-soft badge-success-soft">@o.Status.ToDisplay()</span>
+                    </div>
+                }
+            </div>
+        }
+    </div>
+</div>

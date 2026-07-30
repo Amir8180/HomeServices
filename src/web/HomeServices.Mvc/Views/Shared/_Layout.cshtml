@@ -1,0 +1,163 @@
+@using System.Security.Claims
+@using HomeServices.Shared.Enums
+@inject HomeServices.Application.Interfaces.ISiteSettingService SiteSettings
+@{
+    var settings = await SiteSettings.GetAllAsDictionaryAsync(Context.RequestAborted);
+    var siteName = settings.TryGetValue("Site.Name", out var name) && !string.IsNullOrWhiteSpace(name) ? name : "خدمات منزل";
+    var tagline = settings.TryGetValue("Site.Tagline", out var t) ? t : "";
+    var phone = settings.TryGetValue("Contact.Phone", out var p) ? p : "";
+    var email = settings.TryGetValue("Contact.Email", out var em) ? em : "";
+    var instagram = settings.TryGetValue("Social.Instagram", out var ig) ? ig : "#";
+    var telegram = settings.TryGetValue("Social.Telegram", out var tg) ? tg : "#";
+
+    var user = Context.User;
+    var isAuthenticated = user?.Identity?.IsAuthenticated ?? false;
+    var fullName = user?.FindFirst(ClaimTypes.Name)?.Value;
+    var isCustomer = user?.IsInRole("Customer") ?? false;
+    var isExpert = user?.IsInRole("Expert") ?? false;
+    var isAdmin = user?.IsInRole("Admin") ?? false;
+}
+<!DOCTYPE html>
+<html lang="fa" dir="rtl">
+<head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>@ViewData["Title"] - @siteName</title>
+    <link rel="stylesheet" href="~/lib/bootstrap/dist/css/bootstrap.rtl.min.css" />
+    <link href="https://cdn.jsdelivr.net/gh/rastikerdar/vazirmatn@v33.003/Vazirmatn-font-face.css" rel="stylesheet" />
+    <link rel="stylesheet" href="~/css/site.css" asp-append-version="true" />
+    <link rel="stylesheet" href="~/HomeServices.Mvc.styles.css" asp-append-version="true" />
+    @await RenderSectionAsync("Styles", required: false)
+</head>
+<body>
+    <header class="site-header">
+        <nav class="navbar navbar-expand-lg">
+            <div class="container">
+                <a class="navbar-brand d-flex align-items-center" asp-controller="Home" asp-action="Index">
+                    <span class="brand-icon">🏠</span>
+                    <span>@siteName</span>
+                </a>
+                <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#mainNav">
+                    <span class="navbar-toggler-icon"></span>
+                </button>
+                <div class="collapse navbar-collapse" id="mainNav">
+                    <ul class="navbar-nav mx-auto gap-lg-2">
+                        <li class="nav-item"><a class="nav-link" asp-controller="Home" asp-action="Index">خانه</a></li>
+                        <li class="nav-item"><a class="nav-link" asp-controller="Services" asp-action="Index">خدمات</a></li>
+                        <li class="nav-item"><a class="nav-link" asp-controller="Home" asp-action="HowItWorks">نحوه کار</a></li>
+                        <li class="nav-item"><a class="nav-link" asp-controller="Experts" asp-action="Index">کارشناسان</a></li>
+                        @if (isAdmin)
+                        {
+                            <li class="nav-item"><a class="nav-link" asp-area="Admin" asp-controller="Dashboard" asp-action="Index">پنل مدیریت</a></li>
+                        }
+                    </ul>
+                    <ul class="navbar-nav gap-lg-2 align-items-lg-center">
+                        @if (isAuthenticated)
+                        {
+                            <li class="nav-item dropdown">
+                                <a class="nav-link dropdown-toggle d-flex align-items-center gap-2" href="#" data-bs-toggle="dropdown">
+                                    <span class="pro-avatar" style="width:36px;height:36px;font-size:1rem;">@(fullName?.FirstOrDefault() ?? 'U')</span>
+                                    <span>@fullName</span>
+                                </a>
+                                <ul class="dropdown-menu dropdown-menu-end">
+                                    @if (isCustomer)
+                                    {
+                                        <li><a class="dropdown-item" asp-controller="Customer" asp-action="Dashboard">داشبورد من</a></li>
+                                        <li><a class="dropdown-item" asp-controller="Customer" asp-action="MyRequests">درخواست‌های من</a></li>
+                                        <li><a class="dropdown-item" asp-controller="Customer" asp-action="MyOrders">سفارش‌های من</a></li>
+                                        <li><hr class="dropdown-divider"></li>
+                                    }
+                                    else if (isExpert)
+                                    {
+                                        <li><a class="dropdown-item" asp-controller="Expert" asp-action="Dashboard">داشبورد کارشناس</a></li>
+                                        <li><a class="dropdown-item" asp-controller="Expert" asp-action="OpenRequests">درخواست‌های باز</a></li>
+                                        <li><a class="dropdown-item" asp-controller="Expert" asp-action="MyProposals">پیشنهادهای من</a></li>
+                                        <li><a class="dropdown-item" asp-controller="Expert" asp-action="MyJobs">سفارش‌های من</a></li>
+                                        <li><a class="dropdown-item" asp-controller="Expert" asp-action="MyReviews">نظرات درباره من</a></li>
+                                        <li><hr class="dropdown-divider"></li>
+                                    }
+                                    <li><a class="dropdown-item" asp-controller="Account" asp-action="Profile">پروفایل من</a></li>
+                                    <li>
+                                        <form asp-controller="Account" asp-action="Logout" method="post">
+                                            <button type="submit" class="dropdown-item text-danger">خروج</button>
+                                        </form>
+                                    </li>
+                                </ul>
+                            </li>
+                        }
+                        else
+                        {
+                            <li class="nav-item"><a class="btn btn-outline-brand" asp-controller="Account" asp-action="Login">ورود</a></li>
+                            <li class="nav-item"><a class="btn btn-brand" asp-controller="Account" asp-action="Register">ثبت‌نام</a></li>
+                        }
+                    </ul>
+                </div>
+            </div>
+        </nav>
+    </header>
+
+    <main role="main">
+        @if (TempData["Success"] != null)
+        {
+            <div class="alert alert-success alert-dismissible fade show m-0 rounded-0 py-2" role="alert">
+                <i class="bi bi-check-circle"></i> @TempData["Success"]
+                <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+            </div>
+        }
+        @if (TempData["Error"] != null)
+        {
+            <div class="alert alert-danger alert-dismissible fade show m-0 rounded-0 py-2" role="alert">
+                @TempData["Error"]
+                <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+            </div>
+        }
+        @RenderBody()
+    </main>
+
+    <footer class="site-footer">
+        <div class="container">
+            <div class="row g-4">
+                <div class="col-lg-4">
+                    <h5>🏠 @siteName</h5>
+                    <p>@tagline</p>
+                </div>
+                <div class="col-6 col-lg-2">
+                    <h5>خدمات</h5>
+                    <ul class="list-unstyled vstack gap-2">
+                        <li><a asp-controller="Services" asp-action="Index">همه خدمات</a></li>
+                        <li><a asp-controller="Home" asp-action="HowItWorks">نحوه کار</a></li>
+                        <li><a asp-controller="Experts" asp-action="Index">کارشناسان</a></li>
+                    </ul>
+                </div>
+                <div class="col-6 col-lg-3">
+                    <h5>حساب کاربری</h5>
+                    <ul class="list-unstyled vstack gap-2">
+                        <li><a asp-controller="Account" asp-action="Login">ورود</a></li>
+                        <li><a asp-controller="Account" asp-action="Register">ثبت‌نام</a></li>
+                        <li><a asp-controller="Account" asp-action="Profile">پروفایل</a></li>
+                    </ul>
+                </div>
+                <div class="col-lg-3">
+                    <h5>تماس با ما</h5>
+                    <ul class="list-unstyled vstack gap-2">
+                        <li>📞 @phone</li>
+                        <li>✉️ @email</li>
+                        <li>
+                            <a href="@instagram" target="_blank">اینستاگرام</a> ·
+                            <a href="@telegram" target="_blank">تلگرام</a>
+                        </li>
+                    </ul>
+                </div>
+            </div>
+            <div class="footer-bottom text-center">
+                <span>© @DateTime.Now.Year @siteName — تمامی حقوق محفوظ است.</span>
+            </div>
+        </div>
+    </footer>
+
+    <script src="~/lib/jquery/dist/jquery.min.js"></script>
+    <script src="~/lib/bootstrap/dist/js/bootstrap.bundle.min.js"></script>
+    <script src="~/js/site.js" asp-append-version="true"></script>
+    @await RenderSectionAsync("Scripts", required: false)
+</body>
+</html>

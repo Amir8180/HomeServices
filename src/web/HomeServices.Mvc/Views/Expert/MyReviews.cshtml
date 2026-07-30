@@ -1,0 +1,56 @@
+@using HomeServices.Domain.Enums
+@model IReadOnlyList<ReviewDto>
+@{
+    ViewData["Title"] = "نظرات درباره من";
+    var avg = Model.Any() ? Model.Average(r => r.Rating).ToString("0.0") : "—";
+}
+
+<div class="container py-4">
+    <div class="d-flex justify-content-between align-items-center mb-4 flex-wrap gap-2">
+        <div>
+            <h1 class="fw-800 mb-0">نظرات مشتریان</h1>
+            <p class="text-muted mb-0">@Model.Count نظر</p>
+        </div>
+        <div class="dashboard-card d-flex align-items-center gap-3 py-2 px-3">
+            <div class="rating-stars fs-4">★★★★★</div>
+            <div>
+                <div class="fw-800 fs-4">@avg</div>
+                <div class="small text-muted">میانگین امتیاز</div>
+            </div>
+        </div>
+    </div>
+
+    @if (!Model.Any())
+    {
+        <div class="empty-state dashboard-card">
+            <div class="icon">⭐</div>
+            <h5 class="fw-800">هنوز نظری ثبت نشده</h5>
+            <p class="text-muted">پس از تکمیل سفارش‌ها، مشتریان نظر خود را ثبت می‌کنند.</p>
+        </div>
+    }
+    else
+    {
+        <div class="vstack gap-3">
+            @foreach (var r in Model)
+            {
+                <div class="dashboard-card">
+                    <div class="d-flex justify-content-between align-items-start gap-3 flex-wrap mb-2">
+                        <div class="d-flex align-items-center gap-2">
+                            <span class="rating-stars">@("★".PadLeft(r.Rating, '★'))<span class="text-muted">@("★".PadLeft(5 - r.Rating, '★'))</span></span>
+                            <span class="fw-700">@r.CustomerName</span>
+                        </div>
+                        <span class="badge-soft @r.Status.ReviewStatusClass()">@r.Status.ToDisplay()</span>
+                    </div>
+                    @if (!string.IsNullOrEmpty(r.Comment))
+                    {
+                        <p class="mb-2">"@r.Comment"</p>
+                    }
+                    <div class="d-flex gap-3 flex-wrap small text-muted">
+                        <span>🕒 @r.CreatedAt.ToPersianDate()</span>
+                        @if (r.ServiceDate.HasValue) { <span>📅 @r.ServiceDate.Value.ToPersianDate()</span> }
+                    </div>
+                </div>
+            }
+        </div>
+    }
+</div>

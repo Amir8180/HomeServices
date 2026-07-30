@@ -1,0 +1,123 @@
+@model ExpertProfileDto
+@using HomeServices.Application.Dtos
+@{
+    ViewData["Title"] = Model.BusinessName;
+    var reviews = ViewBag.Reviews as IReadOnlyList<ReviewDto> ?? Array.Empty<ReviewDto>();
+}
+
+<div class="container py-4">
+    <nav aria-label="breadcrumb" class="small mb-3">
+        <a asp-controller="Home" asp-action="Index">خانه</a> /
+        <a asp-controller="Experts" asp-action="Index">کارشناسان</a> /
+        <span class="text-muted">@Model.BusinessName</span>
+    </nav>
+
+    <div class="dashboard-card mb-4">
+        <div class="row g-4 align-items-center">
+            <div class="col-md-auto">
+                <span class="pro-avatar" style="width:90px;height:90px;font-size:2.5rem;">@(Model.BusinessName?.FirstOrDefault() ?? 'P')</span>
+            </div>
+            <div class="col-md">
+                <div class="d-flex align-items-center gap-2 flex-wrap mb-1">
+                    <h1 class="fw-800 mb-0">@Model.BusinessName</h1>
+                    @if (Model.IsVerified)
+                    {
+                        <span class="badge-soft badge-success-soft">✓ تأیید شده</span>
+                    }
+                    @if (Model.IsApproved)
+                    {
+                        <span class="badge-soft badge-info-soft">تأیید پلتفرم</span>
+                    }
+                </div>
+                <div class="rating-stars mb-2">
+                    @for (int i = 1; i <= 5; i++)
+                    {
+                        <span class="fs-5">@(i <= Math.Round(Model.RatingAverage) ? "★" : "☆")</span>
+                    }
+                    <span class="text-muted">@Model.RatingAverage.ToString("0.0") از ۵ — @Model.ReviewCount نظر</span>
+                </div>
+                <div class="d-flex gap-3 flex-wrap text-muted small">
+                    <span>📍 @Model.City</span>
+                    <span>🗺️ @Model.ServiceArea</span>
+                    <span>✅ @Model.JobsCompleted کار انجام شده</span>
+                    @if (Model.ResponseTimeMinutes.HasValue)
+                    {
+                        <span>⏱️ میانگین پاسخ: @Model.ResponseTimeMinutes دقیقه</span>
+                    }
+                    <span>📅 عضو از @Model.JoinedAt.ToPersianDate()</span>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="row g-4">
+        <div class="col-lg-8">
+            @if (!string.IsNullOrEmpty(Model.Bio))
+            {
+                <div class="dashboard-card mb-4">
+                    <h5 class="fw-800 mb-2">درباره کارشناس</h5>
+                    <p class="mb-0">@Model.Bio</p>
+                </div>
+            }
+
+            <div class="dashboard-card">
+                <h5 class="fw-800 mb-3">نظرات کاربران (@Model.ReviewCount)</h5>
+                @if (!reviews.Any())
+                {
+                    <p class="text-muted mb-0">هنوز نظری ثبت نشده است.</p>
+                }
+                else
+                {
+                    <div class="vstack gap-3">
+                        @foreach (var r in reviews)
+                        {
+                            <div class="border-bottom pb-3">
+                                <div class="d-flex justify-content-between align-items-center mb-1">
+                                    <span class="fw-700">@r.CustomerName</span>
+                                    <span class="rating-stars">@string.Concat(Enumerable.Repeat("★", r.Rating))<span class="text-muted">@string.Concat(Enumerable.Repeat("☆", 5 - r.Rating))</span></span>
+                                </div>
+                                <small class="text-muted">@r.CreatedAt.ToPersianDate()</small>
+                                @if (!string.IsNullOrEmpty(r.Comment))
+                                {
+                                    <p class="mb-0 mt-1">@r.Comment</p>
+                                }
+                            </div>
+                        }
+                    </div>
+                }
+            </div>
+        </div>
+
+        <div class="col-lg-4">
+            <div class="dashboard-card">
+                <h5 class="fw-800 mb-3">تخصص‌ها</h5>
+                @if (Model.CategoryNames.Any())
+                {
+                    <div class="d-flex flex-wrap gap-2">
+                        @foreach (var c in Model.CategoryNames)
+                        {
+                            <span class="badge-soft badge-brand">@c</span>
+                        }
+                    </div>
+                }
+                else
+                {
+                    <p class="text-muted small mb-0">اطلاعاتی ثبت نشده.</p>
+                }
+            </div>
+
+            @if (!string.IsNullOrEmpty(Model.BusinessHours))
+            {
+                <div class="dashboard-card mt-3">
+                    <h5 class="fw-800 mb-2">ساعات کاری</h5>
+                    <p class="mb-0">@Model.BusinessHours</p>
+                </div>
+            }
+
+            <div class="dashboard-card mt-3 text-center">
+                <p class="small text-muted mb-2">نیاز به خدمت دارید؟</p>
+                <a asp-controller="ServiceRequests" asp-action="Create" class="btn btn-brand w-100">ثبت درخواست خدمت</a>
+            </div>
+        </div>
+    </div>
+</div>

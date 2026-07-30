@@ -1,0 +1,78 @@
+@model ServiceFormViewModel
+@{
+    var categories = (IReadOnlyList<CategoryDto>)ViewBag.Categories;
+    var isEdit = Model.Id > 0;
+}
+
+<div class="admin-card">
+    <h5 class="admin-card-title">@(isEdit ? "ویرایش خدمت" : "خدمت جدید")</h5>
+    <form asp-action="@(isEdit ? "Edit" : "Create")" method="post">
+        <input type="hidden" asp-for="Id" />
+        <div class="row g-3">
+            <div class="col-md-8">
+                <label asp-for="Title" class="form-label"></label>
+                <input asp-for="Title" class="form-control" />
+                <span asp-validation-for="Title" class="text-danger small"></span>
+            </div>
+            <div class="col-md-4">
+                <label asp-for="CategoryId" class="form-label"></label>
+                <select asp-for="CategoryId" class="form-select" asp-items="@(new SelectList(categories, "Id", "Name"))">
+                    <option value="">انتخاب کنید</option>
+                </select>
+                <span asp-validation-for="CategoryId" class="text-danger small"></span>
+            </div>
+            <div class="col-md-6">
+                <label asp-for="Slug" class="form-label"></label>
+                <input asp-for="Slug" class="form-control" placeholder="خالی بگذارید تا خودکار ساخته شود" />
+            </div>
+            <div class="col-md-6">
+                <label asp-for="BasePrice" class="form-label"></label>
+                <div class="input-group">
+                    <input asp-for="BasePrice" class="form-control" type="number" step="1000" />
+                    <span class="input-group-text">تومان</span>
+                </div>
+            </div>
+            <div class="col-md-4">
+                <label asp-for="EstimatedDurationMinutes" class="form-label"></label>
+                <div class="input-group">
+                    <input asp-for="EstimatedDurationMinutes" class="form-control" type="number" />
+                    <span class="input-group-text">دقیقه</span>
+                </div>
+            </div>
+            <div class="col-md-4">
+                <label asp-for="DisplayOrder" class="form-label"></label>
+                <input asp-for="DisplayOrder" class="form-control" type="number" min="0" />
+            </div>
+            <div class="col-md-4 d-flex align-items-center gap-4">
+                <div class="form-check form-switch">
+                    <input asp-for="IsFixedPrice" class="form-check-input" type="checkbox" />
+                    <label asp-for="IsFixedPrice" class="form-check-label">قیمت ثابت</label>
+                </div>
+                <div class="form-check form-switch">
+                    <input asp-for="IsActive" class="form-check-input" type="checkbox" />
+                    <label asp-for="IsActive" class="form-check-label">فعال</label>
+                </div>
+            </div>
+            <div class="col-md-6">
+                <label asp-for="IconUrl" class="form-label"></label>
+                <input asp-for="IconUrl" class="form-control" />
+            </div>
+            <div class="col-md-6">
+                <label asp-for="ThumbnailUrl" class="form-label"></label>
+                <input asp-for="ThumbnailUrl" class="form-control" />
+            </div>
+            <div class="col-12">
+                <label asp-for="Description" class="form-label"></label>
+                <textarea asp-for="Description" class="form-control" rows="3"></textarea>
+            </div>
+        </div>
+        <div class="mt-3 d-flex gap-2">
+            <button type="submit" class="btn btn-brand">@(isEdit ? "ذخیره تغییرات" : "ایجاد خدمت")</button>
+            <a asp-action="Index" class="btn btn-outline-brand">انصراف</a>
+        </div>
+    </form>
+</div>
+
+@section Scripts {
+    <partial name="_ValidationScriptsPartial" />
+}

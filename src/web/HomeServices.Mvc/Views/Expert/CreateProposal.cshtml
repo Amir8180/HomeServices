@@ -1,0 +1,71 @@
+@model CreateProposalViewModel
+@{
+    ViewData["Title"] = "ارسال پیشنهاد";
+    var request = (ServiceRequestDto)ViewBag.Request;
+}
+
+<div class="container py-4">
+    <div class="row justify-content-center">
+        <div class="col-lg-9">
+            <nav class="mb-3 small">
+                <a asp-action="OpenRequests" class="text-muted">درخواست‌های باز</a>
+                <span class="text-muted"> / </span>
+                <span>ارسال پیشنهاد</span>
+            </nav>
+
+            <div class="dashboard-card mb-4">
+                <h6 class="fw-800 mb-2">جزئیات درخواست</h6>
+                <h5 class="fw-800">@request.Title</h5>
+                <p class="text-muted small mb-2">@request.Description</p>
+                <div class="d-flex gap-3 flex-wrap small text-muted">
+                    @if (!string.IsNullOrEmpty(request.CategoryName)) { <span>🏷️ @request.CategoryName</span> }
+                    @if (!string.IsNullOrEmpty(request.City)) { <span>📍 @request.City</span> }
+                    <span class="badge-soft badge-info-soft">@request.Urgency.ToDisplay()</span>
+                    @if (request.BudgetMin.HasValue || request.BudgetMax.HasValue)
+                    {
+                        <span>💰 بودجه: @(@request.BudgetMin?.ToString("N0") ?? "—") - @(request.BudgetMax?.ToString("N0") ?? "—")</span>
+                    }
+                </div>
+            </div>
+
+            <div class="dashboard-card">
+                <h5 class="fw-800 mb-3">پیشنهاد خود را ثبت کنید</h5>
+                <form asp-action="CreateProposal" method="post">
+                    <input type="hidden" asp-for="RequestId" />
+                    <div class="mb-3">
+                        <label asp-for="Price" class="form-label"></label>
+                        <div class="input-group">
+                            <input asp-for="Price" class="form-control" type="number" step="1000" min="10000" />
+                            <span class="input-group-text">تومان</span>
+                        </div>
+                        <span asp-validation-for="Price" class="text-danger small"></span>
+                    </div>
+                    <div class="row g-3">
+                        <div class="col-md-6">
+                            <label asp-for="EstimatedDurationHours" class="form-label"></label>
+                            <div class="input-group">
+                                <input asp-for="EstimatedDurationHours" class="form-control" type="number" min="1" />
+                                <span class="input-group-text">ساعت</span>
+                            </div>
+                            <span asp-validation-for="EstimatedDurationHours" class="text-danger small"></span>
+                        </div>
+                        <div class="col-md-6">
+                            <label asp-for="AvailableStartDate" class="form-label"></label>
+                            <input asp-for="AvailableStartDate" class="form-control" type="date" />
+                            <span asp-validation-for="AvailableStartDate" class="text-danger small"></span>
+                        </div>
+                    </div>
+                    <div class="mt-3">
+                        <label asp-for="Message" class="form-label"></label>
+                        <textarea asp-for="Message" class="form-control" rows="4" placeholder="توضیحات، شرایط، یا مواردی که مشتری باید بداند..."></textarea>
+                        <span asp-validation-for="Message" class="text-danger small"></span>
+                    </div>
+                    <div class="d-flex gap-2 mt-4">
+                        <button type="submit" class="btn btn-brand">ارسال پیشنهاد</button>
+                        <a asp-action="OpenRequests" class="btn btn-outline-brand">انصراف</a>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+</div>
