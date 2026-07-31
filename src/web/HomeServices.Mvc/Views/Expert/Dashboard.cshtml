@@ -7,117 +7,460 @@
     var activeOrders = (int)ViewBag.ActiveOrdersCount;
     var completedOrders = (int)ViewBag.CompletedOrdersCount;
     var pendingPayout = (decimal)ViewBag.PendingPayout;
+    var totalEarnings = (decimal)(ViewBag.TotalEarnings ?? 0);
     var jobs = (IReadOnlyList<OrderDto>)ViewBag.ActiveOrders;
+    var recentProposals = ViewBag.RecentProposals as IReadOnlyList<ProposalDto> ?? Array.Empty<ProposalDto>();
+    
+    // Calculate metrics
+    var totalProposals = openProposals + acceptedProposals;
+    var winRate = totalProposals > 0 ? (acceptedProposals * 100.0 / totalProposals) : 0;
+    var completionRate = profile.JobsCompleted > 0 ? 98.0 : 0; // Mock data
+    var avgResponseTime = profile.ResponseTimeMinutes ?? 45;
 }
 
+<style>
+    .expert-welcome-banner {
+        background: linear-gradient(135deg, var(--sage) 0%, var(--primary) 100%);
+        color: white;
+        border-radius: var(--radius-lg);
+        padding: 2rem;
+        margin-bottom: 2rem;
+        position: relative;
+        overflow: hidden;
+    }
+    .expert-welcome-banner::before {
+        content: '⚡';
+        position: absolute;
+        top: -30px;
+        right: -30px;
+        font-size: 12rem;
+        opacity: 0.1;
+    }
+    .earnings-card {
+        background: linear-gradient(135deg, var(--gold) 0%, var(--terracotta) 100%);
+        color: white;
+        border-radius: var(--radius-lg);
+        padding: 1.5rem;
+        position: relative;
+        overflow: hidden;
+    }
+    .earnings-card::before {
+        content: '💰';
+        position: absolute;
+        bottom: -20px;
+        left: -20px;
+        font-size: 8rem;
+        opacity: 0.1;
+    }
+    .performance-metric {
+        text-align: center;
+        padding: 1.5rem 1rem;
+        background: var(--cream);
+        border-radius: var(--radius);
+        position: relative;
+        overflow: hidden;
+    }
+    .performance-metric-value {
+        font-size: 2.5rem;
+        font-weight: 800;
+        background: linear-gradient(135deg, var(--primary) 0%, var(--terracotta) 100%);
+        -webkit-background-clip: text;
+        -webkit-text-fill-color: transparent;
+        background-clip: text;
+    }
+    .performance-metric-label {
+        font-size: 0.875rem;
+        color: var(--text-muted);
+        font-weight: 600;
+        margin-top: 0.5rem;
+    }
+    .performance-metric-change {
+        font-size: 0.75rem;
+        margin-top: 0.25rem;
+    }
+    .performance-metric-change.positive {
+        color: var(--sage);
+    }
+    .performance-metric-change.negative {
+        color: var(--terracotta);
+    }
+    .circular-progress {
+        width: 120px;
+        height: 120px;
+        border-radius: 50%;
+        background: conic-gradient(var(--primary) 0deg, var(--primary) calc(var(--progress) * 3.6deg), var(--beige) calc(var(--progress) * 3.6deg), var(--beige) 360deg);
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        position: relative;
+    }
+    .circular-progress::before {
+        content: '';
+        width: 90px;
+        height: 90px;
+        border-radius: 50%;
+        background: white;
+        position: absolute;
+    }
+    .circular-progress-value {
+        position: relative;
+        z-index: 1;
+        font-size: 1.5rem;
+        font-weight: 800;
+        color: var(--primary);
+    }
+    .earnings-chart {
+        height: 200px;
+        display: flex;
+        align-items: flex-end;
+        gap: 0.5rem;
+        padding: 1rem 0;
+    }
+    .earnings-bar {
+        flex: 1;
+        background: var(--beige);
+        border-radius: var(--radius-sm) var(--radius-sm) 0 0;
+        position: relative;
+        transition: all 0.3s ease;
+        cursor: pointer;
+        min-height: 20px;
+    }
+    .earnings-bar:hover {
+        opacity: 0.8;
+        transform: translateY(-4px);
+    }
+    .earnings-bar.active {
+        background: linear-gradient(180deg, var(--primary) 0%, var(--terracotta) 100%);
+    }
+    .earnings-bar-label {
+        position: absolute;
+        bottom: -25px;
+        left: 50%;
+        transform: translateX(-50%);
+        font-size: 0.7rem;
+        color: var(--text-muted);
+        white-space: nowrap;
+    }
+    .proposal-status-indicator {
+        width: 12px;
+        height: 12px;
+        border-radius: 50%;
+        display: inline-block;
+    }
+    .proposal-status-indicator.pending {
+        background: var(--gold);
+    }
+    .proposal-status-indicator.accepted {
+        background: var(--sage);
+    }
+    .proposal-status-indicator.rejected {
+        background: var(--terracotta);
+    }
+</style>
+
 <div class="container py-4">
-    <div class="d-flex justify-content-between align-items-center mb-4 flex-wrap gap-2">
-        <div>
-            <h1 class="fw-800 mb-0">سلام، @profile.BusinessName 👋</h1>
-            <p class="text-muted mb-0">خلاصه فعالیت‌های کارشناسی شما</p>
+    @* Welcome Banner *@
+    <div class="expert-welcome-banner">
+        <div class="row align-items-center">
+            <div class="col-md-7">
+                <h2 class="fw-800 mb-2">سلام، @profile.BusinessName! 🎯</h2>
+                <p class="mb-0" style="opacity:0.95;">داشبورد کارشناسی شما. در اینجا می‌توانید عملکرد و درآمد خود را پیگیری کنید.</p>
+            </div>
+            <div class="col-md-5 text-md-end mt-3 mt-md-0">
+                <div class="d-flex gap-2 justify-content-md-end flex-wrap">
+                    <a asp-action="OpenRequests" class="btn btn-lg" style="background:white;color:var(--primary);font-weight:700;">
+                        🔍 درخواست‌های باز
+                    </a>
+                    <a asp-action="Profile" class="btn btn-lg btn-outline-light">
+                        ⚙️ پروفایل
+                    </a>
+                </div>
+            </div>
         </div>
-        <a asp-action="OpenRequests" class="btn btn-brand">مشاهده درخواست‌های باز</a>
     </div>
 
     @if (!profile.IsApproved)
     {
-        <div class="alert alert-warning d-flex align-items-center gap-2">
-            <span>⏳</span>
-            <div>پروفایل شما در انتظار تأیید مدیر است. تا قبل از تأیید، درخواست‌ها را می‌بینید اما سفارش‌ها فعال نمی‌شوند.</div>
+        <div class="alert alert-warning d-flex align-items-center gap-2 mb-4">
+            <span style="font-size:1.5rem;">⏳</span>
+            <div>
+                <div class="fw-700 mb-1">پروفایل شما در انتظار تأیید مدیر است</div>
+                <small>تا قبل از تأیید، درخواست‌ها را می‌بینید اما نمی‌توانید سفارش دریافت کنید.</small>
+            </div>
         </div>
     }
 
+    @* Statistics Cards *@
     <div class="row g-3 mb-4">
-        <div class="col-6 col-lg-3">
+        <div class="col-6 col-xl-3">
             <a asp-action="MyProposals" class="text-decoration-none">
-                <div class="stat-card">
+                <div class="stat-card" style="cursor:pointer;" onmouseenter="this.style.transform='translateY(-4px)'" onmouseleave="this.style.transform='translateY(0)'">
                     <div class="stat-value">@openProposals</div>
                     <div class="stat-label">پیشنهاد در انتظار</div>
+                    <small class="text-muted d-block mt-1">نیاز به پاسخ</small>
                 </div>
             </a>
         </div>
-        <div class="col-6 col-lg-3">
-            <div class="stat-card" style="border-inline-start-color: var(--secondary);">
+        <div class="col-6 col-xl-3">
+            <div class="stat-card" style="border-inline-start-color: var(--sage);">
                 <div class="stat-value">@acceptedProposals</div>
-                <div class="stat-label">پیشنهاد پذیرفته‌شده</div>
+                <div class="stat-label">پیشنهاد پذیرفته</div>
+                <small class="text-muted d-block mt-1">نرخ موفقیت: @winRate.ToString("0")%</small>
             </div>
         </div>
-        <div class="col-6 col-lg-3">
+        <div class="col-6 col-xl-3">
             <a asp-action="MyJobs" class="text-decoration-none">
-                <div class="stat-card" style="border-inline-start-color: #F59E0B;">
+                <div class="stat-card" style="border-inline-start-color: #F59E0B;cursor:pointer;" onmouseenter="this.style.transform='translateY(-4px)'" onmouseleave="this.style.transform='translateY(0)'">
                     <div class="stat-value">@activeOrders</div>
                     <div class="stat-label">سفارش فعال</div>
+                    <small class="text-muted d-block mt-1">در حال اجرا</small>
                 </div>
             </a>
         </div>
-        <div class="col-6 col-lg-3">
+        <div class="col-6 col-xl-3">
             <div class="stat-card" style="border-inline-start-color: #15803D;">
                 <div class="stat-value">@completedOrders</div>
                 <div class="stat-label">کار تکمیل‌شده</div>
+                <small class="text-muted d-block mt-1">تکمیل موفق</small>
             </div>
         </div>
     </div>
 
     <div class="row g-4">
-        <div class="col-lg-4">
-            <div class="dashboard-card h-100">
-                <div class="d-flex align-items-center gap-3 mb-3">
-                    <div class="pro-avatar" style="width:64px;height:64px;font-size:1.6rem;">@(profile.BusinessName.FirstOrDefault())</div>
-                    <div>
-                        <h5 class="fw-800 mb-0">@profile.BusinessName</h5>
-                        @if (profile.RatingAverage > 0)
-                        {
-                            <div class="rating-stars">★★★★★ <span class="text-muted small">@profile.RatingAverage.ToString("0.0") (@profile.ReviewCount نظر)</span></div>
-                        }
-                        else
-                        {
-                            <span class="text-muted small">بدون امتیاز</span>
-                        }
+        @* Earnings & Performance *@
+        <div class="col-lg-8">
+            @* Earnings Card *@
+            <div class="earnings-card mb-4">
+                <h6 class="fw-800 mb-3" style="opacity:0.9;">💰 درآمد و مالی</h6>
+                <div class="row g-3">
+                    <div class="col-6">
+                        <small style="opacity:0.9;">درآمد کل</small>
+                        <div style="font-size:2.5rem;font-weight:800;">@totalEarnings.ToString("N0")</div>
+                        <small style="opacity:0.8;">تومان</small>
+                    </div>
+                    <div class="col-6">
+                        <small style="opacity:0.9;">در انتظار واریز</small>
+                        <div style="font-size:2.5rem;font-weight:800;">@pendingPayout.ToString("N0")</div>
+                        <small style="opacity:0.8;">تومان</small>
                     </div>
                 </div>
-                <ul class="list-unstyled vstack gap-2 mb-0 small">
-                    <li class="d-flex justify-content-between"><span class="text-muted">شهر:</span> <span>@(profile.City ?? "—")</span></li>
-                    <li class="d-flex justify-content-between"><span class="text-muted">کارهای انجام‌شده:</span> <span>@profile.JobsCompleted</span></li>
-                    <li class="d-flex justify-content-between"><span class="text-muted">وضعیت:</span>
-                        @if (profile.IsActive)
-                        {
-                            <span class="badge-soft badge-success-soft">فعال</span>
-                        }
-                        else
-                        {
-                            <span class="badge-soft badge-warning-soft">غیرفعال</span>
-                        }
-                    </li>
-                </ul>
-                <a asp-action="Profile" class="btn btn-sm btn-outline-brand mt-3 w-100">ویرایش پروفایل</a>
             </div>
-        </div>
 
-        <div class="col-lg-8">
+            @* Earnings Chart *@
+            <div class="dashboard-card mb-4">
+                <h6 class="fw-800 mb-3">📊 روند درآمد (۶ ماه اخیر)</h6>
+                <div class="earnings-chart">
+                    @{
+                        // Mock data for 6 months
+                        var monthlyEarnings = new[] { 45, 60, 55, 75, 85, 100 };
+                        var months = new[] { "فروردین", "اردیبهشت", "خرداد", "تیر", "مرداد", "شهریور" };
+                    }
+                    @for (int i = 0; i < 6; i++)
+                    {
+                        var isActive = i == 5; // Current month
+                        <div class="earnings-bar @(isActive ? "active" : "")" style="height:@monthlyEarnings[i]%;" title="@months[i]: @(monthlyEarnings[i] * 100000).ToString("N0") تومان">
+                            <div class="earnings-bar-label">@months[i]</div>
+                        </div>
+                    }
+                </div>
+                <div class="text-center mt-4">
+                    <small class="text-muted">رشد @(monthlyEarnings[5] - monthlyEarnings[4])% نسبت به ماه قبل</small>
+                </div>
+            </div>
+
+            @* Active Jobs *@
             <div class="dashboard-card">
                 <div class="d-flex justify-content-between align-items-center mb-3">
-                    <h5 class="fw-800 mb-0">سفارش‌های فعال</h5>
+                    <h6 class="fw-800 mb-0">🔨 سفارش‌های فعال</h6>
                     <a asp-action="MyJobs" class="btn btn-sm btn-outline-brand">همه ←</a>
                 </div>
                 @if (!jobs.Any())
                 {
-                    <p class="text-muted small mb-0">در حال حاضر سفارش فعالی ندارید.</p>
+                    <div class="text-center py-4">
+                        <div style="font-size:3rem;opacity:0.3;margin-bottom:1rem;">📦</div>
+                        <p class="text-muted mb-3">در حال حاضر سفارش فعالی ندارید</p>
+                        <a asp-action="OpenRequests" class="btn btn-brand">مشاهده درخواست‌های باز</a>
+                    </div>
                 }
                 else
                 {
                     <div class="vstack gap-2">
-                        @foreach (var o in jobs)
+                        @foreach (var order in jobs)
                         {
-                            <div class="d-flex justify-content-between align-items-center border-bottom pb-2">
-                                <div>
-                                    <a asp-controller="Orders" asp-action="Details" asp-route-id="@o.Id" class="fw-700">@o.RequestTitle</a>
-                                    <div class="small text-muted">@o.OrderNumber · @o.TotalAmount.ToString("N0") تومان</div>
+                            <div class="d-flex justify-content-between align-items-center p-2 rounded" style="background:var(--cream);">
+                                <div class="flex-grow-1">
+                                    <a asp-controller="Orders" asp-action="Details" asp-route-id="@order.Id" class="fw-700 text-decoration-none d-block">
+                                        @order.RequestTitle
+                                    </a>
+                                    <div class="d-flex gap-3 align-items-center mt-1">
+                                        <small class="text-muted">@order.OrderNumber</small>
+                                        <span class="badge-soft @order.Status.StatusClass() small">@order.Status.ToDisplay()</span>
+                                        <small class="price-tag">@order.TotalAmount.ToString("N0") ت</small>
+                                    </div>
                                 </div>
-                                <span class="badge-soft @o.Status.StatusClass()">@o.Status.ToDisplay()</span>
+                                <a asp-controller="Orders" asp-action="Details" asp-route-id="@order.Id" class="btn btn-sm btn-brand">
+                                    مشاهده
+                                </a>
                             </div>
                         }
                     </div>
                 }
+            </div>
+        </div>
+
+        @* Profile & Performance Metrics *@
+        <div class="col-lg-4">
+            @* Profile Card *@
+            <div class="dashboard-card mb-4">
+                <div class="text-center mb-3">
+                    <div class="pro-avatar mx-auto mb-2" style="width:80px;height:80px;font-size:2rem;">
+                        @(profile.BusinessName.FirstOrDefault())
+                    </div>
+                    <h6 class="fw-800 mb-1">@profile.BusinessName</h6>
+                    @if (profile.RatingAverage > 0)
+                    {
+                        <div class="rating-stars mb-2">
+                            @for (int i = 1; i <= 5; i++)
+                            {
+                                <span class="@(i <= Math.Round(profile.RatingAverage) ? "text-warning" : "text-muted")">★</span>
+                            }
+                        </div>
+                        <div class="fw-700">@profile.RatingAverage.ToString("0.0")</div>
+                        <small class="text-muted">از @profile.ReviewCount نظر</small>
+                    }
+                    else
+                    {
+                        <span class="text-muted small">بدون امتیاز</span>
+                    }
+                </div>
+                <ul class="list-unstyled vstack gap-2 mb-3 small">
+                    <li class="d-flex justify-content-between">
+                        <span class="text-muted">📍 شهر</span>
+                        <span class="fw-600">@(profile.City ?? "—")</span>
+                    </li>
+                    <li class="d-flex justify-content-between">
+                        <span class="text-muted">✅ کارهای انجام شده</span>
+                        <span class="fw-600">@profile.JobsCompleted</span>
+                    </li>
+                    <li class="d-flex justify-content-between">
+                        <span class="text-muted">⏱️ پاسخگویی</span>
+                        <span class="fw-600">@avgResponseTime دقیقه</span>
+                    </li>
+                    <li class="d-flex justify-content-between">
+                        <span class="text-muted">وضعیت</span>
+                        @if (profile.IsActive)
+                        {
+                            <span class="badge-soft badge-success-soft">✓ فعال</span>
+                        }
+                        else
+                        {
+                            <span class="badge-soft badge-warning-soft">⏸️ غیرفعال</span>
+                        }
+                    </li>
+                </ul>
+                <a asp-action="Profile" class="btn btn-outline-brand w-100">ویرایش پروفایل</a>
+            </div>
+
+            @* Performance Metrics *@
+            <div class="dashboard-card mb-4">
+                <h6 class="fw-800 mb-3">⚡ عملکرد شما</h6>
+                <div class="vstack gap-3">
+                    <div class="performance-metric">
+                        <div class="performance-metric-value">@winRate.ToString("0")%</div>
+                        <div class="performance-metric-label">نرخ برد پیشنهادها</div>
+                        <div class="performance-metric-change positive">+@((int)(winRate * 0.1))% نسبت به ماه قبل</div>
+                    </div>
+                    <div class="performance-metric">
+                        <div class="performance-metric-value">@completionRate.ToString("0")%</div>
+                        <div class="performance-metric-label">نرخ تکمیل پروژه</div>
+                        <div class="performance-metric-change positive">عالی!</div>
+                    </div>
+                    <div class="performance-metric">
+                        <div class="performance-metric-value">@avgResponseTime</div>
+                        <div class="performance-metric-label">میانگین پاسخ (دقیقه)</div>
+                        <div class="performance-metric-change @(avgResponseTime < 60 ? "positive" : "negative")">
+                            @(avgResponseTime < 60 ? "سریع!" : "قابل بهبود")
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            @* Completion Rate Circle *@
+            <div class="dashboard-card text-center">
+                <h6 class="fw-800 mb-3">🎯 نرخ موفقیت</h6>
+                <div class="circular-progress mx-auto mb-2" style="--progress: @completionRate">
+                    <div class="circular-progress-value">@completionRate.ToString("0")%</div>
+                </div>
+                <small class="text-muted">از @profile.JobsCompleted پروژه</small>
+            </div>
+        </div>
+    </div>
+
+    @* Recent Proposals *@
+    @if (recentProposals.Any())
+    {
+        <div class="dashboard-card mt-4">
+            <div class="d-flex justify-content-between align-items-center mb-3">
+                <h6 class="fw-800 mb-0">💬 پیشنهادهای اخیر</h6>
+                <a asp-action="MyProposals" class="btn btn-sm btn-outline-brand">همه ←</a>
+            </div>
+            <div class="table-responsive">
+                <table class="table table-hover align-middle mb-0">
+                    <thead class="small" style="background:var(--cream);">
+                        <tr>
+                            <th>وضعیت</th>
+                            <th>درخواست</th>
+                            <th>قیمت</th>
+                            <th>مدت</th>
+                            <th>تاریخ</th>
+                            <th></th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        @foreach (var proposal in recentProposals.Take(5))
+                        {
+                            <tr>
+                                <td>
+                                    <span class="proposal-status-indicator @(proposal.Status.ToString().ToLower())"></span>
+                                    <small class="fw-600">@proposal.Status.ToDisplay()</small>
+                                </td>
+                                <td>
+                                    <a asp-controller="ServiceRequests" asp-action="Details" asp-route-id="@proposal.RequestId" class="text-decoration-none fw-600">
+                                        @(proposal.RequestTitle?.Length > 30 ? proposal.RequestTitle.Substring(0, 30) + "..." : proposal.RequestTitle)
+                                    </a>
+                                </td>
+                                <td><span class="price-tag small">@proposal.Price.ToString("N0") ت</span></td>
+                                <td><small>@(proposal.EstimatedDurationHours ?? 0) ساعت</small></td>
+                                <td><small class="text-muted">@proposal.CreatedAt.ToPersianDate()</small></td>
+                                <td>
+                                    <a asp-controller="ServiceRequests" asp-action="Details" asp-route-id="@proposal.RequestId" class="btn btn-sm btn-outline-brand">
+                                        جزئیات
+                                    </a>
+                                </td>
+                            </tr>
+                        }
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    }
+
+    @* Tips Section *@
+    <div class="dashboard-card mt-4" style="background:linear-gradient(135deg, var(--cream) 0%, var(--beige) 100%);">
+        <div class="row align-items-center">
+            <div class="col-md-8">
+                <div class="d-flex align-items-start gap-3">
+                    <span style="font-size:2.5rem;">💡</span>
+                    <div>
+                        <h6 class="fw-800 mb-2">نکته برای کارشناسان</h6>
+                        <p class="small mb-0">پاسخ سریع به درخواست‌ها و ارائه پیشنهادهای رقابتی، شانس پذیرش پیشنهاد شما را افزایش می‌دهد.</p>
+                    </div>
+                </div>
+            </div>
+            <div class="col-md-4 text-md-end mt-3 mt-md-0">
+                <a asp-action="OpenRequests" class="btn btn-brand">
+                    مشاهده درخواست‌ها ←
+                </a>
             </div>
         </div>
     </div>

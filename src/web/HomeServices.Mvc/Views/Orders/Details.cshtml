@@ -5,96 +5,657 @@
     var userIdStr = User.FindFirst(ClaimTypes.NameIdentifier)?.Value;
     var isCustomer = Model.CustomerId.ToString() == userIdStr;
     var isCompleted = Model.Status == OrderStatus.Completed;
+    
+    // Status progression tracking
+    var statuses = new[] {
+        new { Status = OrderStatus.PendingPayment, Label = "در انتظار پرداخت", Icon = "💳", Color = "var(--gold)" },
+        new { Status = OrderStatus.Confirmed, Label = "تأیید شده", Icon = "✓", Color = "var(--sage)" },
+        new { Status = OrderStatus.InProgress, Label = "در حال انجام", Icon = "🔨", Color = "var(--primary)" },
+        new { Status = OrderStatus.Completed, Label = "تکمیل شده", Icon = "🎉", Color = "var(--sage)" }
+    };
+    
+    var currentStatusIndex = Array.FindIndex(statuses, s => s.Status == Model.Status);
+    if (currentStatusIndex == -1) currentStatusIndex = 0;
 }
 
+<style>
+    .order-header {
+        background: linear-gradient(135deg, var(--primary) 0%, var(--terracotta) 100%);
+        color: white;
+        border-radius: var(--radius-lg);
+        padding: 2rem;
+        margin-bottom: 2rem;
+        position: relative;
+        overflow: hidden;
+    }
+    .order-header::before {
+        content: '📦';
+        position: absolute;
+        top: -20px;
+        left: -20px;
+        font-size: 10rem;
+        opacity: 0.1;
+    }
+    .status-tracker {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        position: relative;
+        margin: 2rem 0;
+        padding: 0 1rem;
+    }
+    .status-tracker::before {
+        content: '';
+        position: absolute;
+        top: 20px;
+        left: 1rem;
+        right: 1rem;
+        height: 3px;
+        background: var(--beige);
+        z-index: 0;
+    }
+    .status-tracker-item {
+        flex: 1;
+        text-align: center;
+        position: relative;
+        z-index: 1;
+    }
+    .status-tracker-circle {
+        width: 40px;
+        height: 40px;
+        border-radius: 50%;
+        background: white;
+        border: 3px solid var(--beige);
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        margin: 0 auto 0.5rem;
+        font-size: 1.2rem;
+        transition: all 0.3s ease;
+    }
+    .status-tracker-item.completed .status-tracker-circle {
+        border-color: var(--sage);
+        background: var(--sage);
+        color: white;
+        transform: scale(1.1);
+    }
+    .status-tracker-item.active .status-tracker-circle {
+        border-color: var(--primary);
+        background: white;
+        animation: pulse 2s infinite;
+    }
+    .status-tracker-label {
+        font-size: 0.75rem;
+        font-weight: 600;
+        color: var(--text-muted);
+    }
+    .status-tracker-item.completed .status-tracker-label,
+    .status-tracker-item.active .status-tracker-label {
+        color: var(--primary);
+        font-weight: 700;
+    }
+    @keyframes pulse {
+        0%, 100% { box-shadow: 0 0 0 0 rgba(252, 86, 71, 0.4); }
+        50% { box-shadow: 0 0 0 10px rgba(252, 86, 71, 0); }
+    }
+    .order-timeline {
+        position: relative;
+        padding-right: 2.5rem;
+    }
+    .order-timeline::before {
+        content: '';
+        position: absolute;
+        right: 12px;
+        top: 0;
+        bottom: 0;
+        width: 3px;
+        background: var(--beige);
+    }
+    .timeline-item {
+        position: relative;
+        padding-bottom: 2rem;
+    }
+    .timeline-item:last-child {
+        padding-bottom: 0;
+    }
+    .timeline-dot {
+        position: absolute;
+        right: 0;
+        top: 0;
+        width: 28px;
+        height: 28px;
+        border-radius: 50%;
+        background: white;
+        border: 3px solid var(--primary);
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        font-size: 0.9rem;
+        transform: translateX(50%);
+        z-index: 1;
+    }
+    .timeline-dot.success {
+        border-color: var(--sage);
+        background: var(--sage);
+        color: white;
+    }
+    .timeline-dot.warning {
+        border-color: var(--gold);
+        background: var(--gold);
+        color: white;
+    }
+    .timeline-content {
+        background: var(--cream);
+        padding: 1.25rem;
+        border-radius: var(--radius);
+        border-right: 3px solid var(--primary);
+    }
+    .timeline-content.success {
+        border-right-color: var(--sage);
+    }
+    .timeline-content.warning {
+        border-right-color: var(--gold);
+    }
+    .info-grid {
+        display: grid;
+        grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+        gap: 1.5rem;
+    }
+    .info-item {
+        padding: 1rem;
+        background: var(--cream);
+        border-radius: var(--radius);
+        border-right: 3px solid var(--primary);
+    }
+    .info-item-icon {
+        font-size: 1.5rem;
+        margin-bottom: 0.5rem;
+    }
+    .info-item-label {
+        font-size: 0.75rem;
+        color: var(--text-muted);
+        font-weight: 600;
+        text-transform: uppercase;
+        margin-bottom: 0.25rem;
+    }
+    .info-item-value {
+        font-size: 1.25rem;
+        font-weight: 700;
+        color: var(--text-dark);
+    }
+    .communication-panel {
+        background: var(--cream);
+        border-radius: var(--radius);
+        padding: 1.5rem;
+        max-height: 400px;
+        overflow-y: auto;
+    }
+    .message-item {
+        display: flex;
+        gap: 1rem;
+        margin-bottom: 1.5rem;
+    }
+    .message-item:last-child {
+        margin-bottom: 0;
+    }
+    .message-avatar {
+        width: 40px;
+        height: 40px;
+        border-radius: 50%;
+        background: var(--primary);
+        color: white;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        font-weight: 700;
+        flex-shrink: 0;
+    }
+    .message-content {
+        flex: 1;
+        background: white;
+        padding: 1rem;
+        border-radius: var(--radius);
+        box-shadow: var(--shadow-sm);
+    }
+    .message-header {
+        display: flex;
+        justify-content: between;
+        align-items: center;
+        margin-bottom: 0.5rem;
+    }
+    .message-author {
+        font-weight: 700;
+        font-size: 0.875rem;
+    }
+    .message-time {
+        font-size: 0.75rem;
+        color: var(--text-muted);
+    }
+    .message-text {
+        font-size: 0.875rem;
+        line-height: 1.6;
+    }
+    .attachment-item {
+        display: inline-flex;
+        align-items: center;
+        gap: 0.5rem;
+        padding: 0.5rem 1rem;
+        background: var(--cream);
+        border-radius: var(--radius);
+        text-decoration: none;
+        font-size: 0.875rem;
+        transition: all 0.2s;
+        margin: 0.25rem;
+    }
+    .attachment-item:hover {
+        background: var(--beige);
+        transform: translateY(-2px);
+    }
+    .action-button {
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        gap: 0.5rem;
+        padding: 0.75rem;
+        border-radius: var(--radius);
+        font-weight: 700;
+        transition: all 0.2s;
+    }
+</style>
+
 <div class="container py-4">
+    @* Breadcrumb *@
     <nav aria-label="breadcrumb" class="small mb-3">
-        <a asp-controller="Home" asp-action="Index">خانه</a> /
-        <a asp-controller="Customer" asp-action="MyOrders">سفارش‌های من</a> /
+        <a asp-controller="Home" asp-action="Index" class="text-decoration-none">خانه</a> /
+        <a asp-controller="@(isCustomer ? "Customer" : "Expert")" asp-action="@(isCustomer ? "MyOrders" : "MyJobs")" class="text-decoration-none">
+            @(isCustomer ? "سفارش‌های من" : "کارهای من")
+        </a> /
         <span class="text-muted">@Model.OrderNumber</span>
     </nav>
 
-    <div class="row g-4">
-        <div class="col-lg-8">
-            <div class="dashboard-card">
-                <div class="d-flex justify-content-between align-items-start flex-wrap gap-2 mb-3">
-                    <div>
-                        <h2 class="fw-800 mb-1">سفارش @Model.OrderNumber</h2>
-                        <p class="text-muted mb-0">@Model.RequestTitle</p>
-                    </div>
-                    <span class="badge-soft @Model.Status.StatusClass()">@Model.Status.ToDisplay()</span>
+    @* Order Header *@
+    <div class="order-header">
+        <div class="row align-items-center">
+            <div class="col-md-8">
+                <div class="d-flex align-items-center gap-2 mb-2">
+                    <h2 class="fw-800 mb-0">@Model.OrderNumber</h2>
+                    <span class="badge" style="background:rgba(255,255,255,0.2);">@Model.Status.ToDisplay()</span>
                 </div>
+                <h5 class="mb-2" style="opacity:0.95;">@Model.RequestTitle</h5>
+                <div class="d-flex gap-3 small" style="opacity:0.9;">
+                    <span>🕒 @Model.CreatedAt.ToPersianDate()</span>
+                    @if (Model.ScheduledDate.HasValue)
+                    {
+                        <span>📅 زمان‌بندی: @Model.ScheduledDate.Value.ToPersianDate()</span>
+                    }
+                </div>
+            </div>
+            <div class="col-md-4 text-md-end mt-3 mt-md-0">
+                <div style="font-size:2.5rem;font-weight:800;line-height:1;">@Model.TotalAmount.ToString("N0")</div>
+                <div style="opacity:0.9;">تومان</div>
+            </div>
+        </div>
+    </div>
 
-                <hr />
-
-                <div class="row g-3">
-                    <div class="col-md-6">
-                        <small class="text-muted d-block">مبلغ سفارش</small>
-                        <span class="price-tag fs-5">@Model.TotalAmount.ToString("N0") تومان</span>
+    @* Status Tracker *@
+    <div class="dashboard-card mb-4">
+        <h6 class="fw-800 mb-4">🚀 وضعیت سفارش</h6>
+        <div class="status-tracker">
+            @for (int i = 0; i < statuses.Length; i++)
+            {
+                var status = statuses[i];
+                var isCompleted = i < currentStatusIndex;
+                var isActive = i == currentStatusIndex;
+                var cssClass = isCompleted ? "completed" : (isActive ? "active" : "");
+                
+                <div class="status-tracker-item @cssClass">
+                    <div class="status-tracker-circle">
+                        @if (isCompleted)
+                        {
+                            <span>✓</span>
+                        }
+                        else
+                        {
+                            <span>@status.Icon</span>
+                        }
                     </div>
-                    <div class="col-md-6">
-                        <small class="text-muted d-block">تاریخ ثبت</small>
-                        <span>@Model.CreatedAt.ToPersianDate()</span>
+                    <div class="status-tracker-label">@status.Label</div>
+                    @if (isActive)
+                    {
+                        <small class="text-primary fw-600 d-block mt-1">فعلی</small>
+                    }
+                </div>
+            }
+        </div>
+    </div>
+
+    <div class="row g-4">
+        @* Main Content *@
+        <div class="col-lg-8">
+            @* Order Information *@
+            <div class="dashboard-card mb-4">
+                <h6 class="fw-800 mb-3">📋 اطلاعات سفارش</h6>
+                <div class="info-grid">
+                    <div class="info-item">
+                        <div class="info-item-icon">💰</div>
+                        <div class="info-item-label">مبلغ کل</div>
+                        <div class="info-item-value">@Model.TotalAmount.ToString("N0") ت</div>
+                    </div>
+                    <div class="info-item" style="border-right-color: var(--sage);">
+                        <div class="info-item-icon">📅</div>
+                        <div class="info-item-label">تاریخ ثبت</div>
+                        <div class="info-item-value" style="font-size:1rem;">@Model.CreatedAt.ToPersianDate()</div>
                     </div>
                     @if (Model.ScheduledDate.HasValue)
                     {
-                        <div class="col-md-6">
-                            <small class="text-muted d-block">تاریخ زمان‌بندی</small>
-                            <span>@Model.ScheduledDate.Value.ToPersianDate()</span>
+                        <div class="info-item" style="border-right-color: var(--gold);">
+                            <div class="info-item-icon">⏰</div>
+                            <div class="info-item-label">زمان‌بندی</div>
+                            <div class="info-item-value" style="font-size:1rem;">@Model.ScheduledDate.Value.ToPersianDate()</div>
                         </div>
                     }
                     @if (Model.CompletedDate.HasValue)
                     {
-                        <div class="col-md-6">
-                            <small class="text-muted d-block">تاریخ تکمیل</small>
-                            <span>@Model.CompletedDate.Value.ToPersianDate()</span>
-                        </div>
-                    }
-                    @if (!string.IsNullOrEmpty(Model.Notes))
-                    {
-                        <div class="col-12">
-                            <small class="text-muted d-block">یادداشت</small>
-                            <span>@Model.Notes</span>
+                        <div class="info-item" style="border-right-color: var(--sage);">
+                            <div class="info-item-icon">✅</div>
+                            <div class="info-item-label">تاریخ تکمیل</div>
+                            <div class="info-item-value" style="font-size:1rem;">@Model.CompletedDate.Value.ToPersianDate()</div>
                         </div>
                     }
                 </div>
-
-                @if (!string.IsNullOrEmpty(Model.ExpertBusinessName))
+                
+                @if (!string.IsNullOrEmpty(Model.Notes))
                 {
                     <hr />
-                    <h6 class="fw-800 mb-2">کارشناس</h6>
-                    <div class="d-flex align-items-center gap-3">
-                        <span class="pro-avatar">@(Model.ExpertBusinessName.FirstOrDefault())</span>
-                        <span class="fw-600">@Model.ExpertBusinessName</span>
+                    <div>
+                        <small class="text-muted fw-600 d-block mb-2">📝 یادداشت</small>
+                        <p class="mb-0">@Model.Notes</p>
                     </div>
                 }
             </div>
+
+            @* Expert Information *@
+            @if (!string.IsNullOrEmpty(Model.ExpertBusinessName))
+            {
+                <div class="dashboard-card mb-4">
+                    <h6 class="fw-800 mb-3">👨‍🔧 کارشناس</h6>
+                    <div class="d-flex align-items-center justify-content-between">
+                        <div class="d-flex align-items-center gap-3">
+                            <div class="pro-avatar" style="width:60px;height:60px;font-size:1.5rem;">
+                                @(Model.ExpertBusinessName.FirstOrDefault())
+                            </div>
+                            <div>
+                                <div class="fw-700 fs-5">@Model.ExpertBusinessName</div>
+                                @if (Model.ExpertRating > 0)
+                                {
+                                    <div class="rating-stars">
+                                        @for (int i = 1; i <= 5; i++)
+                                        {
+                                            <span class="@(i <= Math.Round(Model.ExpertRating) ? "text-warning" : "text-muted")">★</span>
+                                        }
+                                        <span class="small text-muted ms-1">@Model.ExpertRating.ToString("0.0")</span>
+                                    </div>
+                                }
+                            </div>
+                        </div>
+                        @if (Model.ExpertId > 0)
+                        {
+                            <a asp-controller="Experts" asp-action="Details" asp-route-id="@Model.ExpertId" class="btn btn-outline-brand">
+                                مشاهده پروفایل
+                            </a>
+                        }
+                    </div>
+                </div>
+            }
+
+            @* Order Timeline *@
+            <div class="dashboard-card">
+                <h6 class="fw-800 mb-3">📅 تاریخچه سفارش</h6>
+                <div class="order-timeline">
+                    @* Timeline items - Mock data for demonstration *@
+                    
+                    @if (Model.CompletedDate.HasValue)
+                    {
+                        <div class="timeline-item">
+                            <div class="timeline-dot success">🎉</div>
+                            <div class="timeline-content success">
+                                <div class="d-flex justify-content-between align-items-start mb-2">
+                                    <div class="fw-700">سفارش تکمیل شد</div>
+                                    <small class="text-muted">@Model.CompletedDate.Value.ToPersianDate()</small>
+                                </div>
+                                <small class="text-muted">سفارش با موفقیت انجام شد و تکمیل گردید.</small>
+                            </div>
+                        </div>
+                    }
+                    
+                    @if (Model.Status == OrderStatus.InProgress || Model.Status == OrderStatus.Completed)
+                    {
+                        <div class="timeline-item">
+                            <div class="timeline-dot @(Model.Status == OrderStatus.InProgress ? "" : "success")">🔨</div>
+                            <div class="timeline-content @(Model.Status == OrderStatus.InProgress ? "" : "success")">
+                                <div class="d-flex justify-content-between align-items-start mb-2">
+                                    <div class="fw-700">کار شروع شد</div>
+                                    <small class="text-muted">@Model.ScheduledDate?.ToPersianDate()</small>
+                                </div>
+                                <small class="text-muted">کارشناس شروع به انجام کار کرده است.</small>
+                            </div>
+                        </div>
+                    }
+                    
+                    @if (Model.Status != OrderStatus.PendingPayment)
+                    {
+                        <div class="timeline-item">
+                            <div class="timeline-dot success">✓</div>
+                            <div class="timeline-content success">
+                                <div class="d-flex justify-content-between align-items-start mb-2">
+                                    <div class="fw-700">پرداخت تأیید شد</div>
+                                    <small class="text-muted">@Model.CreatedAt.AddHours(1).ToPersianDate()</small>
+                                </div>
+                                <small class="text-muted">پرداخت شما با موفقیت انجام و سفارش تأیید شد.</small>
+                            </div>
+                        </div>
+                    }
+                    
+                    <div class="timeline-item">
+                        <div class="timeline-dot @(Model.Status == OrderStatus.PendingPayment ? "" : "success")">📦</div>
+                        <div class="timeline-content @(Model.Status == OrderStatus.PendingPayment ? "warning" : "success")">
+                            <div class="d-flex justify-content-between align-items-start mb-2">
+                                <div class="fw-700">سفارش ایجاد شد</div>
+                                <small class="text-muted">@Model.CreatedAt.ToPersianDate()</small>
+                            </div>
+                            <small class="text-muted">سفارش شما ثبت شد و در انتظار پرداخت است.</small>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            @* Communication Panel *@
+            <div class="dashboard-card mt-4">
+                <h6 class="fw-800 mb-3">💬 ارتباطات</h6>
+                <div class="communication-panel">
+                    @* Mock messages for demonstration *@
+                    <div class="message-item">
+                        <div class="message-avatar">@(isCustomer ? "ک" : Model.ExpertBusinessName?.FirstOrDefault())</div>
+                        <div class="message-content">
+                            <div class="message-header">
+                                <span class="message-author">@(isCustomer ? "کارشناس" : Model.ExpertBusinessName)</span>
+                                <span class="message-time">@Model.CreatedAt.AddDays(1).ToPersianDate()</span>
+                            </div>
+                            <div class="message-text">
+                                سلام، برای انجام این کار نیاز به دسترسی به محل کار دارم. لطفاً ساعت مناسب خود را اعلام کنید.
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <div class="message-item">
+                        <div class="message-avatar" style="background:var(--sage);">@(isCustomer ? User.Identity?.Name?.FirstOrDefault() : "م")</div>
+                        <div class="message-content">
+                            <div class="message-header">
+                                <span class="message-author">@(isCustomer ? "شما" : "مشتری")</span>
+                                <span class="message-time">@Model.CreatedAt.AddDays(2).ToPersianDate()</span>
+                            </div>
+                            <div class="message-text">
+                                سلام، فردا ساعت ۱۰ صبح مناسب است؟
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <div class="text-center py-3">
+                        <small class="text-muted">🔒 ارتباط امن از طریق پلتفرم</small>
+                    </div>
+                </div>
+                
+                @* Message Input *@
+                <div class="mt-3">
+                    <div class="input-group">
+                        <input type="text" class="form-control" placeholder="پیام خود را بنویسید..." />
+                        <button class="btn btn-brand" type="button">
+                            <span>ارسال</span> 📤
+                        </button>
+                    </div>
+                </div>
+            </div>
+
+            @* Attachments *@
+            <div class="dashboard-card mt-4">
+                <h6 class="fw-800 mb-3">📎 پیوست‌ها</h6>
+                <div class="d-flex flex-wrap gap-2">
+                    <a href="#" class="attachment-item">
+                        <span>📄</span>
+                        <span>مدارک سفارش.pdf</span>
+                        <small class="text-muted">(۲.۳ مگابایت)</small>
+                    </a>
+                    <a href="#" class="attachment-item">
+                        <span>🖼️</span>
+                        <span>عکس محل کار.jpg</span>
+                        <small class="text-muted">(۱.۸ مگابایت)</small>
+                    </a>
+                </div>
+                <div class="mt-3">
+                    <button class="btn btn-sm btn-outline-brand" type="button">
+                        <span>➕ افزودن فایل</span>
+                    </button>
+                </div>
+            </div>
         </div>
 
+        @* Sidebar - Actions *@
         <div class="col-lg-4">
-            <div class="dashboard-card">
-                <h6 class="fw-800 mb-3">عملیات</h6>
-
-                @if (isCustomer && Model.Status == OrderStatus.PendingPayment)
-                {
-                    <form asp-action="Pay" asp-route-id="@Model.Id" method="post"
-                          onsubmit="return confirm('پرداخت @Model.TotalAmount.ToString("N0") تومان را تأیید می‌کنید؟ (درگاه نمایشی)');">
-                        <button type="submit" class="btn btn-brand w-100 mb-2">💳 پرداخت آنلاین</button>
-                    </form>
-                }
-
-                @if (isCompleted && isCustomer)
-                {
-                    <a asp-controller="Reviews" asp-action="Create" asp-route-orderId="@Model.Id" class="btn btn-secondary-brand w-100 mb-2">
-                        ⭐ ثبت نظر و امتیاز
+            @* Action Buttons *@
+            <div class="dashboard-card mb-4" style="position:sticky;top:20px;">
+                <h6 class="fw-800 mb-3">⚡ عملیات</h6>
+                
+                <div class="vstack gap-2">
+                    @if (isCustomer && Model.Status == OrderStatus.PendingPayment)
+                    {
+                        <form asp-action="Pay" asp-route-id="@Model.Id" method="post"
+                              onsubmit="return confirm('پرداخت @Model.TotalAmount.ToString("N0") تومان را تأیید می‌کنید؟');">
+                            <button type="submit" class="btn btn-brand w-100 action-button">
+                                <span>💳</span>
+                                <span>پرداخت آنلاین</span>
+                            </button>
+                        </form>
+                        <small class="text-muted text-center">پرداخت امن از طریق درگاه بانکی</small>
+                    }
+                    
+                    @if (Model.Status == OrderStatus.InProgress && !isCustomer)
+                    {
+                        <button type="button" class="btn btn-brand w-100 action-button" onclick="alert('ویژگی ثبت پیشرفت به زودی اضافه می‌شود')">
+                            <span>📝</span>
+                            <span>ثبت پیشرفت کار</span>
+                        </button>
+                    }
+                    
+                    @if (isCompleted && isCustomer && !Model.HasReview)
+                    {
+                        <a asp-controller="Reviews" asp-action="Create" asp-route-orderId="@Model.Id" class="btn btn-secondary-brand w-100 action-button">
+                            <span>⭐</span>
+                            <span>ثبت نظر و امتیاز</span>
+                        </a>
+                    }
+                    
+                    @if (isCompleted && isCustomer && Model.HasReview)
+                    {
+                        <div class="alert alert-success small mb-0">
+                            ✓ شما قبلاً نظر خود را ثبت کرده‌اید
+                        </div>
+                    }
+                    
+                    <a asp-controller="ServiceRequests" asp-action="Details" asp-route-id="@Model.RequestId" class="btn btn-outline-brand w-100 action-button">
+                        <span>📋</span>
+                        <span>مشاهده درخواست</span>
                     </a>
+                    
+                    <button type="button" class="btn btn-outline-brand w-100 action-button" onclick="window.print()">
+                        <span>🖨️</span>
+                        <span>چاپ سفارش</span>
+                    </button>
+                </div>
+
+                <hr />
+
+                @* Payment Details *@
+                <div>
+                    <small class="text-muted fw-600 d-block mb-2">💰 جزئیات مالی</small>
+                    <div class="vstack gap-2 small">
+                        <div class="d-flex justify-content-between">
+                            <span>مبلغ پایه:</span>
+                            <span class="fw-600">@Model.TotalAmount.ToString("N0") ت</span>
+                        </div>
+                        <div class="d-flex justify-content-between">
+                            <span>مالیات:</span>
+                            <span class="fw-600">۰ ت</span>
+                        </div>
+                        <hr class="my-1" />
+                        <div class="d-flex justify-content-between fw-700">
+                            <span>جمع کل:</span>
+                            <span class="price-tag">@Model.TotalAmount.ToString("N0") ت</span>
+                        </div>
+                    </div>
+                </div>
+
+                <hr />
+
+                @* Order Details *@
+                <div>
+                    <small class="text-muted fw-600 d-block mb-2">📄 اطلاعات سفارش</small>
+                    <div class="vstack gap-1 small">
+                        <div class="d-flex justify-content-between">
+                            <span class="text-muted">شماره سفارش:</span>
+                            <span class="fw-600">@Model.OrderNumber</span>
+                        </div>
+                        <div class="d-flex justify-content-between">
+                            <span class="text-muted">شناسه:</span>
+                            <span class="fw-600">#@Model.Id</span>
+                        </div>
+                        <div class="d-flex justify-content-between">
+                            <span class="text-muted">تاریخ ثبت:</span>
+                            <span class="fw-600">@Model.CreatedAt.ToPersianDate()</span>
+                        </div>
+                    </div>
+                </div>
+
+                @if (!isCompleted)
+                {
+                    <hr />
+                    <div class="alert alert-info small mb-0">
+                        <strong>💡 نکته:</strong> در صورت بروز مشکل، با پشتیبانی تماس بگیرید.
+                    </div>
                 }
+            </div>
 
-                <a asp-controller="ServiceRequests" asp-action="Details" asp-route-id="@Model.RequestId" class="btn btn-outline-brand w-100 mb-2">مشاهده درخواست</a>
-
-                <div class="small text-muted mt-3">
-                    <div class="d-flex justify-content-between"><span>شماره سفارش:</span><span>@Model.OrderNumber</span></div>
-                    <div class="d-flex justify-content-between"><span>شناسه:</span><span>#@Model.Id</span></div>
+            @* Help Card *@
+            <div class="dashboard-card" style="background:linear-gradient(135deg, var(--cream) 0%, var(--beige) 100%);">
+                <div class="text-center">
+                    <div style="font-size:3rem;margin-bottom:1rem;">🆘</div>
+                    <h6 class="fw-800 mb-2">نیاز به کمک دارید؟</h6>
+                    <p class="small text-muted mb-3">تیم پشتیبانی ما آماده پاسخگویی به سوالات شماست.</p>
+                    <a href="tel:02112345678" class="btn btn-outline-brand w-100 mb-2">
+                        📞 تماس با پشتیبانی
+                    </a>
+                    <a asp-controller="Home" asp-action="Contact" class="btn btn-sm btn-outline-brand w-100">
+                        ارسال پیام
+                    </a>
                 </div>
             </div>
         </div>

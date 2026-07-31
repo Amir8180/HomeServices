@@ -7,88 +7,217 @@
 }
 
 <div class="container py-4">
-    <div class="d-flex justify-content-between align-items-end mb-4">
+    @* Header with View Toggle *@
+    <div class="d-flex justify-content-between align-items-end mb-4 flex-wrap gap-3">
         <div>
-            <h1 class="fw-800 mb-0">همه خدمات</h1>
-            <p class="text-muted mb-0">@Model.TotalCount خدمت یافت شد</p>
+            <h1 class="fw-800 mb-1">همه خدمات</h1>
+            <p class="text-muted mb-0">
+                <span class="fw-600">@Model.TotalCount</span> خدمت یافت شد
+                @if (!string.IsNullOrEmpty(filter.SearchTerm))
+                {
+                    <span> برای "<span class="fw-600">@filter.SearchTerm</span>"</span>
+                }
+            </p>
+        </div>
+        <div class="d-flex gap-2 align-items-center">
+            <small class="text-muted me-2">نمایش:</small>
+            <div class="btn-group btn-group-sm" role="group">
+                <button type="button" class="btn btn-outline-brand active" id="viewGrid" onclick="toggleView('grid')">
+                    <span style="font-size:1rem;">▦</span> شبکه
+                </button>
+                <button type="button" class="btn btn-outline-brand" id="viewList" onclick="toggleView('list')">
+                    <span style="font-size:1rem;">☰</span> لیست
+                </button>
+            </div>
         </div>
     </div>
 
     <div class="row g-4">
-        @* Sidebar filters *@
+        @* Enhanced Sidebar Filters *@
         <div class="col-lg-3">
-            <div class="dashboard-card">
-                <h6 class="fw-800 mb-3">🔍 فیلترها</h6>
-                <form method="get" asp-action="Index" class="vstack gap-3">
+            <div class="dashboard-card sticky-top" style="top:1rem;">
+                <div class="d-flex justify-content-between align-items-center mb-3">
+                    <h6 class="fw-800 mb-0">
+                        <span style="font-size:1.2rem;margin-left:0.5rem;">🔍</span>
+                        فیلترها
+                    </h6>
+                    @if (!string.IsNullOrEmpty(filter.SearchTerm) || filter.CategoryId.HasValue || filter.MinPrice.HasValue || filter.MaxPrice.HasValue)
+                    {
+                        <a asp-action="Index" class="btn btn-sm btn-link text-danger p-0" style="text-decoration:none;">پاک کردن</a>
+                    }
+                </div>
+                
+                <form method="get" asp-action="Index" class="vstack gap-3" id="filterForm">
+                    @* Search *@
                     <div>
-                        <label class="form-label small fw-600">جستجو</label>
-                        <input type="text" name="search" value="@filter.SearchTerm" class="form-control form-control-sm" placeholder="نام خدمت..." />
+                        <label class="form-label small fw-600 mb-2">
+                            <span style="font-size:1rem;margin-left:0.25rem;">🔎</span>
+                            جستجو
+                        </label>
+                        <input type="text" name="search" value="@filter.SearchTerm" class="form-control" placeholder="نام خدمت..." />
                     </div>
+
+                    @* Category Filter *@
                     <div>
-                        <label class="form-label small fw-600">دسته‌بندی</label>
-                        <select name="categoryId" class="form-select form-select-sm" asp-items="@(new SelectList(categories, "Id", "Name", filter.CategoryId))">
-                            <option value="">همه</option>
+                        <label class="form-label small fw-600 mb-2">
+                            <span style="font-size:1rem;margin-left:0.25rem;">🏷️</span>
+                            دسته‌بندی
+                        </label>
+                        <select name="categoryId" class="form-select" onchange="this.form.submit()">
+                            <option value="">همه دسته‌ها</option>
+                            @foreach (var cat in categories)
+                            {
+                                <option value="@cat.Id" selected="@(filter.CategoryId == cat.Id)">@cat.Name</option>
+                            }
                         </select>
                     </div>
-                    <div class="row g-2">
-                        <div class="col-6">
-                            <label class="form-label small fw-600">حداقل قیمت</label>
-                            <input type="number" name="minPrice" value="@filter.MinPrice" class="form-control form-control-sm" />
+
+                    @* Price Range *@
+                    <div>
+                        <label class="form-label small fw-600 mb-2">
+                            <span style="font-size:1rem;margin-left:0.25rem;">💰</span>
+                            محدوده قیمت (تومان)
+                        </label>
+                        <div class="row g-2">
+                            <div class="col-6">
+                                <input type="number" name="minPrice" value="@filter.MinPrice" class="form-control" placeholder="از" step="10000" />
+                            </div>
+                            <div class="col-6">
+                                <input type="number" name="maxPrice" value="@filter.MaxPrice" class="form-control" placeholder="تا" step="10000" />
+                            </div>
                         </div>
-                        <div class="col-6">
-                            <label class="form-label small fw-600">حداکثر قیمت</label>
-                            <input type="number" name="maxPrice" value="@filter.MaxPrice" class="form-control form-control-sm" />
+                        <div class="d-flex justify-content-between mt-2">
+                            <small class="text-muted">۰</small>
+                            <small class="text-muted">۱۰M+</small>
                         </div>
                     </div>
+
+                    @* Sort By *@
                     <div>
-                        <label class="form-label small fw-600">مرتب‌سازی</label>
-                        <select name="sortBy" class="form-select form-select-sm">
-                            <option value="" selected="@(string.IsNullOrEmpty(filter.SortBy))">پیش‌فرض</option>
+                        <label class="form-label small fw-600 mb-2">
+                            <span style="font-size:1rem;margin-left:0.25rem;">⚡</span>
+                            مرتب‌سازی
+                        </label>
+                        <select name="sortBy" class="form-select" onchange="this.form.submit()">
+                            <option value="" selected="@(string.IsNullOrEmpty(filter.SortBy))">محبوب‌ترین</option>
                             <option value="price" selected="@(filter.SortBy == "price")">ارزان‌ترین</option>
                             <option value="pricedesc" selected="@(filter.SortBy == "pricedesc")">گران‌ترین</option>
-                            <option value="name" selected="@(filter.SortBy == "name")">الفبایی</option>
+                            <option value="name" selected="@(filter.SortBy == "name")">الفبایی (الف - ی)</option>
                         </select>
                     </div>
-                    <button type="submit" class="btn btn-brand btn-sm">اعمال فیلتر</button>
-                    <a asp-action="Index" class="btn btn-outline-brand btn-sm">پاک کردن</a>
+
+                    @* Filter Actions *@
+                    <div class="d-grid gap-2">
+                        <button type="submit" class="btn btn-brand">
+                            اعمال فیلترها
+                        </button>
+                    </div>
                 </form>
+
+                @* Active Filters Display *@
+                @if (!string.IsNullOrEmpty(filter.SearchTerm) || filter.CategoryId.HasValue || filter.MinPrice.HasValue || filter.MaxPrice.HasValue)
+                {
+                    <hr class="my-3" />
+                    <div>
+                        <small class="text-muted d-block mb-2 fw-600">فیلترهای فعال:</small>
+                        <div class="d-flex flex-wrap gap-1">
+                            @if (!string.IsNullOrEmpty(filter.SearchTerm))
+                            {
+                                <span class="badge-soft badge-brand small">🔎 @filter.SearchTerm</span>
+                            }
+                            @if (filter.CategoryId.HasValue)
+                            {
+                                var selectedCat = categories.FirstOrDefault(c => c.Id == filter.CategoryId.Value);
+                                if (selectedCat != null)
+                                {
+                                    <span class="badge-soft badge-brand small">🏷️ @selectedCat.Name</span>
+                                }
+                            }
+                            @if (filter.MinPrice.HasValue || filter.MaxPrice.HasValue)
+                            {
+                                <span class="badge-soft badge-brand small">💰 @(filter.MinPrice?.ToString("N0") ?? "۰") - @(filter.MaxPrice?.ToString("N0") ?? "∞")</span>
+                            }
+                        </div>
+                    </div>
+                }
+
+                @* Quick Categories *@
+                <hr class="my-3" />
+                <div>
+                    <small class="text-muted d-block mb-2 fw-600">دسترسی سریع:</small>
+                    <div class="d-flex flex-wrap gap-1">
+                        @foreach (var cat in categories.Take(5))
+                        {
+                            <a asp-action="Index" asp-route-categoryId="@cat.Id" class="badge-soft badge-brand small text-decoration-none">
+                                @cat.Name
+                            </a>
+                        }
+                    </div>
+                </div>
             </div>
         </div>
 
-        @* Services grid *@
+        @* Services Grid/List *@
         <div class="col-lg-9">
             @if (!Model.Items.Any())
             {
                 <div class="empty-state dashboard-card">
-                    <div class="icon">🔍</div>
-                    <h5 class="fw-800">خدمتی یافت نشد</h5>
-                    <p class="text-muted">فیلترها را تغییر دهید یا همه خدمات را ببینید.</p>
+                    <div class="icon" style="font-size:4rem;margin-bottom:1rem;">🔍</div>
+                    <h5 class="fw-800 mb-2">خدمتی یافت نشد</h5>
+                    <p class="text-muted mb-3">متأسفانه با این فیلترها نتیجه‌ای یافت نشد.</p>
+                    <a asp-action="Index" class="btn btn-brand">مشاهده همه خدمات</a>
                 </div>
             }
             else
             {
-                <div class="row g-3 row-cols-1 row-cols-md-2 row-cols-xl-3">
+                @* Grid View *@
+                <div id="servicesGrid" class="row g-3 row-cols-1 row-cols-md-2 row-cols-xl-3">
                     @foreach (var svc in Model.Items)
                     {
-                        <div class="col">
-                            <div class="card-service">
-                                <div class="card-thumb">🛠️</div>
+                        <div class="col service-item">
+                            <div class="card-service" style="height:100%;transition:all 0.3s ease;" onmouseenter="this.style.transform='translateY(-8px)';this.style.boxShadow='var(--shadow-lg)';" onmouseleave="this.style.transform='translateY(0)';this.style.boxShadow='var(--shadow)';">
+                                <div class="card-thumb" style="position:relative;background:linear-gradient(135deg, var(--cream) 0%, var(--beige) 100%);">
+                                    <div style="font-size:3rem;opacity:0.3;">🛠️</div>
+                                    @if (svc.IsFixedPrice)
+                                    {
+                                        <span class="badge-soft badge-success-soft" style="position:absolute;top:0.5rem;right:0.5rem;font-size:0.75rem;">
+                                            ✓ قیمت ثابت
+                                        </span>
+                                    }
+                                </div>
                                 <div class="card-body">
-                                    <a asp-action="Details" asp-route-id="@svc.Id" class="card-title-link">@svc.Title</a>
-                                    <p class="card-meta mt-1 mb-2">
-                                        <span class="badge-soft badge-brand">@(svc.CategoryName ?? "عمومی")</span>
-                                    </p>
-                                    <p class="small text-muted">@(string.IsNullOrEmpty(svc.Description) ? "" : (svc.Description.Length > 80 ? svc.Description.Substring(0, 80) + "..." : svc.Description))</p>
-                                    <div class="d-flex justify-content-between align-items-center mt-2">
+                                    <div class="d-flex justify-content-between align-items-start mb-2">
+                                        <a asp-action="Details" asp-route-id="@svc.Id" class="card-title-link flex-grow-1" style="line-height:1.4;">
+                                            @svc.Title
+                                        </a>
+                                    </div>
+                                    
+                                    <div class="mb-2">
+                                        <span class="badge-soft badge-brand small">@(svc.CategoryName ?? "خدمت عمومی")</span>
+                                    </div>
+                                    
+                                    @if (!string.IsNullOrEmpty(svc.Description))
+                                    {
+                                        <p class="small text-muted mb-3" style="line-height:1.5;min-height:3rem;">
+                                            @(svc.Description.Length > 80 ? svc.Description.Substring(0, 80) + "..." : svc.Description)
+                                        </p>
+                                    }
+                                    
+                                    <div class="d-flex justify-content-between align-items-center mt-auto">
                                         @if (svc.BasePrice.HasValue)
                                         {
-                                            <span class="price-tag">@svc.BasePrice.Value.ToString("N0") ت</span>
+                                            <div>
+                                                <small class="text-muted d-block" style="font-size:0.7rem;">شروع از</small>
+                                                <span class="price-tag fw-700">@svc.BasePrice.Value.ToString("N0") ت</span>
+                                            </div>
                                         }
                                         else
                                         {
-                                            <span class="card-meta">توافقی</span>
+                                            <span class="card-meta">قیمت توافقی</span>
                                         }
-                                        <a asp-controller="ServiceRequests" asp-action="Create" asp-route-serviceId="@svc.Id" class="btn btn-sm btn-outline-brand">درخواست</a>
+                                        <a asp-controller="ServiceRequests" asp-action="Create" asp-route-serviceId="@svc.Id" class="btn btn-sm btn-brand" style="white-space:nowrap;">
+                                            ثبت درخواست
+                                        </a>
                                     </div>
                                 </div>
                             </div>
@@ -96,27 +225,199 @@
                     }
                 </div>
 
-                @* Pagination *@
+                @* List View (Hidden by default) *@
+                <div id="servicesList" class="vstack gap-3" style="display:none;">
+                    @foreach (var svc in Model.Items)
+                    {
+                        <div class="dashboard-card service-item" style="transition:all 0.3s ease;" onmouseenter="this.style.boxShadow='var(--shadow-lg)';" onmouseleave="this.style.boxShadow='var(--shadow)';">
+                            <div class="row g-3 align-items-center">
+                                <div class="col-md-3">
+                                    <div class="card-thumb" style="height:140px;border-radius:var(--radius);background:linear-gradient(135deg, var(--cream) 0%, var(--beige) 100%);position:relative;">
+                                        <div style="font-size:3rem;opacity:0.3;">🛠️</div>
+                                        @if (svc.IsFixedPrice)
+                                        {
+                                            <span class="badge-soft badge-success-soft" style="position:absolute;top:0.5rem;right:0.5rem;font-size:0.7rem;">
+                                                ✓ ثابت
+                                            </span>
+                                        }
+                                    </div>
+                                </div>
+                                <div class="col-md-6">
+                                    <div class="mb-2">
+                                        <span class="badge-soft badge-brand small">@(svc.CategoryName ?? "عمومی")</span>
+                                    </div>
+                                    <a asp-action="Details" asp-route-id="@svc.Id" class="text-decoration-none">
+                                        <h5 class="fw-800 mb-2 text-dark">@svc.Title</h5>
+                                    </a>
+                                    @if (!string.IsNullOrEmpty(svc.Description))
+                                    {
+                                        <p class="text-muted small mb-0" style="line-height:1.6;">
+                                            @(svc.Description.Length > 120 ? svc.Description.Substring(0, 120) + "..." : svc.Description)
+                                        </p>
+                                    }
+                                </div>
+                                <div class="col-md-3 text-md-end">
+                                    @if (svc.BasePrice.HasValue)
+                                    {
+                                        <div class="mb-2">
+                                            <small class="text-muted d-block">شروع از</small>
+                                            <div class="price-tag fs-5">@svc.BasePrice.Value.ToString("N0")</div>
+                                            <small class="text-muted">تومان</small>
+                                        </div>
+                                    }
+                                    else
+                                    {
+                                        <div class="mb-2">
+                                            <span class="card-meta">قیمت توافقی</span>
+                                        </div>
+                                    }
+                                    <div class="d-grid gap-2">
+                                        <a asp-action="Details" asp-route-id="@svc.Id" class="btn btn-sm btn-outline-brand">
+                                            مشاهده جزئیات
+                                        </a>
+                                        <a asp-controller="ServiceRequests" asp-action="Create" asp-route-serviceId="@svc.Id" class="btn btn-sm btn-brand">
+                                            ثبت درخواست
+                                        </a>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    }
+                </div>
+
+                @* Enhanced Pagination *@
                 @if (Model.TotalPages > 1)
                 {
                     <nav class="mt-4">
-                        <ul class="pagination justify-content-center">
+                        <ul class="pagination justify-content-center flex-wrap">
                             <li class="page-item @(Model.HasPreviousPage ? "" : "disabled")">
-                                <a class="page-link" asp-action="Index" asp-route-page="@(Model.PageNumber-1)" asp-route-search="@filter.SearchTerm" asp-route-categoryId="@filter.CategoryId">→ قبلی</a>
+                                <a class="page-link" asp-action="Index" 
+                                   asp-route-page="@(Model.PageNumber-1)" 
+                                   asp-route-search="@filter.SearchTerm" 
+                                   asp-route-categoryId="@filter.CategoryId"
+                                   asp-route-minPrice="@filter.MinPrice"
+                                   asp-route-maxPrice="@filter.MaxPrice"
+                                   asp-route-sortBy="@filter.SortBy">
+                                    ← قبلی
+                                </a>
                             </li>
-                            @for (int i = 1; i <= Model.TotalPages; i++)
+                            
+                            @{
+                                var startPage = Math.Max(1, Model.PageNumber - 2);
+                                var endPage = Math.Min(Model.TotalPages, Model.PageNumber + 2);
+                            }
+                            
+                            @if (startPage > 1)
+                            {
+                                <li class="page-item">
+                                    <a class="page-link" asp-action="Index" asp-route-page="1" 
+                                       asp-route-search="@filter.SearchTerm" 
+                                       asp-route-categoryId="@filter.CategoryId"
+                                       asp-route-minPrice="@filter.MinPrice"
+                                       asp-route-maxPrice="@filter.MaxPrice"
+                                       asp-route-sortBy="@filter.SortBy">۱</a>
+                                </li>
+                                @if (startPage > 2)
+                                {
+                                    <li class="page-item disabled"><span class="page-link">...</span></li>
+                                }
+                            }
+                            
+                            @for (int i = startPage; i <= endPage; i++)
                             {
                                 <li class="page-item @(i == Model.PageNumber ? "active" : "")">
-                                    <a class="page-link" asp-action="Index" asp-route-page="@i" asp-route-search="@filter.SearchTerm" asp-route-categoryId="@filter.CategoryId">@i</a>
+                                    <a class="page-link" asp-action="Index" asp-route-page="@i" 
+                                       asp-route-search="@filter.SearchTerm" 
+                                       asp-route-categoryId="@filter.CategoryId"
+                                       asp-route-minPrice="@filter.MinPrice"
+                                       asp-route-maxPrice="@filter.MaxPrice"
+                                       asp-route-sortBy="@filter.SortBy">@i</a>
                                 </li>
                             }
+                            
+                            @if (endPage < Model.TotalPages)
+                            {
+                                @if (endPage < Model.TotalPages - 1)
+                                {
+                                    <li class="page-item disabled"><span class="page-link">...</span></li>
+                                }
+                                <li class="page-item">
+                                    <a class="page-link" asp-action="Index" asp-route-page="@Model.TotalPages" 
+                                       asp-route-search="@filter.SearchTerm" 
+                                       asp-route-categoryId="@filter.CategoryId"
+                                       asp-route-minPrice="@filter.MinPrice"
+                                       asp-route-maxPrice="@filter.MaxPrice"
+                                       asp-route-sortBy="@filter.SortBy">@Model.TotalPages</a>
+                                </li>
+                            }
+                            
                             <li class="page-item @(Model.HasNextPage ? "" : "disabled")">
-                                <a class="page-link" asp-action="Index" asp-route-page="@(Model.PageNumber+1)" asp-route-search="@filter.SearchTerm" asp-route-categoryId="@filter.CategoryId">بعدی ←</a>
+                                <a class="page-link" asp-action="Index" 
+                                   asp-route-page="@(Model.PageNumber+1)" 
+                                   asp-route-search="@filter.SearchTerm" 
+                                   asp-route-categoryId="@filter.CategoryId"
+                                   asp-route-minPrice="@filter.MinPrice"
+                                   asp-route-maxPrice="@filter.MaxPrice"
+                                   asp-route-sortBy="@filter.SortBy">
+                                    بعدی →
+                                </a>
                             </li>
                         </ul>
+                        <div class="text-center mt-2">
+                            <small class="text-muted">
+                                صفحه @Model.PageNumber از @Model.TotalPages
+                            </small>
+                        </div>
                     </nav>
                 }
+
+                @* Results Info *@
+                <div class="text-center mt-3">
+                    <small class="text-muted">
+                        نمایش 
+                        <span class="fw-600">@((Model.PageNumber - 1) * Model.PageSize + 1)</span>
+                        تا 
+                        <span class="fw-600">@Math.Min(Model.PageNumber * Model.PageSize, Model.TotalCount)</span>
+                        از 
+                        <span class="fw-600">@Model.TotalCount</span>
+                        خدمت
+                    </small>
+                </div>
             }
         </div>
     </div>
 </div>
+
+@section Scripts {
+    <script>
+        function toggleView(view) {
+            const grid = document.getElementById('servicesGrid');
+            const list = document.getElementById('servicesList');
+            const btnGrid = document.getElementById('viewGrid');
+            const btnList = document.getElementById('viewList');
+            
+            if (view === 'grid') {
+                grid.style.display = 'flex';
+                list.style.display = 'none';
+                btnGrid.classList.add('active');
+                btnList.classList.remove('active');
+                localStorage.setItem('servicesView', 'grid');
+            } else {
+                grid.style.display = 'none';
+                list.style.display = 'block';
+                btnList.classList.add('active');
+                btnGrid.classList.remove('active');
+                localStorage.setItem('servicesView', 'list');
+            }
+        }
+        
+        // Restore view preference
+        document.addEventListener('DOMContentLoaded', function() {
+            const savedView = localStorage.getItem('servicesView');
+            if (savedView === 'list') {
+                toggleView('list');
+            }
+        });
+    </script>
+}
+

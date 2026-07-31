@@ -78,10 +78,10 @@
     <script>
         document.querySelectorAll('.user-type-option input').forEach(r => {
             r.addEventListener('change', () => {
-                document.querySelectorAll('.user-type-option').forEach(o => o.style.borderColor = '#E5E7EB');
-                r.closest('.user-type-option').style.borderColor = '#FC5647';
+                document.querySelectorAll('.user-type-option').forEach(o => o.style.borderColor = 'var(--border-color)');
+                r.closest('.user-type-option').style.borderColor = 'var(--primary)';
             });
         });
-        document.querySelector('.user-type-option input:checked')?.closest('.user-type-option').style.setProperty('border-color', '#FC5647');
+        document.querySelector('.user-type-option input:checked')?.closest('.user-type-option').style.setProperty('border-color', 'var(--primary)');
     </script>
 }

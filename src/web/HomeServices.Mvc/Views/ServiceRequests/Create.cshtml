@@ -3,98 +3,369 @@
     ViewData["Title"] = "ثبت درخواست";
 }
 
+<style>
+    .wizard-progress {
+        display: flex;
+        justify-content: space-between;
+        position: relative;
+        margin-bottom: 3rem;
+    }
+    .wizard-progress::before {
+        content: '';
+        position: absolute;
+        top: 20px;
+        left: 0;
+        right: 0;
+        height: 2px;
+        background: var(--beige);
+        z-index: 0;
+    }
+    .wizard-step {
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        position: relative;
+        z-index: 1;
+        flex: 1;
+    }
+    .wizard-step-circle {
+        width: 40px;
+        height: 40px;
+        border-radius: 50%;
+        background: var(--cream);
+        border: 2px solid var(--beige);
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        font-weight: 700;
+        color: var(--text-muted);
+        transition: all 0.3s ease;
+        margin-bottom: 0.5rem;
+    }
+    .wizard-step.active .wizard-step-circle {
+        background: var(--primary);
+        border-color: var(--primary);
+        color: white;
+        transform: scale(1.1);
+        box-shadow: 0 4px 12px rgba(139, 115, 85, 0.3);
+    }
+    .wizard-step.completed .wizard-step-circle {
+        background: var(--sage);
+        border-color: var(--sage);
+        color: white;
+    }
+    .wizard-step-label {
+        font-size: 0.875rem;
+        font-weight: 600;
+        color: var(--text-muted);
+        text-align: center;
+    }
+    .wizard-step.active .wizard-step-label {
+        color: var(--primary);
+    }
+    .wizard-content {
+        display: none;
+    }
+    .wizard-content.active {
+        display: block;
+        animation: fadeInUp 0.4s ease;
+    }
+    @@keyframes fadeInUp {
+        from {
+            opacity: 0;
+            transform: translateY(20px);
+        }
+        to {
+            opacity: 1;
+            transform: translateY(0);
+        }
+    }
+    .image-preview-container {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 1rem;
+        margin-top: 1rem;
+    }
+    .image-preview {
+        position: relative;
+        width: 120px;
+        height: 120px;
+        border-radius: var(--radius);
+        overflow: hidden;
+        border: 2px solid var(--beige);
+    }
+    .image-preview img {
+        width: 100%;
+        height: 100%;
+        object-fit: cover;
+    }
+    .image-preview-remove {
+        position: absolute;
+        top: 4px;
+        right: 4px;
+        background: rgba(220, 38, 38, 0.9);
+        color: white;
+        border: none;
+        border-radius: 50%;
+        width: 24px;
+        height: 24px;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        cursor: pointer;
+        font-size: 1rem;
+    }
+    .budget-slider-container {
+        padding: 1rem 0;
+    }
+    .budget-slider {
+        -webkit-appearance: none;
+        width: 100%;
+        height: 6px;
+        border-radius: 3px;
+        background: var(--beige);
+        outline: none;
+    }
+    .budget-slider::-webkit-slider-thumb {
+        -webkit-appearance: none;
+        appearance: none;
+        width: 20px;
+        height: 20px;
+        border-radius: 50%;
+        background: var(--primary);
+        cursor: pointer;
+        box-shadow: 0 2px 6px rgba(0,0,0,0.2);
+    }
+    .budget-slider::-moz-range-thumb {
+        width: 20px;
+        height: 20px;
+        border-radius: 50%;
+        background: var(--primary);
+        cursor: pointer;
+        box-shadow: 0 2px 6px rgba(0,0,0,0.2);
+        border: none;
+    }
+</style>
+
 <div class="container py-4">
     <div class="row justify-content-center">
-        <div class="col-lg-9">
+        <div class="col-lg-10">
             <div class="dashboard-card">
                 <div class="text-center mb-4">
                     <h2 class="fw-800 mb-1">📝 ثبت درخواست خدمت</h2>
-                    <p class="text-muted mb-0">جزئیات درخواست خود را وارد کنید تا کارشناسان پیشنهاد بدهند.</p>
+                    <p class="text-muted mb-0">در چند مرحله ساده، درخواست خود را ثبت کنید</p>
                 </div>
 
-                <form asp-action="Create" method="post" enctype="multipart/form-data">
+                @* Wizard Progress *@
+                <div class="wizard-progress">
+                    <div class="wizard-step active" data-step="1">
+                        <div class="wizard-step-circle">۱</div>
+                        <div class="wizard-step-label">انتخاب خدمت</div>
+                    </div>
+                    <div class="wizard-step" data-step="2">
+                        <div class="wizard-step-circle">۲</div>
+                        <div class="wizard-step-label">جزئیات درخواست</div>
+                    </div>
+                    <div class="wizard-step" data-step="3">
+                        <div class="wizard-step-circle">۳</div>
+                        <div class="wizard-step-label">موقعیت و زمان</div>
+                    </div>
+                    <div class="wizard-step" data-step="4">
+                        <div class="wizard-step-circle">۴</div>
+                        <div class="wizard-step-label">بودجه و تصاویر</div>
+                    </div>
+                </div>
+
+                <form asp-action="Create" method="post" enctype="multipart/form-data" id="wizardForm">
                     <div asp-validation-summary="All" class="text-danger mb-3"></div>
 
-                    <div class="row g-3">
-                        <div class="col-md-8">
-                            <label asp-for="CategoryId" class="form-label">دسته‌بندی خدمت *</label>
-                            <select asp-for="CategoryId" class="form-select" asp-items="@(new SelectList(Model.Categories, "Id", "Name"))">
-                                <option value="">انتخاب کنید...</option>
-                            </select>
-                            <span asp-validation-for="CategoryId" class="text-danger small"></span>
+                    @* Step 1: Service Selection *@
+                    <div class="wizard-content active" data-step="1">
+                        <div class="text-center mb-4">
+                            <h4 class="fw-800 mb-2">🛠️ چه خدمتی نیاز دارید؟</h4>
+                            <p class="text-muted small">ابتدا دسته‌بندی خدمت مورد نظر خود را انتخاب کنید</p>
                         </div>
-                        <div class="col-md-4">
-                            <label asp-for="ServiceId" class="form-label">خدمت خاص (اختیاری)</label>
-                            <input asp-for="ServiceId" type="number" class="form-control" />
+
+                        <div class="row g-3">
+                            <div class="col-md-8">
+                                <label asp-for="CategoryId" class="form-label fw-600">دسته‌بندی خدمت *</label>
+                                <select asp-for="CategoryId" class="form-select form-select-lg" asp-items="@(new SelectList(Model.Categories, "Id", "Name"))">
+                                    <option value="">🔍 انتخاب کنید...</option>
+                                </select>
+                                <span asp-validation-for="CategoryId" class="text-danger small"></span>
+                            </div>
+                            <div class="col-md-4">
+                                <label asp-for="ServiceId" class="form-label fw-600">خدمت خاص (اختیاری)</label>
+                                <input asp-for="ServiceId" type="number" class="form-control form-control-lg" placeholder="شناسه خدمت" />
+                            </div>
+                        </div>
+
+                        <div class="alert alert-soft bg-soft mt-4 d-flex align-items-center gap-2">
+                            <span style="font-size:1.5rem;">💡</span>
+                            <small>اگر خدمت خاصی را مدنظر دارید، می‌توانید شناسه آن را وارد کنید، در غیر این صورت خالی بگذارید.</small>
                         </div>
                     </div>
 
-                    <div class="mt-3">
-                        <label asp-for="Title" class="form-label">عنوان درخواست *</label>
-                        <input asp-for="Title" class="form-control" placeholder="مثلاً تعمیر نشتی لوله زیر سینک" />
-                        <span asp-validation-for="Title" class="text-danger small"></span>
-                    </div>
+                    @* Step 2: Request Details *@
+                    <div class="wizard-content" data-step="2">
+                        <div class="text-center mb-4">
+                            <h4 class="fw-800 mb-2">📋 جزئیات درخواست را بنویسید</h4>
+                            <p class="text-muted small">هرچه دقیق‌تر توضیح دهید، پیشنهادهای بهتری دریافت می‌کنید</p>
+                        </div>
 
-                    <div class="mt-3">
-                        <label asp-for="Description" class="form-label">توضیحات کامل *</label>
-                        <textarea asp-for="Description" class="form-control" rows="5" placeholder="مشکل، زمان مناسب، جزئیات و..."></textarea>
-                        <span asp-validation-for="Description" class="text-danger small"></span>
-                    </div>
+                        <div class="mb-3">
+                            <label asp-for="Title" class="form-label fw-600">عنوان درخواست *</label>
+                            <input asp-for="Title" class="form-control form-control-lg" placeholder="مثلاً: تعمیر نشتی لوله زیر سینک آشپزخانه" maxlength="100" />
+                            <div class="d-flex justify-content-between mt-1">
+                                <span asp-validation-for="Title" class="text-danger small"></span>
+                                <small class="text-muted" id="titleCounter">0 / 100</small>
+                            </div>
+                        </div>
 
-                    <div class="row g-3 mt-1">
-                        <div class="col-md-6">
-                            <label asp-for="Address" class="form-label">آدرس</label>
-                            <input asp-for="Address" class="form-control" placeholder="خیابان، پلاک و..." />
+                        <div class="mb-3">
+                            <label asp-for="Description" class="form-label fw-600">توضیحات کامل *</label>
+                            <textarea asp-for="Description" class="form-control" rows="6" placeholder="لطفاً مشکل، زمان مناسب برای انجام کار، جزئیات محیط و هر اطلاعات مفید دیگری را بنویسید..." maxlength="1000"></textarea>
+                            <div class="d-flex justify-content-between mt-1">
+                                <span asp-validation-for="Description" class="text-danger small"></span>
+                                <small class="text-muted" id="descCounter">0 / 1000</small>
+                            </div>
                         </div>
-                        <div class="col-md-3">
-                            <label asp-for="City" class="form-label">شهر</label>
-                            <input asp-for="City" class="form-control" placeholder="تهران" />
-                        </div>
-                        <div class="col-md-3">
-                            <label asp-for="ZipCode" class="form-label">کد پستی</label>
-                            <input asp-for="ZipCode" class="form-control" />
-                        </div>
-                    </div>
 
-                    <div class="row g-3 mt-1">
-                        <div class="col-md-4">
-                            <label asp-for="Urgency" class="form-label">فوریت</label>
-                            <select asp-for="Urgency" class="form-select" asp-items="Html.GetEnumSelectList<UrgencyLevel>()"></select>
-                        </div>
-                        <div class="col-md-4">
-                            <label asp-for="PreferredDate" class="form-label">تاریخ ترجیحی</label>
-                            <input asp-for="PreferredDate" type="date" class="form-control" />
-                        </div>
-                        <div class="col-md-4">
-                            <label asp-for="IsHomeOwner" class="form-label d-block">مالک منزل</label>
-                            <div class="form-check form-switch fs-5 mt-2">
-                                <input asp-for="IsHomeOwner" class="form-check-input" type="checkbox" checked />
+                        <div class="alert alert-soft bg-soft d-flex align-items-start gap-2">
+                            <span style="font-size:1.5rem;">📝</span>
+                            <div>
+                                <div class="fw-600 mb-1">نکات مهم برای توضیحات:</div>
+                                <ul class="small mb-0" style="padding-right:1.5rem;">
+                                    <li>مشکل را دقیق توضیح دهید</li>
+                                    <li>بازه زمانی مناسب برای انجام کار را ذکر کنید</li>
+                                    <li>اگر ابزار یا قطعه خاصی نیاز است، بنویسید</li>
+                                </ul>
                             </div>
                         </div>
                     </div>
 
-                    <div class="row g-3 mt-1">
-                        <div class="col-md-6">
-                            <label asp-for="BudgetMin" class="form-label">حداقل بودجه (تومان)</label>
-                            <input asp-for="BudgetMin" type="number" class="form-control" />
+                    @* Step 3: Location & Time *@
+                    <div class="wizard-content" data-step="3">
+                        <div class="text-center mb-4">
+                            <h4 class="fw-800 mb-2">📍 موقعیت و زمان انجام کار</h4>
+                            <p class="text-muted small">مشخص کنید کار کجا و چه زمانی باید انجام شود</p>
                         </div>
-                        <div class="col-md-6">
-                            <label asp-for="BudgetMax" class="form-label">حداکثر بودجه (تومان)</label>
-                            <input asp-for="BudgetMax" type="number" class="form-control" />
+
+                        <div class="row g-3 mb-3">
+                            <div class="col-md-12">
+                                <label asp-for="Address" class="form-label fw-600">آدرس محل انجام کار</label>
+                                <input asp-for="Address" class="form-control form-control-lg" placeholder="خیابان، کوچه، پلاک، واحد..." />
+                            </div>
+                        </div>
+
+                        <div class="row g-3 mb-3">
+                            <div class="col-md-6">
+                                <label asp-for="City" class="form-label fw-600">شهر *</label>
+                                <input asp-for="City" class="form-control form-control-lg" placeholder="مثلاً: تهران" />
+                            </div>
+                            <div class="col-md-6">
+                                <label asp-for="ZipCode" class="form-label fw-600">کد پستی</label>
+                                <input asp-for="ZipCode" class="form-control form-control-lg" placeholder="۱۰ رقم" maxlength="10" />
+                            </div>
+                        </div>
+
+                        <div class="row g-3 mb-3">
+                            <div class="col-md-6">
+                                <label asp-for="Urgency" class="form-label fw-600">میزان فوریت</label>
+                                <select asp-for="Urgency" class="form-select form-select-lg" asp-items="Html.GetEnumSelectList<UrgencyLevel>()"></select>
+                            </div>
+                            <div class="col-md-6">
+                                <label asp-for="PreferredDate" class="form-label fw-600">تاریخ ترجیحی</label>
+                                <input asp-for="PreferredDate" type="date" class="form-control form-control-lg" />
+                            </div>
+                        </div>
+
+                        <div class="dashboard-card" style="background:var(--cream);">
+                            <div class="d-flex align-items-center justify-content-between">
+                                <div>
+                                    <label asp-for="IsHomeOwner" class="form-label fw-600 mb-1">آیا مالک ملک هستید؟</label>
+                                    <small class="text-muted d-block">این اطلاعات به کارشناسان کمک می‌کند</small>
+                                </div>
+                                <div class="form-check form-switch" style="font-size:1.5rem;">
+                                    <input asp-for="IsHomeOwner" class="form-check-input" type="checkbox" checked />
+                                </div>
+                            </div>
                         </div>
                     </div>
 
-                    <div class="mt-3">
-                        <label asp-for="Images" class="form-label">تصاویر (اختیاری، حداکثر ۵ فایل)</label>
-                        <input asp-for="Images" type="file" class="form-control" multiple accept="image/*" />
-                        <small class="text-muted">عکس از مشکل یا محل کار می‌تواند به کارشناسان کمک کند.</small>
+                    @* Step 4: Budget & Images *@
+                    <div class="wizard-content" data-step="4">
+                        <div class="text-center mb-4">
+                            <h4 class="fw-800 mb-2">💰 بودجه و تصاویر</h4>
+                            <p class="text-muted small">بودجه خود را مشخص کنید و در صورت نیاز تصویر اضافه کنید</p>
+                        </div>
+
+                        <div class="mb-4">
+                            <label class="form-label fw-600 mb-3">محدوده بودجه (تومان)</label>
+                            <div class="row g-3">
+                                <div class="col-md-6">
+                                    <label asp-for="BudgetMin" class="small text-muted">حداقل بودجه</label>
+                                    <input asp-for="BudgetMin" type="number" class="form-control form-control-lg" placeholder="۱۰۰,۰۰۰" step="10000" id="budgetMinInput" />
+                                </div>
+                                <div class="col-md-6">
+                                    <label asp-for="BudgetMax" class="small text-muted">حداکثر بودجه</label>
+                                    <input asp-for="BudgetMax" type="number" class="form-control form-control-lg" placeholder="۵۰۰,۰۰۰" step="10000" id="budgetMaxInput" />
+                                </div>
+                            </div>
+                            
+                            <div class="budget-slider-container">
+                                <div class="d-flex justify-content-between mb-2">
+                                    <small class="text-muted">۰ تومان</small>
+                                    <small class="fw-600 text-primary" id="budgetDisplay">بودجه خود را مشخص کنید</small>
+                                    <small class="text-muted">۱۰M+ تومان</small>
+                                </div>
+                                <input type="range" class="budget-slider" min="0" max="10000000" step="100000" value="0" id="budgetSlider" />
+                            </div>
+
+                            <div class="alert alert-soft bg-soft d-flex align-items-center gap-2 mt-3">
+                                <span style="font-size:1.5rem;">💡</span>
+                                <small>بودجه الزامی نیست، اما مشخص کردن آن به دریافت پیشنهادهای مناسب‌تر کمک می‌کند.</small>
+                            </div>
+                        </div>
+
+                        <div class="mb-3">
+                            <label asp-for="Images" class="form-label fw-600">تصاویر (اختیاری، حداکثر ۵ فایل)</label>
+                            <div class="d-flex align-items-center gap-2 p-3 border border-2 border-dashed rounded" style="border-color:var(--beige) !important;background:var(--cream);">
+                                <span style="font-size:2rem;">📸</span>
+                                <div class="flex-grow-1">
+                                    <input asp-for="Images" type="file" class="form-control" multiple accept="image/*" id="imageInput" style="display:none;" />
+                                    <button type="button" class="btn btn-outline-brand btn-sm" onclick="document.getElementById('imageInput').click()">
+                                        انتخاب تصاویر
+                                    </button>
+                                    <small class="text-muted d-block mt-1">عکس از مشکل یا محل کار می‌تواند به کارشناسان کمک زیادی کند</small>
+                                </div>
+                            </div>
+                            <div id="imagePreviewContainer" class="image-preview-container"></div>
+                        </div>
                     </div>
 
-                    <div class="d-flex gap-2 mt-4">
-                        <button type="submit" class="btn btn-brand btn-lg flex-grow-1">ثبت درخواست</button>
-                        <a asp-controller="Home" asp-action="Index" class="btn btn-outline-brand btn-lg">انصراف</a>
+                    @* Navigation Buttons *@
+                    <div class="d-flex justify-content-between gap-2 mt-4 pt-3 border-top">
+                        <button type="button" class="btn btn-outline-brand btn-lg" id="prevBtn" style="display:none;">
+                            → مرحله قبل
+                        </button>
+                        <div class="flex-grow-1"></div>
+                        <a asp-controller="Home" asp-action="Index" class="btn btn-link btn-lg">انصراف</a>
+                        <button type="button" class="btn btn-brand btn-lg" id="nextBtn">
+                            مرحله بعد ←
+                        </button>
+                        <button type="submit" class="btn btn-brand btn-lg" id="submitBtn" style="display:none;">
+                            ✓ ثبت درخواست
+                        </button>
                     </div>
                 </form>
+            </div>
+
+            @* Progress Info *@
+            <div class="text-center mt-3">
+                <small class="text-muted">
+                    مرحله <span class="fw-600" id="currentStepInfo">۱</span> از ۴
+                </small>
             </div>
         </div>
     </div>
@@ -102,4 +373,128 @@
 
 @section Scripts {
     @{await Html.RenderPartialAsync("_ValidationScriptsPartial");}
+    <script>
+        let currentStep = 1;
+        const totalSteps = 4;
+
+        // Update wizard display
+        function updateWizard() {
+            // Update steps
+            document.querySelectorAll('.wizard-step').forEach(step => {
+                const stepNum = parseInt(step.dataset.step);
+                step.classList.remove('active', 'completed');
+                if (stepNum === currentStep) {
+                    step.classList.add('active');
+                } else if (stepNum < currentStep) {
+                    step.classList.add('completed');
+                }
+            });
+
+            // Update content
+            document.querySelectorAll('.wizard-content').forEach(content => {
+                content.classList.remove('active');
+            });
+            document.querySelector(`.wizard-content[data-step="${currentStep}"]`).classList.add('active');
+
+            // Update buttons
+            document.getElementById('prevBtn').style.display = currentStep === 1 ? 'none' : 'inline-block';
+            document.getElementById('nextBtn').style.display = currentStep === totalSteps ? 'none' : 'inline-block';
+            document.getElementById('submitBtn').style.display = currentStep === totalSteps ? 'inline-block' : 'none';
+            
+            // Update info
+            document.getElementById('currentStepInfo').textContent = currentStep;
+
+            // Scroll to top
+            window.scrollTo({ top: 0, behavior: 'smooth' });
+        }
+
+        // Next button
+        document.getElementById('nextBtn').addEventListener('click', () => {
+            if (currentStep < totalSteps) {
+                currentStep++;
+                updateWizard();
+            }
+        });
+
+        // Previous button
+        document.getElementById('prevBtn').addEventListener('click', () => {
+            if (currentStep > 1) {
+                currentStep--;
+                updateWizard();
+            }
+        });
+
+        // Character counters
+        document.querySelector('[name="Title"]')?.addEventListener('input', (e) => {
+            document.getElementById('titleCounter').textContent = `${e.target.value.length} / 100`;
+        });
+
+        document.querySelector('[name="Description"]')?.addEventListener('input', (e) => {
+            document.getElementById('descCounter').textContent = `${e.target.value.length} / 1000`;
+        });
+
+        // Budget slider
+        const budgetSlider = document.getElementById('budgetSlider');
+        const budgetDisplay = document.getElementById('budgetDisplay');
+        const budgetMaxInput = document.getElementById('budgetMaxInput');
+
+        budgetSlider?.addEventListener('input', (e) => {
+            const value = parseInt(e.target.value);
+            budgetMaxInput.value = value;
+            if (value > 0) {
+                budgetDisplay.textContent = `تا ${value.toLocaleString('fa-IR')} تومان`;
+            } else {
+                budgetDisplay.textContent = 'بودجه خود را مشخص کنید';
+            }
+        });
+
+        budgetMaxInput?.addEventListener('input', (e) => {
+            const value = parseInt(e.target.value) || 0;
+            budgetSlider.value = Math.min(value, 10000000);
+            if (value > 0) {
+                budgetDisplay.textContent = `تا ${value.toLocaleString('fa-IR')} تومان`;
+            }
+        });
+
+        // Image preview
+        const imageInput = document.getElementById('imageInput');
+        const imagePreviewContainer = document.getElementById('imagePreviewContainer');
+        let selectedFiles = [];
+
+        imageInput?.addEventListener('change', (e) => {
+            const files = Array.from(e.target.files).slice(0, 5);
+            selectedFiles = files;
+            updateImagePreviews();
+        });
+
+        function updateImagePreviews() {
+            imagePreviewContainer.innerHTML = '';
+            selectedFiles.forEach((file, index) => {
+                const reader = new FileReader();
+                reader.onload = (e) => {
+                    const preview = document.createElement('div');
+                    preview.className = 'image-preview';
+                    preview.innerHTML = `
+                        <img src="${e.target.result}" alt="Preview ${index + 1}">
+                        <button type="button" class="image-preview-remove" onclick="removeImage(${index})">×</button>
+                    `;
+                    imagePreviewContainer.appendChild(preview);
+                };
+                reader.readAsDataURL(file);
+            });
+        }
+
+        window.removeImage = function(index) {
+            selectedFiles.splice(index, 1);
+            updateImagePreviews();
+            
+            // Update file input
+            const dt = new DataTransfer();
+            selectedFiles.forEach(file => dt.items.add(file));
+            imageInput.files = dt.files;
+        };
+
+        // Initialize
+        updateWizard();
+    </script>
 }

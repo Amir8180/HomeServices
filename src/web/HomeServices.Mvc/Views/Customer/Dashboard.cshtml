@@ -4,61 +4,409 @@
     var booked = (int)ViewBag.BookedRequestsCount;
     var completed = (int)ViewBag.CompletedOrdersCount;
     var active = (int)ViewBag.ActiveOrdersCount;
+    var recentRequests = ViewBag.RecentRequests as IReadOnlyList<ServiceRequestDto> ?? Array.Empty<ServiceRequestDto>();
+    var recentOrders = ViewBag.RecentOrders as IReadOnlyList<OrderDto> ?? Array.Empty<OrderDto>();
+    var userName = User.Identity?.Name ?? "کاربر";
+    
+    var totalSpent = ViewBag.TotalSpent as decimal? ?? 0;
+    var totalRequests = open + booked + completed;
 }
 
+<style>
+    .welcome-banner {
+        background: linear-gradient(135deg, var(--primary) 0%, var(--terracotta) 100%);
+        color: white;
+        border-radius: var(--radius-lg);
+        padding: 2rem;
+        margin-bottom: 2rem;
+        position: relative;
+        overflow: hidden;
+    }
+    .welcome-banner::before {
+        content: '🏠';
+        position: absolute;
+        top: -20px;
+        left: -20px;
+        font-size: 10rem;
+        opacity: 0.1;
+    }
+    .quick-action {
+        text-align: center;
+        padding: 1.5rem 1rem;
+        background: var(--cream);
+        border-radius: var(--radius);
+        text-decoration: none;
+        color: inherit;
+        transition: all 0.3s ease;
+        border: 2px solid transparent;
+    }
+    .quick-action:hover {
+        transform: translateY(-4px);
+        box-shadow: var(--shadow-lg);
+        border-color: var(--primary);
+        color: var(--primary);
+    }
+    .quick-action-icon {
+        font-size: 2rem;
+        margin-bottom: 0.5rem;
+    }
+    .quick-action-label {
+        font-weight: 700;
+        font-size: 0.875rem;
+    }
+    .activity-timeline {
+        position: relative;
+        padding-right: 2rem;
+    }
+    .activity-timeline::before {
+        content: '';
+        position: absolute;
+        right: 8px;
+        top: 0;
+        bottom: 0;
+        width: 2px;
+        background: var(--beige);
+    }
+    .activity-item {
+        position: relative;
+        padding-bottom: 1.5rem;
+    }
+    .activity-item:last-child {
+        padding-bottom: 0;
+    }
+    .activity-dot {
+        position: absolute;
+        right: 0;
+        top: 0;
+        width: 18px;
+        height: 18px;
+        border-radius: 50%;
+        background: white;
+        border: 3px solid var(--primary);
+        transform: translateX(50%);
+        z-index: 1;
+    }
+    .activity-dot.success {
+        border-color: var(--sage);
+    }
+    .activity-dot.warning {
+        border-color: var(--gold);
+    }
+    .activity-content {
+        background: var(--cream);
+        padding: 1rem;
+        border-radius: var(--radius);
+    }
+    .chart-container {
+        position: relative;
+        height: 200px;
+    }
+    .chart-bar {
+        display: flex;
+        align-items: flex-end;
+        height: 100%;
+        gap: 0.5rem;
+    }
+    .chart-bar-item {
+        flex: 1;
+        background: var(--beige);
+        border-radius: var(--radius-sm) var(--radius-sm) 0 0;
+        position: relative;
+        transition: all 0.3s ease;
+        cursor: pointer;
+    }
+    .chart-bar-item:hover {
+        opacity: 0.8;
+    }
+    .chart-bar-item.active {
+        background: var(--primary);
+    }
+    .chart-bar-label {
+        position: absolute;
+        bottom: -25px;
+        left: 50%;
+        transform: translateX(-50%);
+        font-size: 0.75rem;
+        color: var(--text-muted);
+        white-space: nowrap;
+    }
+    .chart-bar-value {
+        position: absolute;
+        top: -25px;
+        left: 50%;
+        transform: translateX(-50%);
+        font-size: 0.75rem;
+        font-weight: 700;
+        color: var(--primary);
+    }
+</style>
+
 <div class="container py-4">
-    <div class="d-flex justify-content-between align-items-center mb-4">
-        <div>
-            <h1 class="fw-800 mb-0">داشبورد من</h1>
-            <p class="text-muted mb-0">خلاصه فعالیت‌های شما</p>
+    @* Welcome Banner *@
+    <div class="welcome-banner">
+        <div class="row align-items-center">
+            <div class="col-md-8">
+                <h2 class="fw-800 mb-2">سلام، @userName! 👋</h2>
+                <p class="mb-0" style="opacity:0.95;">به داشبورد خود خوش آمدید. در اینجا می‌توانید درخواست‌ها و سفارش‌های خود را مدیریت کنید.</p>
+            </div>
+            <div class="col-md-4 text-md-end mt-3 mt-md-0">
+                <a asp-controller="ServiceRequests" asp-action="Create" class="btn btn-lg" style="background:white;color:var(--primary);font-weight:700;">
+                    ✨ ثبت درخواست جدید
+                </a>
+            </div>
         </div>
-        <a asp-controller="ServiceRequests" asp-action="Create" class="btn btn-brand">+ ثبت درخواست جدید</a>
     </div>
 
+    @* Statistics Cards *@
     <div class="row g-3 mb-4">
         <div class="col-6 col-lg-3">
-            <div class="stat-card">
-                <div class="stat-value">@open</div>
-                <div class="stat-label">درخواست باز</div>
-            </div>
+            <a asp-action="MyRequests" class="text-decoration-none">
+                <div class="stat-card" style="cursor:pointer;" onmouseenter="this.style.transform='translateY(-4px)'" onmouseleave="this.style.transform='translateY(0)'">
+                    <div class="stat-value">@open</div>
+                    <div class="stat-label">درخواست باز</div>
+                    <small class="text-muted d-block mt-1">نیاز به پیشنهاد</small>
+                </div>
+            </a>
         </div>
         <div class="col-6 col-lg-3">
             <div class="stat-card" style="border-inline-start-color: var(--secondary);">
                 <div class="stat-value">@booked</div>
                 <div class="stat-label">در حال انجام</div>
+                <small class="text-muted d-block mt-1">در حال اجرا</small>
             </div>
         </div>
         <div class="col-6 col-lg-3">
-            <div class="stat-card" style="border-inline-start-color: #F59E0B;">
-                <div class="stat-value">@active</div>
-                <div class="stat-label">سفارش فعال</div>
-            </div>
+            <a asp-action="MyOrders" class="text-decoration-none">
+                <div class="stat-card" style="border-inline-start-color: #F59E0B;cursor:pointer;" onmouseenter="this.style.transform='translateY(-4px)'" onmouseleave="this.style.transform='translateY(0)'">
+                    <div class="stat-value">@active</div>
+                    <div class="stat-label">سفارش فعال</div>
+                    <small class="text-muted d-block mt-1">نیاز به پیگیری</small>
+                </div>
+            </a>
         </div>
         <div class="col-6 col-lg-3">
             <div class="stat-card" style="border-inline-start-color: #15803D;">
                 <div class="stat-value">@completed</div>
-                <div class="stat-label">سفارش تکمیل‌شده</div>
+                <div class="stat-label">تکمیل شده</div>
+                <small class="text-muted d-block mt-1">موفقیت‌آمیز</small>
+            </div>
+        </div>
+    </div>
+
+    @* Quick Actions *@
+    <div class="dashboard-card mb-4">
+        <h6 class="fw-800 mb-3">⚡ دسترسی سریع</h6>
+        <div class="row g-3">
+            <div class="col-6 col-md-3">
+                <a asp-controller="ServiceRequests" asp-action="Create" class="quick-action d-block">
+                    <div class="quick-action-icon">📝</div>
+                    <div class="quick-action-label">ثبت درخواست</div>
+                </a>
+            </div>
+            <div class="col-6 col-md-3">
+                <a asp-action="MyRequests" class="quick-action d-block">
+                    <div class="quick-action-icon">📋</div>
+                    <div class="quick-action-label">درخواست‌های من</div>
+                </a>
+            </div>
+            <div class="col-6 col-md-3">
+                <a asp-action="MyOrders" class="quick-action d-block">
+                    <div class="quick-action-icon">📦</div>
+                    <div class="quick-action-label">سفارش‌های من</div>
+                </a>
+            </div>
+            <div class="col-6 col-md-3">
+                <a asp-controller="Services" asp-action="Index" class="quick-action d-block">
+                    <div class="quick-action-icon">🔍</div>
+                    <div class="quick-action-label">جستجوی خدمات</div>
+                </a>
             </div>
         </div>
     </div>
 
     <div class="row g-4">
-        <div class="col-lg-6">
+        @* Activity Chart *@
+        <div class="col-lg-8">
+            <div class="dashboard-card mb-4">
+                <h6 class="fw-800 mb-3">📊 نمای کلی فعالیت</h6>
+                <div class="chart-container mb-4">
+                    <div class="chart-bar">
+                        <div class="chart-bar-item" style="height:@(totalRequests > 0 ? (open * 100.0 / totalRequests) : 0)%;">
+                            <div class="chart-bar-value">@open</div>
+                            <div class="chart-bar-label">باز</div>
+                        </div>
+                        <div class="chart-bar-item" style="height:@(totalRequests > 0 ? (booked * 100.0 / totalRequests) : 0)%;background:var(--secondary);">
+                            <div class="chart-bar-value">@booked</div>
+                            <div class="chart-bar-label">در حال انجام</div>
+                        </div>
+                        <div class="chart-bar-item" style="height:@(totalRequests > 0 ? (active * 100.0 / totalRequests) : 0)%;background:var(--gold);">
+                            <div class="chart-bar-value">@active</div>
+                            <div class="chart-bar-label">فعال</div>
+                        </div>
+                        <div class="chart-bar-item active" style="height:@(totalRequests > 0 ? (completed * 100.0 / totalRequests) : 0)%;background:var(--sage);">
+                            <div class="chart-bar-value">@completed</div>
+                            <div class="chart-bar-label">تکمیل شده</div>
+                        </div>
+                    </div>
+                </div>
+                <div class="row g-3 text-center">
+                    <div class="col-6">
+                        <div style="font-size:2rem;font-weight:800;color:var(--primary);">@totalRequests</div>
+                        <small class="text-muted">کل درخواست‌ها</small>
+                    </div>
+                    <div class="col-6">
+                        <div style="font-size:2rem;font-weight:800;color:var(--sage);">@totalSpent.ToString("N0")</div>
+                        <small class="text-muted">هزینه کل (تومان)</small>
+                    </div>
+                </div>
+            </div>
+
+            @* Recent Requests *@
             <div class="dashboard-card">
                 <div class="d-flex justify-content-between align-items-center mb-3">
-                    <h5 class="fw-800 mb-0">درخواست‌های اخیر</h5>
+                    <h6 class="fw-800 mb-0">📋 درخواست‌های اخیر</h6>
                     <a asp-action="MyRequests" class="btn btn-sm btn-outline-brand">همه ←</a>
                 </div>
-                <p class="text-muted small mb-0">درخواست‌های خود را اینجا مدیریت کنید.</p>
+                @if (!recentRequests.Any())
+                {
+                    <div class="text-center py-4">
+                        <div style="font-size:3rem;opacity:0.3;margin-bottom:1rem;">📋</div>
+                        <p class="text-muted mb-3">هنوز درخواستی ثبت نکرده‌اید</p>
+                        <a asp-controller="ServiceRequests" asp-action="Create" class="btn btn-brand">ثبت اولین درخواست</a>
+                    </div>
+                }
+                else
+                {
+                    <div class="vstack gap-2">
+                        @foreach (var request in recentRequests.Take(5))
+                        {
+                            <div class="d-flex justify-content-between align-items-center p-2 rounded" style="background:var(--cream);">
+                                <div class="flex-grow-1">
+                                    <a asp-controller="ServiceRequests" asp-action="Details" asp-route-id="@request.Id" class="fw-700 text-decoration-none d-block">
+                                        @request.Title
+                                    </a>
+                                    <div class="d-flex gap-2 align-items-center mt-1">
+                                        <span class="badge-soft @request.Status.StatusClass() small">@request.Status.ToDisplay()</span>
+                                        <small class="text-muted">💬 @request.ProposalCount پیشنهاد</small>
+                                        <small class="text-muted">🕒 @request.CreatedAt.ToPersianDate()</small>
+                                    </div>
+                                </div>
+                                @if ((request.Status == RequestStatus.Open || request.Status == RequestStatus.Quoted) && request.ProposalCount > 0)
+                                {
+                                    <a asp-controller="Proposals" asp-action="Compare" asp-route-requestId="@request.Id" class="btn btn-sm btn-brand">
+                                        مشاهده پیشنهادها
+                                    </a>
+                                }
+                            </div>
+                        }
+                    </div>
+                }
             </div>
         </div>
-        <div class="col-lg-6">
+
+        @* Activity Timeline & Recent Orders *@
+        <div class="col-lg-4">
+            @* Activity Timeline *@
+            <div class="dashboard-card mb-4">
+                <h6 class="fw-800 mb-3">📅 فعالیت‌های اخیر</h6>
+                <div class="activity-timeline">
+                    @if (recentRequests.Any() || recentOrders.Any())
+                    {
+                        var activities = new List<dynamic>();
+                        
+                        @foreach (var request in recentRequests.Take(3))
+                        {
+                            <div class="activity-item">
+                                <div class="activity-dot"></div>
+                                <div class="activity-content">
+                                    <div class="d-flex justify-content-between align-items-start mb-1">
+                                        <small class="fw-700">درخواست جدید</small>
+                                        <small class="text-muted">@request.CreatedAt.ToPersianDate()</small>
+                                    </div>
+                                    <small class="text-muted d-block">@request.Title</small>
+                                </div>
+                            </div>
+                        }
+                        
+                        @foreach (var order in recentOrders.Take(2))
+                        {
+                            <div class="activity-item">
+                                <div class="activity-dot @(order.Status == OrderStatus.Completed ? "success" : "warning")"></div>
+                                <div class="activity-content">
+                                    <div class="d-flex justify-content-between align-items-start mb-1">
+                                        <small class="fw-700">@order.Status.ToDisplay()</small>
+                                        <small class="text-muted">@order.CreatedAt.ToPersianDate()</small>
+                                    </div>
+                                    <small class="text-muted d-block">@order.RequestTitle</small>
+                                    <small class="text-muted d-block mt-1">💰 @order.TotalAmount.ToString("N0") تومان</small>
+                                </div>
+                            </div>
+                        }
+                    }
+                    else
+                    {
+                        <div class="text-center py-4">
+                            <div style="font-size:2rem;opacity:0.3;">📅</div>
+                            <small class="text-muted">فعالیتی ثبت نشده</small>
+                        </div>
+                    }
+                </div>
+            </div>
+
+            @* Recent Orders *@
             <div class="dashboard-card">
                 <div class="d-flex justify-content-between align-items-center mb-3">
-                    <h5 class="fw-800 mb-0">سفارش‌های اخیر</h5>
+                    <h6 class="fw-800 mb-0">📦 سفارش‌های اخیر</h6>
                     <a asp-action="MyOrders" class="btn btn-sm btn-outline-brand">همه ←</a>
                 </div>
-                <p class="text-muted small mb-0">سفارش‌های فعال و تکمیل‌شده.</p>
+                @if (!recentOrders.Any())
+                {
+                    <div class="text-center py-3">
+                        <div style="font-size:2rem;opacity:0.3;margin-bottom:0.5rem;">📦</div>
+                        <small class="text-muted">هنوز سفارشی ندارید</small>
+                    </div>
+                }
+                else
+                {
+                    <div class="vstack gap-2">
+                        @foreach (var order in recentOrders.Take(3))
+                        {
+                            <a asp-controller="Orders" asp-action="Details" asp-route-id="@order.Id" class="text-decoration-none">
+                                <div class="p-2 rounded" style="background:var(--cream);transition:all 0.2s;" onmouseenter="this.style.boxShadow='var(--shadow)'" onmouseleave="this.style.boxShadow='none'">
+                                    <div class="d-flex justify-content-between align-items-start mb-1">
+                                        <small class="fw-700 text-dark">@order.OrderNumber</small>
+                                        <span class="badge-soft @order.Status.StatusClass()" style="font-size:0.7rem;">@order.Status.ToDisplay()</span>
+                                    </div>
+                                    <small class="text-muted d-block">@(order.RequestTitle?.Length > 30 ? order.RequestTitle.Substring(0, 30) + "..." : order.RequestTitle)</small>
+                                    <div class="d-flex justify-content-between align-items-center mt-1">
+                                        <small class="price-tag" style="font-size:0.75rem;">@order.TotalAmount.ToString("N0") ت</small>
+                                        <small class="text-muted">@order.CreatedAt.ToPersianDate()</small>
+                                    </div>
+                                </div>
+                            </a>
+                        }
+                    </div>
+                }
+            </div>
+        </div>
+    </div>
+
+    @* Tips Section *@
+    <div class="dashboard-card mt-4" style="background:linear-gradient(135deg, var(--cream) 0%, var(--beige) 100%);">
+        <div class="row align-items-center">
+            <div class="col-md-8">
+                <div class="d-flex align-items-start gap-3">
+                    <span style="font-size:2.5rem;">💡</span>
+                    <div>
+                        <h6 class="fw-800 mb-2">نکته مفید</h6>
+                        <p class="small mb-0">برای دریافت بهترین پیشنهادها، حتماً جزئیات کامل درخواست خود را بنویسید و در صورت امکان عکس اضافه کنید.</p>
+                    </div>
+                </div>
+            </div>
+            <div class="col-md-4 text-md-end mt-3 mt-md-0">
+                <a asp-controller="Home" asp-action="HowItWorks" class="btn btn-outline-brand">
+                    نحوه کار ←
+                </a>
             </div>
         </div>
     </div>

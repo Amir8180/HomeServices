@@ -1,68 +1,324 @@
 @model ServiceDto
 @{
     ViewData["Title"] = Model.Title;
+    var relatedServices = ViewBag.RelatedServices as IReadOnlyList<ServiceDto> ?? Array.Empty<ServiceDto>();
+    var popularInCategory = ViewBag.PopularInCategory as IReadOnlyList<ServiceDto> ?? Array.Empty<ServiceDto>();
 }
 
 <div class="container py-4">
     <nav aria-label="breadcrumb" class="small mb-3">
-        <a asp-controller="Home" asp-action="Index">خانه</a> /
-        <a asp-controller="Services" asp-action="Index">خدمات</a> /
+        <a asp-controller="Home" asp-action="Index" class="text-decoration-none">خانه</a> 
+        <span class="text-muted mx-1">/</span>
+        <a asp-controller="Services" asp-action="Index" class="text-decoration-none">خدمات</a> 
+        <span class="text-muted mx-1">/</span>
         <span class="text-muted">@Model.Title</span>
     </nav>
 
     <div class="row g-4">
         <div class="col-lg-8">
-            <div class="dashboard-card">
-                <div class="card-thumb mb-3" style="height:240px;border-radius:var(--radius);">🛠️</div>
-                <div class="d-flex align-items-center gap-2 flex-wrap mb-2">
-                    @if (!string.IsNullOrEmpty(Model.CategoryName))
-                    {
-                        <span class="badge-soft badge-brand">@Model.CategoryName</span>
-                    }
+            @* Service Hero Image/Gallery *@
+            <div class="dashboard-card p-0 overflow-hidden mb-3">
+                <div class="service-hero-image" style="background: linear-gradient(135deg, var(--cream) 0%, var(--beige) 100%); height: 360px; display: flex; align-items: center; justify-content: center; position: relative;">
+                    <div style="font-size: 120px; opacity: 0.3;">🛠️</div>
                     @if (Model.IsFixedPrice)
                     {
-                        <span class="badge-soft badge-info-soft">قیمت ثابت</span>
+                        <span class="badge-soft badge-success-soft" style="position: absolute; top: 1rem; right: 1rem; font-size: 0.875rem;">
+                            ✓ قیمت ثابت
+                        </span>
                     }
-                    else
+                    @if (!string.IsNullOrEmpty(Model.CategoryName))
                     {
-                        <span class="badge-soft badge-warning-soft">نیازمند پیشنهاد</span>
+                        <span class="badge-soft badge-brand" style="position: absolute; top: 1rem; left: 1rem; font-size: 0.875rem;">
+                            @Model.CategoryName
+                        </span>
                     }
                 </div>
-                <h1 class="fw-800 mb-2">@Model.Title</h1>
+            </div>
+
+            @* Service Title & Quick Info *@
+            <div class="dashboard-card">
+                <div class="d-flex justify-content-between align-items-start flex-wrap gap-3 mb-3">
+                    <div>
+                        <h1 class="fw-800 mb-2" style="font-size: 2rem; line-height: 1.2;">@Model.Title</h1>
+                        <div class="d-flex align-items-center gap-3 flex-wrap small text-muted">
+                            @if (Model.EstimatedDurationMinutes.HasValue)
+                            {
+                                <span>⏱️ @(Model.EstimatedDurationMinutes.Value / 60) ساعت</span>
+                            }
+                            @if (Model.IsFixedPrice)
+                            {
+                                <span>💰 قیمت مشخص</span>
+                            }
+                            else
+                            {
+                                <span>💬 نیاز به پیشنهاد</span>
+                            }
+                            <span>🏷️ @(Model.CategoryName ?? "خدمت عمومی")</span>
+                        </div>
+                    </div>
+                    <button type="button" class="btn btn-outline-brand btn-sm" onclick="window.print()">
+                        🖨️ چاپ
+                    </button>
+                </div>
 
                 @if (!string.IsNullOrEmpty(Model.Description))
                 {
-                    <h6 class="fw-800 mt-3 mb-2">شرح خدمت</h6>
-                    <p>@Model.Description</p>
+                    <hr class="my-3" />
+                    <h5 class="fw-800 mb-2">📋 شرح کامل خدمت</h5>
+                    <p class="text-muted mb-0" style="line-height: 1.8;">@Model.Description</p>
                 }
+            </div>
 
-                @if (Model.EstimatedDurationMinutes.HasValue)
+            @* Service Features & What's Included *@
+            <div class="dashboard-card">
+                <h5 class="fw-800 mb-3">✨ این خدمت شامل چه مواردی است؟</h5>
+                <div class="row g-3">
+                    <div class="col-md-6">
+                        <div class="d-flex align-items-start gap-2">
+                            <span class="badge-soft badge-success-soft" style="margin-top: 2px;">✓</span>
+                            <div>
+                                <div class="fw-600">ارائه توسط کارشناسان تأیید شده</div>
+                                <small class="text-muted">کلیه کارشناسان دارای مدارک و سوابق معتبر</small>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="col-md-6">
+                        <div class="d-flex align-items-start gap-2">
+                            <span class="badge-soft badge-success-soft" style="margin-top: 2px;">✓</span>
+                            <div>
+                                <div class="fw-600">گارانتی کیفیت کار</div>
+                                <small class="text-muted">ضمانت رضایت از کیفیت خدمات</small>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="col-md-6">
+                        <div class="d-flex align-items-start gap-2">
+                            <span class="badge-soft badge-success-soft" style="margin-top: 2px;">✓</span>
+                            <div>
+                                <div class="fw-600">پشتیبانی ۲۴ ساعته</div>
+                                <small class="text-muted">همواره در کنار شما هستیم</small>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="col-md-6">
+                        <div class="d-flex align-items-start gap-2">
+                            <span class="badge-soft badge-success-soft" style="margin-top: 2px;">✓</span>
+                            <div>
+                                <div class="fw-600">پرداخت امن آنلاین</div>
+                                <small class="text-muted">درگاه پرداخت معتبر و امن</small>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            @* How It Works *@
+            <div class="dashboard-card">
+                <h5 class="fw-800 mb-3">🚀 چگونه این خدمت را دریافت کنم؟</h5>
+                <div class="vstack gap-3">
+                    <div class="d-flex gap-3">
+                        <div class="step-number" style="width: 40px; height: 40px; font-size: 1.2rem; flex-shrink: 0;">۱</div>
+                        <div>
+                            <div class="fw-700">درخواست خود را ثبت کنید</div>
+                            <small class="text-muted">با کلیک روی دکمه "ثبت درخواست" فرم را پر کنید</small>
+                        </div>
+                    </div>
+                    <div class="d-flex gap-3">
+                        <div class="step-number" style="width: 40px; height: 40px; font-size: 1.2rem; flex-shrink: 0; border-color: var(--secondary);">۲</div>
+                        <div>
+                            <div class="fw-700">پیشنهادها را دریافت کنید</div>
+                            <small class="text-muted">کارشناسان واجد شرایط پیشنهاد قیمت و زمان ارسال می‌کنند</small>
+                        </div>
+                    </div>
+                    <div class="d-flex gap-3">
+                        <div class="step-number" style="width: 40px; height: 40px; font-size: 1.2rem; flex-shrink: 0; border-color: var(--gold);">۳</div>
+                        <div>
+                            <div class="fw-700">بهترین کارشناس را انتخاب کنید</div>
+                            <small class="text-muted">پیشنهادها را مقایسه کرده و مناسب‌ترین را انتخاب کنید</small>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            @* FAQ Section *@
+            <div class="dashboard-card">
+                <h5 class="fw-800 mb-3">❓ سؤالات متداول</h5>
+                <div class="accordion" id="faqAccordion">
+                    <div class="accordion-item border rounded-3 mb-2">
+                        <h2 class="accordion-header">
+                            <button class="accordion-button collapsed" type="button" data-bs-toggle="collapse" data-bs-target="#faq1">
+                                چقدر طول می‌کشد تا کارشناسان پیشنهاد بدهند؟
+                            </button>
+                        </h2>
+                        <div id="faq1" class="accordion-collapse collapse" data-bs-parent="#faqAccordion">
+                            <div class="accordion-body">
+                                معمولاً ظرف چند ساعت اولین پیشنهادها را دریافت می‌کنید. بسته به نوع خدمت و فوریت درخواست، ممکن است بیش از ۵ تا ۱۰ پیشنهاد دریافت کنید.
+                            </div>
+                        </div>
+                    </div>
+                    <div class="accordion-item border rounded-3 mb-2">
+                        <h2 class="accordion-header">
+                            <button class="accordion-button collapsed" type="button" data-bs-toggle="collapse" data-bs-target="#faq2">
+                                آیا می‌توانم قیمت را چانه‌زنی کنم؟
+                            </button>
+                        </h2>
+                        <div id="faq2" class="accordion-collapse collapse" data-bs-parent="#faqAccordion">
+                            <div class="accordion-body">
+                                بله، قیمت‌های پیشنهادی توسط کارشناسان قابل مذاکره است. می‌توانید با کارشناس مورد نظر تماس بگیرید.
+                            </div>
+                        </div>
+                    </div>
+                    <div class="accordion-item border rounded-3">
+                        <h2 class="accordion-header">
+                            <button class="accordion-button collapsed" type="button" data-bs-toggle="collapse" data-bs-target="#faq3">
+                                اگر از کیفیت کار راضی نباشم چطور؟
+                            </button>
+                        </h2>
+                        <div id="faq3" class="accordion-collapse collapse" data-bs-parent="#faqAccordion">
+                            <div class="accordion-body">
+                                ما ضمانت کیفیت ارائه می‌دهیم. در صورت عدم رضایت، با پشتیبانی تماس بگیرید تا مشکل را حل کنیم.
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        @* Sidebar *@
+        <div class="col-lg-4">
+            @* Pricing Card with Enhanced CTA *@
+            <div class="dashboard-card sticky-top" style="top: 1rem; box-shadow: var(--shadow-lg);">
+                <div class="text-center">
+                    @if (Model.BasePrice.HasValue)
+                    {
+                        <div class="mb-3">
+                            <small class="text-muted d-block mb-1">شروع از</small>
+                            <div class="price-tag" style="font-size: 2.5rem; font-weight: 800; background: linear-gradient(135deg, var(--primary) 0%, var(--terracotta) 100%); -webkit-background-clip: text; -webkit-text-fill-color: transparent; background-clip: text;">
+                                @Model.BasePrice.Value.ToString("N0")
+                            </div>
+                            <div class="text-muted">تومان</div>
+                        </div>
+                        @if (Model.IsFixedPrice)
+                        {
+                            <div class="alert alert-soft bg-soft mb-3 small">
+                                <strong>💰 قیمت ثابت:</strong> این خدمت دارای قیمت مشخص است.
+                            </div>
+                        }
+                    }
+                    else
+                    {
+                        <div class="mb-3 py-3">
+                            <div class="fs-4 fw-800 mb-1">قیمت توافقی</div>
+                            <small class="text-muted">پس از دریافت پیشنهادها مشخص می‌شود</small>
+                        </div>
+                    }
+
+                    <a asp-controller="ServiceRequests" asp-action="Create" asp-route-serviceId="@Model.Id" class="btn btn-brand w-100 py-3 mb-2" style="font-size: 1.1rem;">
+                        📝 ثبت درخواست رایگان
+                    </a>
+                    
+                    @if (!Model.IsFixedPrice)
+                    {
+                        <small class="text-muted d-block mb-3">بدون هیچ هزینه‌ای درخواست ثبت کنید</small>
+                    }
+
+                    <div class="d-flex justify-content-center gap-2">
+                        <button type="button" class="btn btn-outline-brand flex-fill" onclick="window.scrollTo({top: 0, behavior: 'smooth'})">
+                            🔍 اطلاعات بیشتر
+                        </button>
+                    </div>
+                </div>
+
+                <hr class="my-3" />
+
+                @* Service Quick Stats *@
+                <div class="vstack gap-2 small">
+                    <div class="d-flex justify-content-between align-items-center">
+                        <span class="text-muted">⏱️ زمان تخمینی</span>
+                        <span class="fw-600">
+                            @if (Model.EstimatedDurationMinutes.HasValue)
+                            {
+                                <span>@(Model.EstimatedDurationMinutes.Value / 60)h @(Model.EstimatedDurationMinutes.Value % 60)m</span>
+                            }
+                            else
+                            {
+                                <span>متغیر</span>
+                            }
+                        </span>
+                    </div>
+                    <div class="d-flex justify-content-between align-items-center">
+                        <span class="text-muted">🏷️ دسته‌بندی</span>
+                        <span class="fw-600">@(Model.CategoryName ?? "عمومی")</span>
+                    </div>
+                    <div class="d-flex justify-content-between align-items-center">
+                        <span class="text-muted">📋 نوع قیمت</span>
+                        <span class="fw-600">@(Model.IsFixedPrice ? "ثابت" : "متغیر")</span>
+                    </div>
+                </div>
+
+                <hr class="my-3" />
+
+                @* Trust Badges *@
+                <div class="text-center">
+                    <small class="text-muted d-block mb-2">چرا ما را انتخاب کنید؟</small>
+                    <div class="d-flex justify-content-center gap-2 flex-wrap">
+                        <span class="badge-soft badge-success-soft small">✓ تضمین کیفیت</span>
+                        <span class="badge-soft badge-info-soft small">🛡️ پرداخت امن</span>
+                        <span class="badge-soft badge-brand small">⭐ کارشناسان معتبر</span>
+                    </div>
+                </div>
+            </div>
+
+            @* Emergency Banner *@
+            @if (!Model.IsFixedPrice)
+            {
+                <div class="dashboard-card mt-3 text-center" style="background: linear-gradient(135deg, var(--terracotta) 0%, var(--gold) 100%); color: white;">
+                    <div style="font-size: 2rem; margin-bottom: 0.5rem;">⚡</div>
+                    <div class="fw-700 mb-1">نیاز فوری دارید؟</div>
+                    <small style="opacity: 0.95;">درخواست خود را با فوریت بالا ثبت کنید تا سریعتر پیشنهاد بگیرید.</small>
+                </div>
+            }
+        </div>
+    </div>
+
+    @* Related Services *@
+    @if (popularInCategory.Any())
+    {
+        <section class="mt-5 pt-4">
+            <div class="d-flex justify-content-between align-items-end mb-4">
+                <div>
+                    <h3 class="fw-800 mb-1">خدمات مرتبط</h3>
+                    <p class="text-muted mb-0">سایر خدمات در این دسته‌بندی</p>
+                </div>
+                <a asp-controller="Services" asp-action="Index" asp-route-categoryId="@Model.CategoryId" class="btn btn-sm btn-outline-brand">
+                    همه خدمات ←
+                </a>
+            </div>
+            <div class="row g-3 row-cols-1 row-cols-md-2 row-cols-lg-3">
+                @foreach (var svc in popularInCategory.Take(3))
                 {
-                    <div class="mt-3">
-                        <small class="text-muted d-block">مدت تخمینی</small>
-                        <span>⏱️ حدود @(Model.EstimatedDurationMinutes.Value / 60) ساعت و @(Model.EstimatedDurationMinutes.Value % 60) دقیقه</span>
+                    <div class="col">
+                        <a asp-action="Details" asp-route-id="@svc.Id" class="card-service text-decoration-none">
+                            <div class="card-thumb">🛠️</div>
+                            <div class="card-body">
+                                <div class="card-title-link text-dark">@svc.Title</div>
+                                <p class="card-meta mt-1 mb-2">@(svc.CategoryName ?? "خدمت عمومی")</p>
+                                <div class="d-flex justify-content-between align-items-center">
+                                    @if (svc.BasePrice.HasValue)
+                                    {
+                                        <span class="price-tag small">@svc.BasePrice.Value.ToString("N0") ت</span>
+                                    }
+                                    else
+                                    {
+                                        <span class="card-meta">توافقی</span>
+                                    }
+                                    <span class="btn btn-sm btn-outline-brand">مشاهده</span>
+                                </div>
+                            </div>
+                        </a>
                     </div>
                 }
             </div>
-        </div>
-
-        <div class="col-lg-4">
-            <div class="dashboard-card text-center">
-                @if (Model.BasePrice.HasValue)
-                {
-                    <small class="text-muted d-block">شروع از</small>
-                    <div class="price-tag fs-3 my-2">@Model.BasePrice.Value.ToString("N0") <span class="fs-6">تومان</span></div>
-                }
-                else
-                {
-                    <div class="fs-5 my-2">قیمت توافقی</div>
-                }
-                <a asp-controller="ServiceRequests" asp-action="Create" asp-route-serviceId="@Model.Id" class="btn btn-brand w-100 mt-2">📝 ثبت درخواست</a>
-                @if (!Model.IsFixedPrice)
-                {
-                    <small class="text-muted d-block mt-2">قیمت نهایی پس از دریافت پیشنهاد کارشناسان مشخص می‌شود.</small>
-                }
-            </div>
-        </div>
-    </div>
+        </section>
+    }
 </div>

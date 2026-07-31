@@ -5,110 +5,547 @@
     var request = ViewBag.Request as ServiceRequestDto;
     var experts = ViewBag.Experts as IDictionary<Guid, ExpertProfileDto?> ?? new Dictionary<Guid, ExpertProfileDto?>();
     var canChoose = request != null && !request.AcceptedProposalId.HasValue;
+    
+    // Calculate best proposal
+    var bestPrice = Model.Any() ? Model.Min(p => p.Price) : 0;
+    var bestResponse = experts.Values.Where(e => e != null).Any() ? experts.Values.Where(e => e != null).Min(e => e.ResponseTimeMinutes ?? int.MaxValue) : 0;
+    var bestRating = experts.Values.Where(e => e != null).Any() ? experts.Values.Where(e => e != null).Max(e => e.RatingAverage) : 0;
 }
+
+<style>
+    .comparison-view-toggle {
+        display: inline-flex;
+        background: var(--cream);
+        border-radius: var(--radius);
+        padding: 0.25rem;
+    }
+    .comparison-view-toggle button {
+        border: none;
+        background: transparent;
+        padding: 0.5rem 1rem;
+        border-radius: var(--radius-sm);
+        font-weight: 600;
+        color: var(--text-muted);
+        transition: all 0.2s;
+    }
+    .comparison-view-toggle button.active {
+        background: white;
+        color: var(--primary);
+        box-shadow: var(--shadow-sm);
+    }
+    .comparison-table {
+        overflow-x: auto;
+    }
+    .comparison-table table {
+        width: 100%;
+        border-collapse: separate;
+        border-spacing: 0;
+    }
+    .comparison-table th {
+        background: var(--cream);
+        padding: 1rem;
+        text-align: center;
+        font-weight: 700;
+        border-bottom: 2px solid var(--beige);
+        position: sticky;
+        top: 0;
+        z-index: 10;
+    }
+    .comparison-table td {
+        padding: 1rem;
+        text-align: center;
+        border-bottom: 1px solid var(--beige);
+    }
+    .comparison-table tbody tr:hover {
+        background: var(--cream);
+    }
+    .winner-badge {
+        display: inline-flex;
+        align-items: center;
+        gap: 0.25rem;
+        padding: 0.25rem 0.75rem;
+        background: linear-gradient(135deg, var(--gold) 0%, var(--primary) 100%);
+        color: white;
+        border-radius: 2rem;
+        font-size: 0.75rem;
+        font-weight: 700;
+        box-shadow: 0 2px 8px rgba(212, 175, 106, 0.3);
+    }
+    .best-value {
+        background: var(--sage);
+        color: white;
+        padding: 0.25rem 0.5rem;
+        border-radius: var(--radius-sm);
+        font-weight: 700;
+    }
+    .recommendation-card {
+        background: linear-gradient(135deg, var(--cream) 0%, var(--beige) 100%);
+        border: 2px solid var(--gold);
+        position: relative;
+        overflow: hidden;
+    }
+    .recommendation-card::before {
+        content: '⭐';
+        position: absolute;
+        top: -10px;
+        right: -10px;
+        font-size: 4rem;
+        opacity: 0.1;
+    }
+    .quick-stats {
+        display: grid;
+        grid-template-columns: repeat(auto-fit, minmax(120px, 1fr));
+        gap: 1rem;
+    }
+    .quick-stat {
+        text-align: center;
+        padding: 1rem;
+        background: var(--cream);
+        border-radius: var(--radius);
+    }
+    .quick-stat-value {
+        font-size: 1.5rem;
+        font-weight: 800;
+        color: var(--primary);
+    }
+    .quick-stat-label {
+        font-size: 0.75rem;
+        color: var(--text-muted);
+        margin-top: 0.25rem;
+    }
+</style>
 
 <div class="container py-4">
     <nav aria-label="breadcrumb" class="small mb-3">
-        <a asp-controller="Home" asp-action="Index">خانه</a> /
-        <a asp-controller="ServiceRequests" asp-action="Details" asp-route-id="@request?.Id">@request?.Title</a> /
+        <a asp-controller="Home" asp-action="Index" class="text-decoration-none">خانه</a>
+        <span class="text-muted mx-1">/</span>
+        <a asp-controller="ServiceRequests" asp-action="Details" asp-route-id="@request?.Id" class="text-decoration-none">@request?.Title</a>
+        <span class="text-muted mx-1">/</span>
         <span class="text-muted">مقایسه پیشنهادها</span>
     </nav>
 
-    <div class="d-flex justify-content-between align-items-center mb-4">
+    <div class="d-flex justify-content-between align-items-center mb-4 flex-wrap gap-3">
         <div>
-            <h1 class="fw-800 mb-0">مقایسه پیشنهادها</h1>
+            <h1 class="fw-800 mb-1">مقایسه پیشنهادها</h1>
             <p class="text-muted mb-0">@request?.Title</p>
         </div>
         @if (!canChoose)
         {
             <span class="badge-soft badge-success-soft">✅ پیشنهاد انتخاب شده است</span>
         }
+        else if (Model.Any())
+        {
+            <div class="comparison-view-toggle">
+                <button type="button" class="active" id="viewCards" onclick="toggleComparisonView('cards')">
+                    <span>▦</span> کارت‌ها
+                </button>
+                <button type="button" id="viewTable" onclick="toggleComparisonView('table')">
+                    <span>☰</span> جدول
+                </button>
+            </div>
+        }
     </div>
 
     @if (!Model.Any())
     {
         <div class="empty-state dashboard-card">
-            <div class="icon">⏳</div>
-            <h5 class="fw-800">هنوز پیشنهادی ثبت نشده</h5>
-            <p class="text-muted">به محض ارسال پیشنهاد توسط کارشناسان، در این صفحه نمایش داده می‌شود.</p>
+            <div class="icon" style="font-size:4rem;margin-bottom:1rem;">⏳</div>
+            <h5 class="fw-800 mb-2">هنوز پیشنهادی ثبت نشده</h5>
+            <p class="text-muted mb-3">به محض ارسال پیشنهاد توسط کارشناسان، در این صفحه نمایش داده می‌شود.</p>
+            <a asp-controller="ServiceRequests" asp-action="Details" asp-route-id="@request?.Id" class="btn btn-brand">
+                بازگشت به درخواست
+            </a>
         </div>
     }
     else
     {
-        <div class="row g-3 row-cols-1 row-cols-md-2 row-cols-xl-3">
-            @foreach (var p in Model)
-            {
-                var expert = experts.ContainsKey(p.ExpertId) ? experts[p.ExpertId] : null;
-                var isAccepted = p.Status == ProposalStatus.Accepted;
-                <div class="col">
-                    <div class="compare-card @(isAccepted ? "selected" : "")">
-                        @if (isAccepted)
-                        {
-                            <span class="badge-soft badge-success-soft mb-2 d-inline-block">✅ انتخاب شده</span>
-                        }
-                        else if (p.Status == ProposalStatus.Rejected)
-                        {
-                            <span class="badge-soft badge-warning-soft mb-2 d-inline-block">رد شده</span>
-                        }
+        @* Quick Statistics *@
+        <div class="dashboard-card mb-4">
+            <h6 class="fw-800 mb-3">📊 خلاصه پیشنهادها</h6>
+            <div class="quick-stats">
+                <div class="quick-stat">
+                    <div class="quick-stat-value">@Model.Count</div>
+                    <div class="quick-stat-label">پیشنهاد دریافتی</div>
+                </div>
+                <div class="quick-stat">
+                    <div class="quick-stat-value">@bestPrice.ToString("N0")</div>
+                    <div class="quick-stat-label">کمترین قیمت (ت)</div>
+                </div>
+                <div class="quick-stat">
+                    <div class="quick-stat-value">@Model.Max(p => p.Price).ToString("N0")</div>
+                    <div class="quick-stat-label">بیشترین قیمت (ت)</div>
+                </div>
+                <div class="quick-stat">
+                    <div class="quick-stat-value">@((int)Model.Average(p => p.Price)).ToString("N0")</div>
+                    <div class="quick-stat-label">میانگین قیمت (ت)</div>
+                </div>
+                @if (Model.Any(p => p.EstimatedDurationHours.HasValue))
+                {
+                    <div class="quick-stat">
+                        <div class="quick-stat-value">@Model.Where(p => p.EstimatedDurationHours.HasValue).Min(p => p.EstimatedDurationHours)</div>
+                        <div class="quick-stat-label">سریع‌ترین (ساعت)</div>
+                    </div>
+                }
+            </div>
+        </div>
 
-                        <div class="d-flex gap-3 mb-3">
-                            <span class="pro-avatar">@(p.ExpertBusinessName?.FirstOrDefault() ?? (expert?.BusinessName.FirstOrDefault() ?? 'P'))</span>
-                            <div>
-                                <a asp-controller="Experts" asp-action="Details" asp-route-id="@expert?.Id" class="fw-800 d-block">@(p.ExpertBusinessName ?? expert?.BusinessName ?? "کارشناس")</a>
-                                @if (expert != null)
+        @* AI Recommendation (if applicable) *@
+        @{
+            var recommendedProposal = Model
+                .Where(p => p.Status == ProposalStatus.Pending)
+                .OrderBy(p => p.Price * 0.4 + (experts.ContainsKey(p.ExpertId) && experts[p.ExpertId] != null ? (5 - experts[p.ExpertId].RatingAverage) * 100000 : 500000) * 0.6)
+                .FirstOrDefault();
+        }
+        
+        @if (recommendedProposal != null && canChoose)
+        {
+            var recommendedExpert = experts.ContainsKey(recommendedProposal.ExpertId) ? experts[recommendedProposal.ExpertId] : null;
+            <div class="recommendation-card dashboard-card mb-4">
+                <div class="d-flex align-items-center gap-2 mb-3">
+                    <span class="winner-badge">🏆 پیشنهاد برتر</span>
+                    <span class="text-muted small">بر اساس قیمت، امتیاز و سابقه</span>
+                </div>
+                <div class="row g-3 align-items-center">
+                    <div class="col-md-auto text-center">
+                        <span class="pro-avatar" style="width:70px;height:70px;font-size:2rem;">
+                            @(recommendedProposal.ExpertBusinessName?.FirstOrDefault() ?? 'P')
+                        </span>
+                    </div>
+                    <div class="col-md">
+                        <div class="d-flex align-items-center gap-2 mb-1">
+                            <h5 class="fw-800 mb-0">@(recommendedProposal.ExpertBusinessName ?? "کارشناس")</h5>
+                            @if (recommendedExpert?.IsVerified == true)
+                            {
+                                <span class="badge-soft badge-success-soft small">✓</span>
+                            }
+                        </div>
+                        @if (recommendedExpert != null)
+                        {
+                            <div class="rating-stars mb-1">
+                                @for (int i = 1; i <= 5; i++)
                                 {
-                                    <div class="rating-stars small">
-                                        <span>@(expert.RatingAverage.ToString("0.0")) ★</span>
-                                        <span class="text-muted">(@expert.ReviewCount نظر)</span>
+                                    <span class="@(i <= Math.Round(recommendedExpert.RatingAverage) ? "text-warning" : "text-muted")">★</span>
+                                }
+                                <span class="fw-600">@recommendedExpert.RatingAverage.ToString("0.0")</span>
+                                <span class="text-muted small">(@recommendedExpert.ReviewCount نظر)</span>
+                            </div>
+                            <small class="text-muted">@recommendedExpert.JobsCompleted کار تکمیل شده · @recommendedExpert.City</small>
+                        }
+                    </div>
+                    <div class="col-md-auto text-md-end">
+                        <div class="mb-2">
+                            <small class="text-muted d-block">قیمت پیشنهادی</small>
+                            <div class="price-tag fs-3">@recommendedProposal.Price.ToString("N0")</div>
+                            <small class="text-muted">تومان</small>
+                        </div>
+                        <form asp-action="Accept" asp-route-proposalId="@recommendedProposal.Id" asp-route-requestId="@recommendedProposal.RequestId" method="post"
+                              onsubmit="return confirm('این پیشنهاد را انتخاب می‌کنید؟');">
+                            <button type="submit" class="btn btn-brand w-100">
+                                ✓ انتخاب این پیشنهاد
+                            </button>
+                        </form>
+                    </div>
+                </div>
+                @if (!string.IsNullOrEmpty(recommendedProposal.Message))
+                {
+                    <div class="alert alert-soft bg-soft mt-3 mb-0">
+                        <small class="fw-600">پیام کارشناس:</small>
+                        <small class="d-block mt-1">@recommendedProposal.Message</small>
+                    </div>
+                }
+            </div>
+        }
+
+        @* Card View *@
+        <div id="cardsView">
+            <div class="row g-3 row-cols-1 row-cols-md-2 row-cols-xl-3">
+                @foreach (var p in Model)
+                {
+                    var expert = experts.ContainsKey(p.ExpertId) ? experts[p.ExpertId] : null;
+                    var isAccepted = p.Status == ProposalStatus.Accepted;
+                    var isBestPrice = p.Price == bestPrice;
+                    var isBestRating = expert != null && expert.RatingAverage == bestRating;
+                    
+                    <div class="col">
+                        <div class="compare-card @(isAccepted ? "selected" : "")" style="height:100%;position:relative;">
+                            @if (isAccepted)
+                            {
+                                <span class="badge-soft badge-success-soft mb-2 d-inline-block">✅ انتخاب شده</span>
+                            }
+                            else if (p.Status == ProposalStatus.Rejected)
+                            {
+                                <span class="badge-soft badge-warning-soft mb-2 d-inline-block">❌ رد شده</span>
+                            }
+                            else
+                            {
+                                <div class="mb-2">
+                                    @if (isBestPrice)
+                                    {
+                                        <span class="badge-soft badge-success-soft small">💰 بهترین قیمت</span>
+                                    }
+                                    @if (isBestRating && expert != null)
+                                    {
+                                        <span class="badge-soft badge-gold small">⭐ بالاترین امتیاز</span>
+                                    }
+                                </div>
+                            }
+
+                            <div class="d-flex gap-3 mb-3 align-items-center">
+                                <span class="pro-avatar" style="width:60px;height:60px;font-size:1.5rem;">
+                                    @(p.ExpertBusinessName?.FirstOrDefault() ?? (expert?.BusinessName.FirstOrDefault() ?? 'P'))
+                                </span>
+                                <div class="flex-grow-1">
+                                    <a asp-controller="Experts" asp-action="Details" asp-route-id="@expert?.Id" class="fw-800 d-block text-decoration-none">
+                                        @(p.ExpertBusinessName ?? expert?.BusinessName ?? "کارشناس")
+                                    </a>
+                                    @if (expert != null)
+                                    {
+                                        <div class="rating-stars small mb-1">
+                                            @for (int i = 1; i <= 5; i++)
+                                            {
+                                                <span class="@(i <= Math.Round(expert.RatingAverage) ? "text-warning" : "text-muted")">★</span>
+                                            }
+                                            <span class="fw-600">@expert.RatingAverage.ToString("0.0")</span>
+                                        </div>
+                                        <small class="text-muted">@expert.JobsCompleted کار · @expert.City</small>
+                                    }
+                                </div>
+                            </div>
+
+                            <div class="vstack gap-2 small mb-3">
+                                <div class="d-flex justify-content-between align-items-center">
+                                    <span class="text-muted">💰 قیمت</span>
+                                    <span class="@(isBestPrice ? "best-value" : "price-tag")">@p.Price.ToString("N0") ت</span>
+                                </div>
+                                @if (p.EstimatedDurationHours.HasValue)
+                                {
+                                    <div class="d-flex justify-content-between">
+                                        <span class="text-muted">⏱️ مدت تخمینی</span>
+                                        <span class="fw-600">@p.EstimatedDurationHours ساعت</span>
                                     </div>
-                                    <small class="text-muted">@expert.JobsCompleted کار · @expert.City</small>
+                                }
+                                @if (p.AvailableStartDate.HasValue)
+                                {
+                                    <div class="d-flex justify-content-between">
+                                        <span class="text-muted">📅 شروع کار</span>
+                                        <span class="fw-600">@p.AvailableStartDate.Value.ToPersianDate()</span>
+                                    </div>
+                                }
+                                @if (expert != null && expert.ResponseTimeMinutes.HasValue)
+                                {
+                                    <div class="d-flex justify-content-between">
+                                        <span class="text-muted">⚡ پاسخگویی</span>
+                                        <span class="fw-600">@expert.ResponseTimeMinutes دقیقه</span>
+                                    </div>
+                                }
+                            </div>
+
+                            @if (!string.IsNullOrEmpty(p.Message))
+                            {
+                                <div class="bg-soft rounded p-2 mb-3 small" style="line-height:1.5;">
+                                    <div class="fw-600 mb-1">پیام کارشناس:</div>
+                                    @p.Message
+                                </div>
+                            }
+
+                            <div class="mt-auto">
+                                @if (canChoose && p.Status == ProposalStatus.Pending)
+                                {
+                                    <div class="d-grid gap-2">
+                                        <form asp-action="Accept" asp-route-proposalId="@p.Id" asp-route-requestId="@p.RequestId" method="post"
+                                              onsubmit="return confirm('این پیشنهاد را انتخاب می‌کنید? پس از انتخاب، سفارش ایجاد می‌شود.');">
+                                            <button type="submit" class="btn btn-brand w-100">✓ انتخاب این پیشنهاد</button>
+                                        </form>
+                                        <a asp-controller="Experts" asp-action="Details" asp-route-id="@expert?.Id" class="btn btn-outline-brand w-100">
+                                            مشاهده پروفایل
+                                        </a>
+                                    </div>
                                 }
                             </div>
                         </div>
-
-                        <div class="vstack gap-2 small">
-                            <div class="d-flex justify-content-between">
-                                <span class="text-muted">قیمت پیشنهادی</span>
-                                <span class="price-tag">@p.Price.ToString("N0") ت</span>
-                            </div>
-                            @if (p.EstimatedDurationHours.HasValue)
-                            {
-                                <div class="d-flex justify-content-between">
-                                    <span class="text-muted">مدت تخمینی</span>
-                                    <span>@p.EstimatedDurationHours ساعت</span>
-                                </div>
-                            }
-                            @if (p.AvailableStartDate.HasValue)
-                            {
-                                <div class="d-flex justify-content-between">
-                                    <span class="text-muted">شروع کار</span>
-                                    <span>@p.AvailableStartDate.Value.ToPersianDate()</span>
-                                </div>
-                            }
-                            @if (expert != null)
-                            {
-                                <div class="d-flex justify-content-between">
-                                    <span class="text-muted">زمان پاسخگویی</span>
-                                    <span>@(expert.ResponseTimeMinutes ?? 0) دقیقه</span>
-                                </div>
-                            }
-                        </div>
-
-                        @if (!string.IsNullOrEmpty(p.Message))
-                        {
-                            <div class="bg-soft rounded p-2 mt-3 small">@p.Message</div>
-                        }
-
-                        @if (canChoose && p.Status == ProposalStatus.Pending)
-                        {
-                            <form asp-action="Accept" asp-route-proposalId="@p.Id" asp-route-requestId="@p.RequestId" method="post"
-                                  onsubmit="return confirm('این پیشنهاد را انتخاب می‌کنید؟ پس از انتخاب، سفارش ایجاد می‌شود.');">
-                                <button type="submit" class="btn btn-brand w-100 mt-3">انتخاب این پیشنهاد</button>
-                            </form>
-                        }
                     </div>
+                }
+            </div>
+        </div>
+
+        @* Table View *@
+        <div id="tableView" style="display:none;">
+            <div class="dashboard-card comparison-table">
+                <table>
+                    <thead>
+                        <tr>
+                            <th style="text-align:right;">کارشناس</th>
+                            <th>امتیاز</th>
+                            <th>قیمت</th>
+                            <th>مدت تخمینی</th>
+                            <th>شروع کار</th>
+                            <th>پاسخگویی</th>
+                            <th>تجربه</th>
+                            <th style="width:120px;">عملیات</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        @foreach (var p in Model.OrderBy(p => p.Price))
+                        {
+                            var expert = experts.ContainsKey(p.ExpertId) ? experts[p.ExpertId] : null;
+                            var isAccepted = p.Status == ProposalStatus.Accepted;
+                            var isBestPrice = p.Price == bestPrice;
+                            
+                            <tr style="@(isAccepted ? "background:var(--cream);" : "")">
+                                <td style="text-align:right;">
+                                    <div class="d-flex align-items-center gap-2">
+                                        <span class="pro-avatar" style="width:40px;height:40px;font-size:1rem;">
+                                            @(p.ExpertBusinessName?.FirstOrDefault() ?? 'P')
+                                        </span>
+                                        <div>
+                                            <a asp-controller="Experts" asp-action="Details" asp-route-id="@expert?.Id" class="fw-700 text-decoration-none">
+                                                @(p.ExpertBusinessName ?? "کارشناس")
+                                            </a>
+                                            @if (isAccepted)
+                                            {
+                                                <small class="badge-soft badge-success-soft d-block mt-1">✓ انتخاب شده</small>
+                                            }
+                                        </div>
+                                    </div>
+                                </td>
+                                <td>
+                                    @if (expert != null)
+                                    {
+                                        <div class="rating-stars small">
+                                            @for (int i = 1; i <= 5; i++)
+                                            {
+                                                <span class="@(i <= Math.Round(expert.RatingAverage) ? "text-warning" : "text-muted")">★</span>
+                                            }
+                                        </div>
+                                        <small class="fw-600">@expert.RatingAverage.ToString("0.0")</small>
+                                    }
+                                    else
+                                    {
+                                        <span class="text-muted">—</span>
+                                    }
+                                </td>
+                                <td>
+                                    <span class="@(isBestPrice ? "best-value" : "price-tag")">
+                                        @p.Price.ToString("N0")
+                                    </span>
+                                    @if (isBestPrice)
+                                    {
+                                        <small class="d-block text-success mt-1">بهترین</small>
+                                    }
+                                </td>
+                                <td>
+                                    @if (p.EstimatedDurationHours.HasValue)
+                                    {
+                                        <span class="fw-600">@p.EstimatedDurationHours</span>
+                                        <small class="text-muted d-block">ساعت</small>
+                                    }
+                                    else
+                                    {
+                                        <span class="text-muted">—</span>
+                                    }
+                                </td>
+                                <td>
+                                    @if (p.AvailableStartDate.HasValue)
+                                    {
+                                        <span class="small">@p.AvailableStartDate.Value.ToPersianDate()</span>
+                                    }
+                                    else
+                                    {
+                                        <span class="text-muted">—</span>
+                                    }
+                                </td>
+                                <td>
+                                    @if (expert?.ResponseTimeMinutes != null)
+                                    {
+                                        <span class="fw-600">@expert.ResponseTimeMinutes</span>
+                                        <small class="text-muted d-block">دقیقه</small>
+                                    }
+                                    else
+                                    {
+                                        <span class="text-muted">—</span>
+                                    }
+                                </td>
+                                <td>
+                                    @if (expert != null)
+                                    {
+                                        <span class="fw-600">@expert.JobsCompleted</span>
+                                        <small class="text-muted d-block">کار</small>
+                                    }
+                                    else
+                                    {
+                                        <span class="text-muted">—</span>
+                                    }
+                                </td>
+                                <td>
+                                    @if (canChoose && p.Status == ProposalStatus.Pending)
+                                    {
+                                        <form asp-action="Accept" asp-route-proposalId="@p.Id" asp-route-requestId="@p.RequestId" method="post"
+                                              onsubmit="return confirm('انتخاب این پیشنهاد؟');">
+                                            <button type="submit" class="btn btn-brand btn-sm w-100">انتخاب</button>
+                                        </form>
+                                    }
+                                    else if (isAccepted)
+                                    {
+                                        <span class="text-success small">✓ انتخاب شده</span>
+                                    }
+                                </td>
+                            </tr>
+                        }
+                    </tbody>
+                </table>
+            </div>
+
+            @* Messages Section *@
+            <div class="dashboard-card mt-3">
+                <h6 class="fw-800 mb-3">💬 پیام‌های کارشناسان</h6>
+                <div class="vstack gap-3">
+                    @foreach (var p in Model.Where(p => !string.IsNullOrEmpty(p.Message)))
+                    {
+                        <div class="d-flex gap-3">
+                            <span class="pro-avatar" style="width:40px;height:40px;font-size:1rem;">
+                                @(p.ExpertBusinessName?.FirstOrDefault() ?? 'P')
+                            </span>
+                            <div class="flex-grow-1">
+                                <div class="fw-700 mb-1">@p.ExpertBusinessName</div>
+                                <div class="bg-soft rounded p-2 small">@p.Message</div>
+                            </div>
+                        </div>
+                    }
                 </div>
-            }
+            </div>
         </div>
     }
 </div>
+
+@section Scripts {
+    <script>
+        function toggleComparisonView(view) {
+            const cardsView = document.getElementById('cardsView');
+            const tableView = document.getElementById('tableView');
+            const btnCards = document.getElementById('viewCards');
+            const btnTable = document.getElementById('viewTable');
+            
+            if (view === 'cards') {
+                cardsView.style.display = 'block';
+                tableView.style.display = 'none';
+                btnCards.classList.add('active');
+                btnTable.classList.remove('active');
+                localStorage.setItem('proposalsView', 'cards');
+            } else {
+                cardsView.style.display = 'none';
+                tableView.style.display = 'block';
+                btnTable.classList.add('active');
+                btnCards.classList.remove('active');
+                localStorage.setItem('proposalsView', 'table');
+            }
+        }
+        
+        // Restore view preference
+        document.addEventListener('DOMContentLoaded', function() {
+            const savedView = localStorage.getItem('proposalsView');
+            if (savedView === 'table') {
+                toggleComparisonView('table');
+            }
+        });
+    </script>
+}

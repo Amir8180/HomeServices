@@ -7,111 +7,473 @@
 }
 
 <div class="container py-4">
-    <div class="d-flex justify-content-between align-items-end mb-4">
+    @* Header with Stats *@
+    <div class="d-flex justify-content-between align-items-end mb-4 flex-wrap gap-3">
         <div>
-            <h1 class="fw-800 mb-0">کارشناسان خدمات</h1>
-            <p class="text-muted mb-0">@Model.TotalCount کارشناس تأییدشده</p>
+            <h1 class="fw-800 mb-1">کارشناسان خدمات</h1>
+            <p class="text-muted mb-0">
+                <span class="fw-600">@Model.TotalCount</span> کارشناس تأیید شده
+                @if (!string.IsNullOrEmpty(filter.SearchTerm))
+                {
+                    <span> برای "<span class="fw-600">@filter.SearchTerm</span>"</span>
+                }
+                @if (!string.IsNullOrEmpty(filter.City))
+                {
+                    <span> در <span class="fw-600">@filter.City</span></span>
+                }
+            </p>
+        </div>
+        <div class="d-flex gap-2 align-items-center">
+            <small class="text-muted me-2">نمایش:</small>
+            <div class="btn-group btn-group-sm" role="group">
+                <button type="button" class="btn btn-outline-brand active" id="viewGrid" onclick="toggleView('grid')">
+                    <span style="font-size:1rem;">▦</span> کارت
+                </button>
+                <button type="button" class="btn btn-outline-brand" id="viewList" onclick="toggleView('list')">
+                    <span style="font-size:1rem;">☰</span> لیست
+                </button>
+            </div>
         </div>
     </div>
 
     <div class="row g-4">
+        @* Enhanced Sidebar Filters *@
         <div class="col-lg-3">
-            <div class="dashboard-card">
-                <h6 class="fw-800 mb-3">🔍 فیلترها</h6>
-                <form method="get" class="vstack gap-3">
+            <div class="dashboard-card sticky-top" style="top:1rem;">
+                <div class="d-flex justify-content-between align-items-center mb-3">
+                    <h6 class="fw-800 mb-0">
+                        <span style="font-size:1.2rem;margin-left:0.5rem;">🔍</span>
+                        فیلترها
+                    </h6>
+                    @if (!string.IsNullOrEmpty(filter.SearchTerm) || filter.CategoryId.HasValue || !string.IsNullOrEmpty(filter.City))
+                    {
+                        <a asp-action="Index" class="btn btn-sm btn-link text-danger p-0" style="text-decoration:none;">پاک کردن</a>
+                    }
+                </div>
+                
+                <form method="get" class="vstack gap-3" id="filterForm">
+                    @* Search *@
                     <div>
-                        <label class="form-label small fw-600">جستجو</label>
-                        <input type="text" name="search" value="@filter.SearchTerm" class="form-control form-control-sm" placeholder="نام کسب‌وکار..." />
+                        <label class="form-label small fw-600 mb-2">
+                            <span style="font-size:1rem;margin-left:0.25rem;">🔎</span>
+                            جستجو
+                        </label>
+                        <input type="text" name="search" value="@filter.SearchTerm" class="form-control" placeholder="نام کسب‌وکار..." />
                     </div>
+
+                    @* Expertise Filter *@
                     <div>
-                        <label class="form-label small fw-600">تخصص</label>
-                        <select name="categoryId" class="form-select form-select-sm" asp-items="@(new SelectList(categories, "Id", "Name", filter.CategoryId))">
-                            <option value="">همه</option>
+                        <label class="form-label small fw-600 mb-2">
+                            <span style="font-size:1rem;margin-left:0.25rem;">⚡</span>
+                            تخصص
+                        </label>
+                        <select name="categoryId" class="form-select" onchange="this.form.submit()">
+                            <option value="">همه تخصص‌ها</option>
+                            @foreach (var cat in categories)
+                            {
+                                <option value="@cat.Id" selected="@(filter.CategoryId == cat.Id)">@cat.Name</option>
+                            }
                         </select>
                     </div>
+
+                    @* Location Filter *@
                     <div>
-                        <label class="form-label small fw-600">شهر</label>
-                        <input type="text" name="city" value="@filter.City" class="form-control form-control-sm" />
+                        <label class="form-label small fw-600 mb-2">
+                            <span style="font-size:1rem;margin-left:0.25rem;">📍</span>
+                            شهر
+                        </label>
+                        <input type="text" name="city" value="@filter.City" class="form-control" placeholder="مثلاً تهران" />
                     </div>
-                    <button type="submit" class="btn btn-brand btn-sm">اعمال فیلتر</button>
-                    <a asp-action="Index" class="btn btn-outline-brand btn-sm">پاک کردن</a>
+
+                    @* Rating Filter *@
+                    <div>
+                        <label class="form-label small fw-600 mb-2">
+                            <span style="font-size:1rem;margin-left:0.25rem;">⭐</span>
+                            حداقل امتیاز
+                        </label>
+                        <select name="minRating" class="form-select">
+                            <option value="">همه امتیازها</option>
+                            <option value="4.5">4.5+ ستاره</option>
+                            <option value="4">4+ ستاره</option>
+                            <option value="3.5">3.5+ ستاره</option>
+                            <option value="3">3+ ستاره</option>
+                        </select>
+                    </div>
+
+                    @* Sort By *@
+                    <div>
+                        <label class="form-label small fw-600 mb-2">
+                            <span style="font-size:1rem;margin-left:0.25rem;">🎯</span>
+                            مرتب‌سازی
+                        </label>
+                        <select name="sortBy" class="form-select" onchange="this.form.submit()">
+                            <option value="">پیشنهادی</option>
+                            <option value="rating">بالاترین امتیاز</option>
+                            <option value="jobs">بیشترین کار</option>
+                            <option value="response">سریع‌ترین پاسخ</option>
+                        </select>
+                    </div>
+
+                    @* Filter Actions *@
+                    <div class="d-grid gap-2">
+                        <button type="submit" class="btn btn-brand">
+                            اعمال فیلترها
+                        </button>
+                    </div>
                 </form>
+
+                @* Active Filters Display *@
+                @if (!string.IsNullOrEmpty(filter.SearchTerm) || filter.CategoryId.HasValue || !string.IsNullOrEmpty(filter.City))
+                {
+                    <hr class="my-3" />
+                    <div>
+                        <small class="text-muted d-block mb-2 fw-600">فیلترهای فعال:</small>
+                        <div class="d-flex flex-wrap gap-1">
+                            @if (!string.IsNullOrEmpty(filter.SearchTerm))
+                            {
+                                <span class="badge-soft badge-brand small">🔎 @filter.SearchTerm</span>
+                            }
+                            @if (filter.CategoryId.HasValue)
+                            {
+                                var selectedCat = categories.FirstOrDefault(c => c.Id == filter.CategoryId.Value);
+                                if (selectedCat != null)
+                                {
+                                    <span class="badge-soft badge-brand small">⚡ @selectedCat.Name</span>
+                                }
+                            }
+                            @if (!string.IsNullOrEmpty(filter.City))
+                            {
+                                <span class="badge-soft badge-brand small">📍 @filter.City</span>
+                            }
+                        </div>
+                    </div>
+                }
+
+                @* Trust Badge *@
+                <hr class="my-3" />
+                <div class="alert alert-soft bg-soft small mb-0">
+                    <div class="fw-600 mb-1">🛡️ کارشناسان معتبر</div>
+                    <small class="text-muted">همه کارشناسان بررسی و تأیید شده‌اند</small>
+                </div>
             </div>
         </div>
 
+        @* Experts Grid/List *@
         <div class="col-lg-9">
             @if (!Model.Items.Any())
             {
                 <div class="empty-state dashboard-card">
-                    <div class="icon">👷</div>
-                    <h5 class="fw-800">کارشناسی یافت نشد</h5>
+                    <div class="icon" style="font-size:4rem;margin-bottom:1rem;">👷</div>
+                    <h5 class="fw-800 mb-2">کارشناسی یافت نشد</h5>
+                    <p class="text-muted mb-3">متأسفانه با این فیلترها نتیجه‌ای یافت نشد.</p>
+                    <a asp-action="Index" class="btn btn-brand">مشاهده همه کارشناسان</a>
                 </div>
             }
             else
             {
-                <div class="row g-3 row-cols-1 row-cols-md-2">
-                    @foreach (var e in Model.Items)
+                @* Grid View *@
+                <div id="expertsGrid" class="row g-3 row-cols-1 row-cols-md-2 row-cols-xl-3">
+                    @foreach (var expert in Model.Items)
                     {
-                        <div class="col">
-                            <a asp-action="Details" asp-route-id="@e.Id" class="card-pro p-3 d-block h-100">
-                                <div class="d-flex gap-3 align-items-center">
-                                    <span class="pro-avatar" style="width:60px;height:60px;font-size:1.6rem;">@(e.BusinessName?.FirstOrDefault() ?? 'P')</span>
-                                    <div class="flex-grow-1">
-                                        <div class="fw-800 fs-5 text-dark">@e.BusinessName</div>
-                                        <div class="d-flex gap-1 flex-wrap">
-                                            @if (e.IsVerified)
-                                            {
-                                                <span class="badge-soft badge-success-soft small">✓ تأییدشده</span>
-                                            }
-                                            @if (e.IsApproved)
-                                            {
-                                                <span class="badge-soft badge-info-soft small">✔ تأیید مدیر</span>
-                                            }
-                                        </div>
-                                        <div class="rating-stars small">
-                                            @for (int i = 1; i <= 5; i++)
-                                            {
-                                                <span>@(i <= Math.Round(e.RatingAverage) ? "★" : "☆")</span>
-                                            }
-                                            <span class="text-muted">@e.RatingAverage.ToString("0.0") (@e.ReviewCount)</span>
-                                        </div>
-                                        <div class="small text-muted">@e.City · @e.JobsCompleted کار انجام شده</div>
+                        <div class="col expert-item">
+                            <div class="card-pro h-100" style="transition:all 0.3s ease;cursor:pointer;" 
+                                 onmouseenter="this.style.transform='translateY(-8px)';this.style.boxShadow='var(--shadow-lg)';" 
+                                 onmouseleave="this.style.transform='translateY(0)';this.style.boxShadow='var(--shadow)';"
+                                 onclick="window.location.href='@Url.Action("Details", new { id = expert.Id })'">
+                                
+                                @* Expert Card Header *@
+                                <div class="text-center mb-3 pt-3">
+                                    <div class="position-relative d-inline-block">
+                                        <span class="pro-avatar" style="width:80px;height:80px;font-size:2.2rem;box-shadow:var(--shadow);">
+                                            @(expert.BusinessName?.FirstOrDefault() ?? 'P')
+                                        </span>
+                                        @if (expert.IsVerified)
+                                        {
+                                            <span class="badge-soft badge-success-soft" style="position:absolute;bottom:-4px;right:-4px;font-size:0.7rem;padding:0.25rem 0.5rem;">
+                                                ✓
+                                            </span>
+                                        }
                                     </div>
                                 </div>
-                                @if (e.CategoryNames.Any())
-                                {
-                                    <div class="mt-2">
-                                        @foreach (var c in e.CategoryNames.Take(3))
+
+                                @* Expert Info *@
+                                <div class="text-center mb-2">
+                                    <h6 class="fw-800 mb-1 text-dark">@expert.BusinessName</h6>
+                                    <small class="text-muted d-block mb-2">📍 @expert.City</small>
+                                    
+                                    @* Badges *@
+                                    <div class="d-flex justify-content-center gap-1 mb-2 flex-wrap">
+                                        @if (expert.IsVerified)
                                         {
-                                            <span class="badge-soft badge-brand small">@c</span>
+                                            <span class="badge-soft badge-success-soft" style="font-size:0.7rem;">✓ تأیید شده</span>
+                                        }
+                                        @if (expert.IsApproved)
+                                        {
+                                            <span class="badge-soft badge-info-soft" style="font-size:0.7rem;">✔ مدیریت</span>
+                                        }
+                                        @if (expert.JobsCompleted >= 50)
+                                        {
+                                            <span class="badge-soft badge-gold" style="font-size:0.7rem;">🏆 برتر</span>
+                                        }
+                                    </div>
+
+                                    @* Rating *@
+                                    <div class="rating-stars mb-2" style="font-size:1.1rem;">
+                                        @for (int i = 1; i <= 5; i++)
+                                        {
+                                            <span class="@(i <= Math.Round(expert.RatingAverage) ? "text-warning" : "text-muted")">★</span>
+                                        }
+                                    </div>
+                                    <div class="small">
+                                        <span class="fw-700">@expert.RatingAverage.ToString("0.0")</span>
+                                        <span class="text-muted">(@expert.ReviewCount نظر)</span>
+                                    </div>
+                                </div>
+
+                                @* Stats *@
+                                <div class="row g-2 text-center mb-3">
+                                    <div class="col-6">
+                                        <div style="background:var(--cream);padding:0.5rem;border-radius:var(--radius-sm);">
+                                            <div class="fw-700" style="font-size:1.2rem;">@expert.JobsCompleted</div>
+                                            <small class="text-muted" style="font-size:0.75rem;">پروژه</small>
+                                        </div>
+                                    </div>
+                                    <div class="col-6">
+                                        <div style="background:var(--cream);padding:0.5rem;border-radius:var(--radius-sm);">
+                                            <div class="fw-700" style="font-size:1.2rem;">@(expert.ResponseTimeMinutes ?? 60)</div>
+                                            <small class="text-muted" style="font-size:0.75rem;">دقیقه پاسخ</small>
+                                        </div>
+                                    </div>
+                                </div>
+
+                                @* Specialties *@
+                                @if (expert.CategoryNames.Any())
+                                {
+                                    <div class="d-flex flex-wrap gap-1 justify-content-center mb-2">
+                                        @foreach (var category in expert.CategoryNames.Take(3))
+                                        {
+                                            <span class="badge-soft badge-brand" style="font-size:0.7rem;">@category</span>
+                                        }
+                                        @if (expert.CategoryNames.Count() > 3)
+                                        {
+                                            <span class="badge-soft badge-brand" style="font-size:0.7rem;">+@(expert.CategoryNames.Count() - 3)</span>
                                         }
                                     </div>
                                 }
-                            </a>
+
+                                @* CTA *@
+                                <div class="mt-auto pt-2">
+                                    <a asp-action="Details" asp-route-id="@expert.Id" class="btn btn-brand w-100 btn-sm" onclick="event.stopPropagation();">
+                                        مشاهده پروفایل
+                                    </a>
+                                </div>
+                            </div>
                         </div>
                     }
                 </div>
 
+                @* List View (Hidden by default) *@
+                <div id="expertsList" class="vstack gap-3" style="display:none;">
+                    @foreach (var expert in Model.Items)
+                    {
+                        <div class="dashboard-card expert-item" style="transition:all 0.3s ease;" 
+                             onmouseenter="this.style.boxShadow='var(--shadow-lg)';" 
+                             onmouseleave="this.style.boxShadow='var(--shadow)';">
+                            <div class="row g-3 align-items-center">
+                                <div class="col-md-auto text-center">
+                                    <div class="position-relative d-inline-block">
+                                        <span class="pro-avatar" style="width:90px;height:90px;font-size:2.5rem;">
+                                            @(expert.BusinessName?.FirstOrDefault() ?? 'P')
+                                        </span>
+                                        @if (expert.IsVerified)
+                                        {
+                                            <span class="badge-soft badge-success-soft" style="position:absolute;bottom:0;right:0;font-size:0.7rem;">
+                                                ✓
+                                            </span>
+                                        }
+                                    </div>
+                                </div>
+                                <div class="col-md-7">
+                                    <div class="d-flex align-items-center gap-2 mb-1">
+                                        <h5 class="fw-800 mb-0">@expert.BusinessName</h5>
+                                        @if (expert.JobsCompleted >= 50)
+                                        {
+                                            <span class="badge-soft badge-gold small">🏆</span>
+                                        }
+                                    </div>
+                                    
+                                    <div class="d-flex align-items-center gap-2 mb-2">
+                                        <div class="rating-stars">
+                                            @for (int i = 1; i <= 5; i++)
+                                            {
+                                                <span class="@(i <= Math.Round(expert.RatingAverage) ? "text-warning" : "text-muted")">★</span>
+                                            }
+                                        </div>
+                                        <span class="fw-700">@expert.RatingAverage.ToString("0.0")</span>
+                                        <span class="text-muted small">(@expert.ReviewCount نظر)</span>
+                                    </div>
+
+                                    <div class="d-flex gap-3 flex-wrap text-muted small mb-2">
+                                        <span>📍 @expert.City</span>
+                                        <span>✅ @expert.JobsCompleted کار</span>
+                                        @if (expert.ResponseTimeMinutes.HasValue)
+                                        {
+                                            <span>⏱️ @expert.ResponseTimeMinutes دقیقه</span>
+                                        }
+                                    </div>
+
+                                    @if (expert.CategoryNames.Any())
+                                    {
+                                        <div class="d-flex flex-wrap gap-1">
+                                            @foreach (var category in expert.CategoryNames.Take(4))
+                                            {
+                                                <span class="badge-soft badge-brand small">@category</span>
+                                            }
+                                            @if (expert.CategoryNames.Count() > 4)
+                                            {
+                                                <span class="badge-soft badge-brand small">+@(expert.CategoryNames.Count() - 4)</span>
+                                            }
+                                        </div>
+                                    }
+                                </div>
+                                <div class="col-md-auto ms-md-auto text-md-end">
+                                    <div class="d-grid gap-2" style="min-width:150px;">
+                                        <a asp-action="Details" asp-route-id="@expert.Id" class="btn btn-brand">
+                                            مشاهده پروفایل
+                                        </a>
+                                        <a asp-controller="ServiceRequests" asp-action="Create" class="btn btn-outline-brand">
+                                            ثبت درخواست
+                                        </a>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    }
+                </div>
+
+                @* Enhanced Pagination *@
                 @if (Model.TotalPages > 1)
                 {
                     <nav class="mt-4">
-                        <ul class="pagination justify-content-center">
+                        <ul class="pagination justify-content-center flex-wrap">
                             <li class="page-item @(Model.HasPreviousPage ? "" : "disabled")">
-                                <a class="page-link" asp-action="Index" asp-route-page="@(Model.PageNumber-1)">→ قبلی</a>
+                                <a class="page-link" asp-action="Index" 
+                                   asp-route-page="@(Model.PageNumber-1)" 
+                                   asp-route-search="@filter.SearchTerm" 
+                                   asp-route-categoryId="@filter.CategoryId"
+                                   asp-route-city="@filter.City">
+                                    ← قبلی
+                                </a>
                             </li>
-                            @for (int i = 1; i <= Model.TotalPages; i++)
+                            
+                            @{
+                                var startPage = Math.Max(1, Model.PageNumber - 2);
+                                var endPage = Math.Min(Model.TotalPages, Model.PageNumber + 2);
+                            }
+                            
+                            @if (startPage > 1)
+                            {
+                                <li class="page-item">
+                                    <a class="page-link" asp-action="Index" asp-route-page="1" 
+                                       asp-route-search="@filter.SearchTerm" 
+                                       asp-route-categoryId="@filter.CategoryId"
+                                       asp-route-city="@filter.City">۱</a>
+                                </li>
+                                @if (startPage > 2)
+                                {
+                                    <li class="page-item disabled"><span class="page-link">...</span></li>
+                                }
+                            }
+                            
+                            @for (int i = startPage; i <= endPage; i++)
                             {
                                 <li class="page-item @(i == Model.PageNumber ? "active" : "")">
-                                    <a class="page-link" asp-action="Index" asp-route-page="@i">@i</a>
+                                    <a class="page-link" asp-action="Index" asp-route-page="@i" 
+                                       asp-route-search="@filter.SearchTerm" 
+                                       asp-route-categoryId="@filter.CategoryId"
+                                       asp-route-city="@filter.City">@i</a>
                                 </li>
                             }
+                            
+                            @if (endPage < Model.TotalPages)
+                            {
+                                @if (endPage < Model.TotalPages - 1)
+                                {
+                                    <li class="page-item disabled"><span class="page-link">...</span></li>
+                                }
+                                <li class="page-item">
+                                    <a class="page-link" asp-action="Index" asp-route-page="@Model.TotalPages" 
+                                       asp-route-search="@filter.SearchTerm" 
+                                       asp-route-categoryId="@filter.CategoryId"
+                                       asp-route-city="@filter.City">@Model.TotalPages</a>
+                                </li>
+                            }
+                            
                             <li class="page-item @(Model.HasNextPage ? "" : "disabled")">
-                                <a class="page-link" asp-action="Index" asp-route-page="@(Model.PageNumber+1)">بعدی ←</a>
+                                <a class="page-link" asp-action="Index" 
+                                   asp-route-page="@(Model.PageNumber+1)" 
+                                   asp-route-search="@filter.SearchTerm" 
+                                   asp-route-categoryId="@filter.CategoryId"
+                                   asp-route-city="@filter.City">
+                                    بعدی →
+                                </a>
                             </li>
                         </ul>
+                        <div class="text-center mt-2">
+                            <small class="text-muted">
+                                صفحه @Model.PageNumber از @Model.TotalPages
+                            </small>
+                        </div>
                     </nav>
                 }
+
+                @* Results Info *@
+                <div class="text-center mt-3">
+                    <small class="text-muted">
+                        نمایش 
+                        <span class="fw-600">@((Model.PageNumber - 1) * Model.PageSize + 1)</span>
+                        تا 
+                        <span class="fw-600">@Math.Min(Model.PageNumber * Model.PageSize, Model.TotalCount)</span>
+                        از 
+                        <span class="fw-600">@Model.TotalCount</span>
+                        کارشناس
+                    </small>
+                </div>
             }
         </div>
     </div>
 </div>
+
+@section Scripts {
+    <script>
+        function toggleView(view) {
+            const grid = document.getElementById('expertsGrid');
+            const list = document.getElementById('expertsList');
+            const btnGrid = document.getElementById('viewGrid');
+            const btnList = document.getElementById('viewList');
+            
+            if (view === 'grid') {
+                grid.style.display = 'flex';
+                list.style.display = 'none';
+                btnGrid.classList.add('active');
+                btnList.classList.remove('active');
+                localStorage.setItem('expertsView', 'grid');
+            } else {
+                grid.style.display = 'none';
+                list.style.display = 'block';
+                btnList.classList.add('active');
+                btnGrid.classList.remove('active');
+                localStorage.setItem('expertsView', 'list');
+            }
+        }
+        
+        // Restore view preference
+        document.addEventListener('DOMContentLoaded', function() {
+            const savedView = localStorage.getItem('expertsView');
+            if (savedView === 'list') {
+                toggleView('list');
+            }
+        });
+    </script>
+}
+
