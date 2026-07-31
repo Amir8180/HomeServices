@@ -127,16 +127,28 @@ builder.Services.AddCors(options =>
 
 var app = builder.Build();
 
-// ---------- Migrate + Seed ----------
-using (var scope = app.Services.CreateScope())
+// ---------- Migrate + Seed (run in background to avoid blocking startup) ----------
+_ = Task.Run(async () =>
 {
-    var context = scope.ServiceProvider.GetRequiredService<IdentityDbContext>();
-    var userManager = scope.ServiceProvider.GetRequiredService<UserManager<ApplicationUser>>();
-    var roleManager = scope.ServiceProvider.GetRequiredService<RoleManager<ApplicationRole>>();
-    var loggerFactory = scope.ServiceProvider.GetRequiredService<ILoggerFactory>();
-    var seedLogger = loggerFactory.CreateLogger("IdentityDbInitializer");
-    await IdentityDbInitializer.InitializeAsync(context, userManager, roleManager, seedLogger);
-}
+    try
+    {
+        using var scope = app.Services.CreateScope();
+        var context = scope.ServiceProvider.GetRequiredService<IdentityDbContext>();
+        var userManager = scope.ServiceProvider.GetRequiredService<UserManager<ApplicationUser>>();
+        var roleManager = scope.ServiceProvider.GetRequiredService<RoleManager<ApplicationRole>>();
+        var loggerFactory = scope.ServiceProvider.GetRequiredService<ILoggerFactory>();
+        var seedLogger = loggerFactory.CreateLogger("IdentityDbInitializer");
+
+        seedLogger.LogInformation("Starting Identity DB migration & seed (background).");
+        await IdentityDbInitializer.InitializeAsync(context, userManager, roleManager, seedLogger);
+        seedLogger.LogInformation("Identity DB migration & seed finished.");
+    }
+    catch (Exception ex)
+    {
+        var logger = app.Services.GetService<ILoggerFactory>()?.CreateLogger("IdentityDbInitializer");
+        logger?.LogError(ex, "Background identity DB migration/seed failed.");
+    }
+});
 
 // ---------- Pipeline ----------
 if (app.Environment.IsDevelopment())
@@ -147,7 +159,7 @@ if (app.Environment.IsDevelopment())
 
 app.UseSerilogRequestLogging();
 app.UseCors("MvcClient");
-app.UseHttpsRedirection();
+// No UseHttpsRedirection — this is an internal microservice API called over HTTP by the MVC app.
 app.UseAuthentication();
 app.UseAuthorization();
 app.MapControllers();

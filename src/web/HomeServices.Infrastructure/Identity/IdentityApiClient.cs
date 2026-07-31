@@ -1,5 +1,6 @@
 using System.Net.Http.Headers;
 using System.Net.Http.Json;
+using System.Text.Json;
 using HomeServices.Application.Contracts;
 using HomeServices.Application.Interfaces;
 using HomeServices.Shared.Common;
@@ -10,18 +11,19 @@ using Microsoft.Extensions.Logging;
 
 namespace HomeServices.Infrastructure.Identity;
 
-/// <summary>
-/// HTTP client for the Identity microservice. Uses IHttpClientFactory (typed via
-/// the registered HttpClient) for socket reuse and resilience. An access token can
-/// be attached to forward the caller's identity on user-scoped calls (update profile).
-/// User-info lookups are cached for a few minutes to cut inter-service chatter.
-/// </summary>
 public class IdentityApiClient : IIdentityApiClient
 {
     private readonly HttpClient _http;
     private readonly ICacheService _cache;
     private readonly ILogger<IdentityApiClient> _logger;
     private static readonly TimeSpan UserCacheTtl = TimeSpan.FromMinutes(5);
+
+    // Camel-case JSON options match the default ASP.NET Core serialization contract,
+    // so deserialization of the API response works regardless of property casing.
+    private static readonly JsonSerializerOptions JsonOptions = new()
+    {
+        PropertyNameCaseInsensitive = true,
+    };
 
     public IdentityApiClient(
         HttpClient http,
@@ -33,6 +35,8 @@ public class IdentityApiClient : IIdentityApiClient
         _logger = logger;
     }
 
+    private static string NormalizeRoute(string route) => route.StartsWith("/") ? route : "/" + route;
+
     public async Task<Result<AuthResultDto>> RegisterAsync(
         string fullName, string email, string phoneNumber, string password, UserType userType,
         CancellationToken cancellationToken = default)
@@ -42,7 +46,7 @@ public class IdentityApiClient : IIdentityApiClient
             fullName, email, phoneNumber, password, confirmPassword = password, userType
         };
 
-        var response = await PostJsonAsync("api/auth/register", payload, cancellationToken);
+        var response = await PostJsonAsync(NormalizeRoute("api/auth/register"), payload, cancellationToken);
         var auth = await ReadAuthResponseAsync(response, cancellationToken);
         return auth.Succeeded
             ? Result.Success(auth.Data!)
@@ -52,7 +56,7 @@ public class IdentityApiClient : IIdentityApiClient
     public async Task<Result<AuthResultDto>> LoginAsync(string email, string password, CancellationToken cancellationToken = default)
     {
         var payload = new { email, password, rememberMe = false };
-        var response = await PostJsonAsync("api/auth/login", payload, cancellationToken);
+        var response = await PostJsonAsync(NormalizeRoute("api/auth/login"), payload, cancellationToken);
         var auth = await ReadAuthResponseAsync(response, cancellationToken);
         return auth.Succeeded
             ? Result.Success(auth.Data!)
@@ -64,9 +68,7 @@ public class IdentityApiClient : IIdentityApiClient
         var cacheKey = $"identity:user:{id}";
         return await _cache.GetOrCreateAsync(cacheKey, async () =>
         {
-            // The public user endpoint requires auth; if no token is attached we get 401.
-            // For inter-service reads we call with a service token when configured (see ctor bearer).
-            var response = await _http.GetAsync($"api/users/{id}", cancellationToken);
+            var response = await _http.GetAsync(NormalizeRoute($"api/users/{id}"), cancellationToken);
             if (!response.IsSuccessStatusCode)
             {
                 _logger.LogWarning("GetUserByIdAsync({Id}) returned {Status}.", id, response.StatusCode);
@@ -78,7 +80,7 @@ public class IdentityApiClient : IIdentityApiClient
 
     public async Task<IReadOnlyList<UserDto>> GetAllUsersAsync(CancellationToken cancellationToken = default)
     {
-        var response = await _http.GetAsync("api/users", cancellationToken);
+        var response = await _http.GetAsync(NormalizeRoute("api/users"), cancellationToken);
         if (!response.IsSuccessStatusCode) return Array.Empty<UserDto>();
         var users = await response.Content.ReadFromJsonAsync<List<UserDto>>(cancellationToken: cancellationToken);
         return users ?? new List<UserDto>();
@@ -87,7 +89,7 @@ public class IdentityApiClient : IIdentityApiClient
     public async Task<bool> UpdateProfileAsync(Guid id, string fullName, string? avatarUrl, string? phoneNumber, CancellationToken cancellationToken = default)
     {
         var payload = new { fullName, avatarUrl, phoneNumber };
-        var response = await _http.PutAsJsonAsync($"api/users/{id}/profile", payload, cancellationToken);
+        var response = await _http.PutAsJsonAsync(NormalizeRoute($"api/users/{id}/profile"), payload, cancellationToken);
         if (response.IsSuccessStatusCode)
         {
             await _cache.RemoveAsync($"identity:user:{id}", cancellationToken);
@@ -100,7 +102,7 @@ public class IdentityApiClient : IIdentityApiClient
     public async Task<Result> ChangePasswordAsync(Guid id, string currentPassword, string newPassword, CancellationToken cancellationToken = default)
     {
         var payload = new { currentPassword, newPassword, confirmNewPassword = newPassword };
-        var response = await _http.PostAsJsonAsync($"api/users/{id}/change-password", payload, cancellationToken);
+        var response = await _http.PostAsJsonAsync(NormalizeRoute($"api/users/{id}/change-password"), payload, cancellationToken);
         return response.IsSuccessStatusCode
             ? Result.Success("Password changed.")
             : Result.Failure("Password change failed. Please check your current password.");
@@ -108,7 +110,7 @@ public class IdentityApiClient : IIdentityApiClient
 
     public async Task<bool> ToggleUserStatusAsync(Guid id, CancellationToken cancellationToken = default)
     {
-        var response = await _http.PostAsync($"api/users/{id}/toggle-status", null, cancellationToken);
+        var response = await _http.PostAsync(NormalizeRoute($"api/users/{id}/toggle-status"), null, cancellationToken);
         if (response.IsSuccessStatusCode)
         {
             await _cache.RemoveAsync($"identity:user:{id}", cancellationToken);
@@ -121,13 +123,53 @@ public class IdentityApiClient : IIdentityApiClient
     // ---------------- helpers ----------------
     private async Task<HttpResponseMessage> PostJsonAsync(string route, object payload, CancellationToken ct)
     {
-        return await _http.PostAsJsonAsync(route, payload, ct);
+        var requestUri = _http.BaseAddress == null
+            ? route
+            : new Uri(_http.BaseAddress, route).ToString();
+        try
+        {
+            return await _http.PostAsJsonAsync(route, payload, ct);
+        }
+        catch (HttpRequestException ex)
+        {
+            _logger.LogError(ex,
+                "PostJsonAsync failed. BaseAddress={BaseAddress} Route={Route} RequestUri={RequestUri} Message={Message}",
+                _http.BaseAddress, route, requestUri, ex.Message);
+            throw;
+        }
     }
 
     private async Task<(bool Succeeded, AuthResultDto? Data, string? Message)> ReadAuthResponseAsync(HttpResponseMessage response, CancellationToken ct)
     {
-        // The Identity API returns its own AuthResponse envelope; map it onto our DTO.
-        var apiResponse = await response.Content.ReadFromJsonAsync<IdentityAuthResponse>(cancellationToken: ct);
+        // Always read the raw body first so we never throw on empty/non-JSON responses.
+        var rawBody = await response.Content.ReadAsStringAsync(ct);
+        var statusCode = (int)response.StatusCode;
+
+        if (string.IsNullOrWhiteSpace(rawBody))
+        {
+            _logger.LogError(
+                "Identity API returned an EMPTY body. Status={Status} BaseAddress={BaseAddress} Reason={Reason}",
+                statusCode, _http.BaseAddress, response.ReasonPhrase);
+            return (false, null,
+                $"Identity service returned an empty response (HTTP {statusCode}). " +
+                "Verify the Identity.Api service is running and reachable at the configured BaseAddress.");
+        }
+
+        IdentityAuthResponse? apiResponse;
+        try
+        {
+            apiResponse = JsonSerializer.Deserialize<IdentityAuthResponse>(rawBody, JsonOptions);
+        }
+        catch (JsonException ex)
+        {
+            _logger.LogError(ex,
+                "Identity API returned non-JSON body. Status={Status} Body={Body}",
+                statusCode, rawBody.Length > 500 ? rawBody[..500] + "..." : rawBody);
+            return (false, null,
+                $"Identity service returned a non-JSON response (HTTP {statusCode}). " +
+                "This usually means an HTTP->HTTPS redirect or a reverse proxy error page.");
+        }
+
         if (apiResponse == null)
             return (false, null, "No response from Identity service.");
 

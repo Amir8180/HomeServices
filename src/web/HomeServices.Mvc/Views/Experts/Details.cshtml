@@ -22,11 +22,15 @@
                     <h1 class="fw-800 mb-0">@Model.BusinessName</h1>
                     @if (Model.IsVerified)
                     {
-                        <span class="badge-soft badge-success-soft">✓ تأیید شده</span>
+                        <span class="badge-soft badge-success-soft">✓ تأییدشده</span>
                     }
                     @if (Model.IsApproved)
                     {
-                        <span class="badge-soft badge-info-soft">تأیید پلتفرم</span>
+                        <span class="badge-soft badge-info-soft">✔ تأییدشده توسط مدیر</span>
+                    }
+                    else if (!Model.IsApproved)
+                    {
+                        <span class="badge-soft badge-warning-soft">⏳ در انتظار تأیید مدیر</span>
                     }
                 </div>
                 <div class="rating-stars mb-2">

@@ -1,3 +1,5 @@
+using System;
+using System.Net.Http;
 using HomeServices.Application.Contracts;
 using HomeServices.Application.Interfaces;
 using HomeServices.Infrastructure.Caching;
@@ -8,15 +10,10 @@ using HomeServices.Infrastructure.Services;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
+using Microsoft.Extensions.Logging;
 
 namespace HomeServices.Infrastructure;
 
-/// <summary>
-/// DI registration for the Infrastructure layer. Wires up EF Core, the generic
-/// repository + unit of work, the cache service, the file service and the typed
-/// Identity API client. Redis is used when a connection string is supplied;
-/// otherwise the in-memory cache is the default.
-/// </summary>
 public static class DependencyInjection
 {
     public static IServiceCollection AddInfrastructure(this IServiceCollection services, IConfiguration configuration)
@@ -46,11 +43,34 @@ public static class DependencyInjection
         services.AddScoped<IFileService, FileService>();
 
         // ----- Identity API client (typed HttpClient via IHttpClientFactory) -----
+        var baseUri = configuration["IdentityApiSettings:BaseUrl"] ?? "https://localhost:7047";
+        var allowInsecure = configuration.GetValue<bool>("IdentityApiSettings:AllowInsecureCertificates", false);
+
         services.AddHttpClient<IIdentityApiClient, IdentityApiClient>((sp, client) =>
         {
-            var baseUri = configuration["IdentityApiSettings:BaseUrl"] ?? "https://localhost:5001";
             client.BaseAddress = new Uri(baseUri);
             client.Timeout = TimeSpan.FromSeconds(30);
+
+            // Log effective BaseAddress and flag so you can verify runtime config
+            var loggerFactory = sp.GetRequiredService<ILoggerFactory>();
+            var log = loggerFactory.CreateLogger("IdentityHttpClient");
+            log.LogInformation("IdentityApi HttpClient configured. BaseAddress={BaseAddress} AllowInsecure={AllowInsecure}",
+                client.BaseAddress, allowInsecure);
+        })
+        .ConfigurePrimaryHttpMessageHandler(() =>
+        {
+            // Bypass system proxy for localhost microservice calls (prevents 503 on Windows).
+            var handler = new HttpClientHandler
+            {
+                UseProxy = false,
+            };
+            if (allowInsecure)
+            {
+                // ONLY for local development debugging when certs are not trusted.
+                handler.ServerCertificateCustomValidationCallback =
+                    HttpClientHandler.DangerousAcceptAnyServerCertificateValidator;
+            }
+            return handler;
         });
 
         return services;

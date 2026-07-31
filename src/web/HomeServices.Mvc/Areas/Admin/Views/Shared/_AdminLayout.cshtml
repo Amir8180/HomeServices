@@ -19,13 +19,13 @@
     <div class="admin-wrapper">
         <!-- Sidebar -->
         <aside class="admin-sidebar" id="sidebar">
-            <div class="sidebar-header">
+            <a asp-action="Index" asp-controller="Dashboard" class="sidebar-header text-decoration-none">
                 <span class="brand-icon">🏠</span>
                 <div>
                     <div class="sidebar-title">پنل مدیریت</div>
                     <div class="sidebar-sub">خدمات منزل</div>
                 </div>
-            </div>
+            </a>
 
             <nav class="sidebar-nav">
                 <a asp-action="Index" asp-controller="Dashboard" class="sidebar-link @(controller == "Dashboard" ? "active" : "")">
@@ -55,10 +55,10 @@
             </nav>
 
             <div class="sidebar-footer">
-                <a asp-controller="Home" asp-action="Index" class="sidebar-link">
+                <a asp-area="" asp-controller="Home" asp-action="Index" class="sidebar-link">
                     <span>🌐</span> مشاهده سایت
                 </a>
-                <form asp-controller="Account" asp-action="Logout" method="post">
+                <form asp-area="" asp-controller="Account" asp-action="Logout" method="post">
                     <button type="submit" class="sidebar-link text-danger w-100 text-start border-0 bg-transparent">
                         <span>🚪</span> خروج
                     </button>

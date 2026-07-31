@@ -47,8 +47,8 @@ public class ServiceRequestConfiguration : IEntityTypeConfiguration<ServiceReque
             .OnDelete(DeleteBehavior.Cascade);
 
         b.HasOne(x => x.AcceptedProposal)
-            .WithOne(p => p.Request)
-            .HasForeignKey<ServiceRequest>(x => x.AcceptedProposalId)
+            .WithMany()
+            .HasForeignKey(x => x.AcceptedProposalId)
             .OnDelete(DeleteBehavior.Restrict);
 
         b.HasOne(x => x.Order)

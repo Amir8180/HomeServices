@@ -1,9 +1,11 @@
 using HomeServices.Application.Interfaces;
 using HomeServices.Domain.Common;
 using HomeServices.Infrastructure.Data;
+using HomeServices.Infrastructure.Persistence;
 using Microsoft.Extensions.Logging;
+using System.Linq;
 
-namespace HomeServices.Infrastructure.Persistence;
+namespace HomeServices.Infrastructure;
 
 /// <summary>
 /// EF Core Unit of Work. Hands out repositories on demand and commits changes
@@ -28,8 +30,14 @@ public class UnitOfWork : IUnitOfWork
         {
             // Create Repository<T>(context, logger<Repository<T>>) via reflection.
             var repoType = typeof(Repository<>).MakeGenericType(type);
-            var loggerType = typeof(ILogger<>).MakeGenericType(repoType);
-            var logger = _loggerFactory.CreateLogger(repoType);
+
+            // Use LoggerFactoryExtensions.CreateLogger<TRepository> via reflection to get ILogger<Repository<T>>
+            var createLoggerMethod = typeof(Microsoft.Extensions.Logging.LoggerFactoryExtensions)
+                .GetMethods()
+                .First(m => m.Name == "CreateLogger" && m.IsGenericMethodDefinition && m.GetParameters().Length == 1);
+
+            var logger = createLoggerMethod.MakeGenericMethod(repoType).Invoke(null, new object[] { _loggerFactory })!;
+
             repo = Activator.CreateInstance(repoType, _context, logger)!;
             _repositories[type] = repo;
         }
