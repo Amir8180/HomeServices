@@ -2,162 +2,322 @@
 @using HomeServices.Shared.Enums
 @inject HomeServices.Application.Interfaces.ISiteSettingService SiteSettings
 @{
-    var settings = await SiteSettings.GetAllAsDictionaryAsync(Context.RequestAborted);
-    var siteName = settings.TryGetValue("Site.Name", out var name) && !string.IsNullOrWhiteSpace(name) ? name : "خدمات منزل";
-    var tagline = settings.TryGetValue("Site.Tagline", out var t) ? t : "";
-    var phone = settings.TryGetValue("Contact.Phone", out var p) ? p : "";
-    var email = settings.TryGetValue("Contact.Email", out var em) ? em : "";
-    var instagram = settings.TryGetValue("Social.Instagram", out var ig) ? ig : "#";
-    var telegram = settings.TryGetValue("Social.Telegram", out var tg) ? tg : "#";
+    var settings    = await SiteSettings.GetAllAsDictionaryAsync(Context.RequestAborted);
+    var siteName    = settings.TryGetValue("Site.Name",    out var sn) && !string.IsNullOrWhiteSpace(sn) ? sn : "خدمات منزل";
+    var tagline     = settings.TryGetValue("Site.Tagline", out var tl) ? tl : "متخصصان معتبر برای خانه شما";
+    var phone       = settings.TryGetValue("Contact.Phone",  out var ph) ? ph : "";
+    var email       = settings.TryGetValue("Contact.Email",  out var em) ? em : "";
+    var instagram   = settings.TryGetValue("Social.Instagram", out var ig) ? ig : "#";
+    var telegram    = settings.TryGetValue("Social.Telegram",  out var tg) ? tg : "#";
 
-    var user = Context.User;
+    var user            = Context.User;
     var isAuthenticated = user?.Identity?.IsAuthenticated ?? false;
-    var fullName = user?.FindFirst(ClaimTypes.Name)?.Value;
-    var isCustomer = user?.IsInRole("Customer") ?? false;
-    var isExpert = user?.IsInRole("Expert") ?? false;
-    var isAdmin = user?.IsInRole("Admin") ?? false;
+    var fullName        = user?.FindFirst(ClaimTypes.Name)?.Value ?? "";
+    var avatarLetter    = fullName.Length > 0 ? fullName[0].ToString() : "U";
+    var isCustomer      = user?.IsInRole("Customer") ?? false;
+    var isExpert        = user?.IsInRole("Expert")   ?? false;
+    var isAdmin         = user?.IsInRole("Admin")    ?? false;
+
+    var currentPath = Context.Request.Path.Value ?? "/";
 }
 <!DOCTYPE html>
 <html lang="fa" dir="rtl">
 <head>
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <meta name="description" content="@tagline" />
     <title>@ViewData["Title"] - @siteName</title>
-    <link rel="stylesheet" href="~/lib/bootstrap/dist/css/bootstrap.rtl.min.css" />
     <link href="https://cdn.jsdelivr.net/gh/rastikerdar/vazirmatn@v33.003/Vazirmatn-font-face.css" rel="stylesheet" />
-    <link rel="stylesheet" href="~/css/site.css" asp-append-version="true" />
+    <link rel="stylesheet" href="~/lib/bootstrap/dist/css/bootstrap.rtl.min.css" />
+    <link rel="stylesheet" href="~/css/design-system.css" asp-append-version="true" />
+    <link rel="stylesheet" href="~/css/components.css"    asp-append-version="true" />
+    <link rel="stylesheet" href="~/css/animations.css"    asp-append-version="true" />
+    <link rel="stylesheet" href="~/css/site.css"          asp-append-version="true" />
     <link rel="stylesheet" href="~/HomeServices.Mvc.styles.css" asp-append-version="true" />
     @await RenderSectionAsync("Styles", required: false)
 </head>
 <body>
-    <header class="site-header">
-        <nav class="navbar navbar-expand-lg">
-            <div class="container">
-                <a class="navbar-brand d-flex align-items-center" asp-controller="Home" asp-action="Index">
-                    <span class="brand-icon">🏠</span>
-                    <span>@siteName</span>
-                </a>
-                <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#mainNav">
-                    <span class="navbar-toggler-icon"></span>
+
+@* =========================================================
+   NAVIGATION
+   ========================================================= *@
+<nav class="hs-nav" role="navigation" aria-label="ناوبری اصلی">
+    <div class="hs-container">
+        <div class="hs-nav__inner">
+
+            <a class="hs-nav__logo" asp-controller="Home" asp-action="Index" aria-label="@siteName">
+                <div class="hs-nav__logo-icon">🏠</div>
+                <span class="hs-nav__logo-text">@siteName</span>
+            </a>
+
+            <ul class="hs-nav__links" role="list">
+                <li><a class="hs-nav__link @(currentPath == "/" ? "active" : "")"
+                       asp-controller="Home" asp-action="Index">خانه</a></li>
+                <li><a class="hs-nav__link @(currentPath.StartsWith("/Services") ? "active" : "")"
+                       asp-controller="Services" asp-action="Index">خدمات</a></li>
+                <li><a class="hs-nav__link @(currentPath.StartsWith("/Experts") ? "active" : "")"
+                       asp-controller="Experts" asp-action="Index">کارشناسان</a></li>
+                <li><a class="hs-nav__link @(currentPath.Contains("HowItWorks") ? "active" : "")"
+                       asp-controller="Home" asp-action="HowItWorks">نحوه کار</a></li>
+                @if (isAdmin)
+                {
+                    <li><a class="hs-nav__link"
+                           asp-area="Admin" asp-controller="Dashboard" asp-action="Index">پنل مدیریت</a></li>
+                }
+            </ul>
+
+            <div class="hs-nav__actions">
+                @if (isAuthenticated)
+                {
+                    @if (isCustomer)
+                    {
+                        <a class="btn btn-ghost btn-sm" style="display:none;" id="nav-dashboard-link"
+                           asp-controller="Customer" asp-action="Dashboard">داشبورد</a>
+                    }
+                    else if (isExpert)
+                    {
+                        <a class="btn btn-ghost btn-sm" style="display:none;" id="nav-dashboard-link"
+                           asp-controller="Expert" asp-action="Dashboard">داشبورد</a>
+                    }
+
+                    <div class="hs-dropdown">
+                        <button class="hs-nav__user-btn" data-dd-toggle aria-haspopup="true" aria-expanded="false">
+                            <span class="hs-nav__avatar">@avatarLetter</span>
+                            <span class="d-none d-md-inline">@fullName</span>
+                            <svg width="12" height="12" viewBox="0 0 12 12" fill="none" aria-hidden="true" style="flex-shrink:0">
+                                <path d="M2 4l4 4 4-4" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/>
+                            </svg>
+                        </button>
+                        <div class="hs-dropdown__menu">
+                            @if (isCustomer)
+                            {
+                                <a class="hs-dropdown__item" asp-controller="Customer" asp-action="Dashboard"><span>📊</span> داشبورد</a>
+                                <a class="hs-dropdown__item" asp-controller="Customer" asp-action="MyRequests"><span>📋</span> درخواست‌های من</a>
+                                <a class="hs-dropdown__item" asp-controller="Customer" asp-action="MyOrders"><span>📦</span> سفارش‌های من</a>
+                            }
+                            else if (isExpert)
+                            {
+                                <a class="hs-dropdown__item" asp-controller="Expert" asp-action="Dashboard"><span>📊</span> داشبورد</a>
+                                <a class="hs-dropdown__item" asp-controller="Expert" asp-action="OpenRequests"><span>🔍</span> درخواست‌های باز</a>
+                                <a class="hs-dropdown__item" asp-controller="Expert" asp-action="MyProposals"><span>💬</span> پیشنهادهای من</a>
+                                <a class="hs-dropdown__item" asp-controller="Expert" asp-action="MyJobs"><span>🔨</span> کارهای من</a>
+                                <a class="hs-dropdown__item" asp-controller="Expert" asp-action="MyReviews"><span>⭐</span> نظرات</a>
+                            }
+                            <div class="hs-dropdown__divider"></div>
+                            <a class="hs-dropdown__item" asp-controller="Account" asp-action="Profile"><span>👤</span> پروفایل من</a>
+                            <div class="hs-dropdown__divider"></div>
+                            <form asp-controller="Account" asp-action="Logout" method="post" style="margin:0">
+                                <button type="submit" class="hs-dropdown__item hs-dropdown__item--danger" style="width:100%">
+                                    <span>🚪</span> خروج از حساب
+                                </button>
+                            </form>
+                        </div>
+                    </div>
+                }
+                else
+                {
+                    <a class="btn btn-secondary btn-sm" asp-controller="Account" asp-action="Login">ورود</a>
+                    <a class="btn btn-primary btn-sm" asp-controller="Account" asp-action="Register">ثبت‌نام رایگان</a>
+                }
+
+                <button class="hs-nav__menu-btn" aria-label="منو" aria-expanded="false" aria-controls="mobile-drawer">
+                    <span></span><span></span><span></span>
                 </button>
-                <div class="collapse navbar-collapse" id="mainNav">
-                    <ul class="navbar-nav mx-auto gap-lg-2">
-                        <li class="nav-item"><a class="nav-link" asp-controller="Home" asp-action="Index">خانه</a></li>
-                        <li class="nav-item"><a class="nav-link" asp-controller="Services" asp-action="Index">خدمات</a></li>
-                        <li class="nav-item"><a class="nav-link" asp-controller="Home" asp-action="HowItWorks">نحوه کار</a></li>
-                        <li class="nav-item"><a class="nav-link" asp-controller="Experts" asp-action="Index">کارشناسان</a></li>
-                        @if (isAdmin)
-                        {
-                            <li class="nav-item"><a class="nav-link" asp-area="Admin" asp-controller="Dashboard" asp-action="Index">پنل مدیریت</a></li>
-                        }
-                    </ul>
-                    <ul class="navbar-nav gap-lg-2 align-items-lg-center">
-                        @if (isAuthenticated)
-                        {
-                            <li class="nav-item dropdown">
-                                <a class="nav-link dropdown-toggle d-flex align-items-center gap-2" href="#" data-bs-toggle="dropdown">
-                                    <span class="pro-avatar" style="width:36px;height:36px;font-size:1rem;">@(fullName?.FirstOrDefault() ?? 'U')</span>
-                                    <span>@fullName</span>
-                                </a>
-                                <ul class="dropdown-menu dropdown-menu-end">
-                                    @if (isCustomer)
-                                    {
-                                        <li><a class="dropdown-item" asp-controller="Customer" asp-action="Dashboard">داشبورد من</a></li>
-                                        <li><a class="dropdown-item" asp-controller="Customer" asp-action="MyRequests">درخواست‌های من</a></li>
-                                        <li><a class="dropdown-item" asp-controller="Customer" asp-action="MyOrders">سفارش‌های من</a></li>
-                                        <li><hr class="dropdown-divider"></li>
-                                    }
-                                    else if (isExpert)
-                                    {
-                                        <li><a class="dropdown-item" asp-controller="Expert" asp-action="Dashboard">داشبورد کارشناس</a></li>
-                                        <li><a class="dropdown-item" asp-controller="Expert" asp-action="OpenRequests">درخواست‌های باز</a></li>
-                                        <li><a class="dropdown-item" asp-controller="Expert" asp-action="MyProposals">پیشنهادهای من</a></li>
-                                        <li><a class="dropdown-item" asp-controller="Expert" asp-action="MyJobs">سفارش‌های من</a></li>
-                                        <li><a class="dropdown-item" asp-controller="Expert" asp-action="MyReviews">نظرات درباره من</a></li>
-                                        <li><hr class="dropdown-divider"></li>
-                                    }
-                                    <li><a class="dropdown-item" asp-controller="Account" asp-action="Profile">پروفایل من</a></li>
-                                    <li>
-                                        <form asp-controller="Account" asp-action="Logout" method="post">
-                                            <button type="submit" class="dropdown-item text-danger">خروج</button>
-                                        </form>
-                                    </li>
-                                </ul>
-                            </li>
-                        }
-                        else
-                        {
-                            <li class="nav-item"><a class="btn btn-outline-brand" asp-controller="Account" asp-action="Login">ورود</a></li>
-                            <li class="nav-item"><a class="btn btn-brand" asp-controller="Account" asp-action="Register">ثبت‌نام</a></li>
-                        }
-                    </ul>
-                </div>
             </div>
-        </nav>
-    </header>
 
-    <main role="main">
-        @if (TempData["Success"] != null)
-        {
-            <div class="alert alert-success alert-dismissible fade show m-0 rounded-0 py-2" role="alert">
-                <i class="bi bi-check-circle"></i> @TempData["Success"]
-                <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
-            </div>
-        }
-        @if (TempData["Error"] != null)
-        {
-            <div class="alert alert-danger alert-dismissible fade show m-0 rounded-0 py-2" role="alert">
-                @TempData["Error"]
-                <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
-            </div>
-        }
-        @RenderBody()
-    </main>
+        </div>
+    </div>
+</nav>
 
-    <footer class="site-footer">
-        <div class="container">
-            <div class="row g-4">
-                <div class="col-lg-4">
-                    <h5>🏠 @siteName</h5>
-                    <p>@tagline</p>
+@* =========================================================
+   MOBILE DRAWER
+   ========================================================= *@
+<div class="hs-nav__drawer" id="mobile-drawer" role="dialog" aria-label="منوی موبایل">
+    <a class="hs-nav__drawer-link" asp-controller="Home"     asp-action="Index"><span>🏠</span> خانه</a>
+    <a class="hs-nav__drawer-link" asp-controller="Services" asp-action="Index"><span>🛠️</span> خدمات</a>
+    <a class="hs-nav__drawer-link" asp-controller="Experts"  asp-action="Index"><span>👷</span> کارشناسان</a>
+    <a class="hs-nav__drawer-link" asp-controller="Home"     asp-action="HowItWorks"><span>❓</span> نحوه کار</a>
+    @if (isAdmin)
+    {
+        <a class="hs-nav__drawer-link" asp-area="Admin" asp-controller="Dashboard" asp-action="Index"><span>⚙️</span> پنل مدیریت</a>
+    }
+    <div style="height:1px;background:var(--color-border-subtle);margin:0.5rem 0;"></div>
+    @if (isAuthenticated)
+    {
+        @if (isCustomer)
+        {
+            <a class="hs-nav__drawer-link" asp-controller="Customer" asp-action="Dashboard"><span>📊</span> داشبورد</a>
+            <a class="hs-nav__drawer-link" asp-controller="Customer" asp-action="MyRequests"><span>📋</span> درخواست‌های من</a>
+            <a class="hs-nav__drawer-link" asp-controller="Customer" asp-action="MyOrders"><span>📦</span> سفارش‌های من</a>
+        }
+        else if (isExpert)
+        {
+            <a class="hs-nav__drawer-link" asp-controller="Expert" asp-action="Dashboard"><span>📊</span> داشبورد</a>
+            <a class="hs-nav__drawer-link" asp-controller="Expert" asp-action="OpenRequests"><span>🔍</span> درخواست‌های باز</a>
+            <a class="hs-nav__drawer-link" asp-controller="Expert" asp-action="MyProposals"><span>💬</span> پیشنهادهای من</a>
+            <a class="hs-nav__drawer-link" asp-controller="Expert" asp-action="MyJobs"><span>🔨</span> کارهای من</a>
+        }
+        <a class="hs-nav__drawer-link" asp-controller="Account" asp-action="Profile"><span>👤</span> پروفایل من</a>
+        <div style="height:1px;background:var(--color-border-subtle);margin:0.5rem 0;"></div>
+        <form asp-controller="Account" asp-action="Logout" method="post" style="margin:0">
+            <button type="submit" class="hs-nav__drawer-link"
+                    style="width:100%;background:none;border:none;cursor:pointer;color:var(--error-600);font-family:inherit;font-size:1rem;">
+                <span>🚪</span> خروج از حساب
+            </button>
+        </form>
+    }
+    else
+    {
+        <a class="hs-nav__drawer-link" asp-controller="Account" asp-action="Login"><span>🔑</span> ورود</a>
+        <a class="hs-nav__drawer-link" asp-controller="Account" asp-action="Register"><span>✨</span> ثبت‌نام رایگان</a>
+    }
+    @if (isCustomer || !isAuthenticated)
+    {
+        <div style="margin-top:auto;padding-top:1.5rem;">
+            <a class="btn btn-primary btn-block" asp-controller="ServiceRequests" asp-action="Create">
+                ثبت درخواست خدمت
+            </a>
+        </div>
+    }
+</div>
+
+@* =========================================================
+   SERVER TOAST BRIDGE
+   ========================================================= *@
+@if (TempData["Success"] != null)
+{
+    <div data-toast="success" data-message="@TempData["Success"]" style="display:none"></div>
+}
+@if (TempData["Error"] != null)
+{
+    <div data-toast="error" data-message="@TempData["Error"]" style="display:none"></div>
+}
+@if (TempData["Warning"] != null)
+{
+    <div data-toast="warning" data-message="@TempData["Warning"]" style="display:none"></div>
+}
+@if (TempData["Info"] != null)
+{
+    <div data-toast="info" data-message="@TempData["Info"]" style="display:none"></div>
+}
+
+@* =========================================================
+   MAIN CONTENT
+   ========================================================= *@
+<main id="main-content" role="main" class="hs-page">
+    @RenderBody()
+</main>
+
+@* =========================================================
+   FOOTER
+   ========================================================= *@
+<footer class="hs-footer" role="contentinfo">
+    <div class="hs-container">
+        <div class="hs-footer__grid">
+
+            <div>
+                <div style="display:flex;align-items:center;gap:0.625rem;margin-bottom:1rem;">
+                    <div class="hs-nav__logo-icon">🏠</div>
+                    <span style="font-size:1.125rem;font-weight:700;color:white;">@siteName</span>
                 </div>
-                <div class="col-6 col-lg-2">
-                    <h5>خدمات</h5>
-                    <ul class="list-unstyled vstack gap-2">
-                        <li><a asp-controller="Services" asp-action="Index">همه خدمات</a></li>
-                        <li><a asp-controller="Home" asp-action="HowItWorks">نحوه کار</a></li>
-                        <li><a asp-controller="Experts" asp-action="Index">کارشناسان</a></li>
-                    </ul>
-                </div>
-                <div class="col-6 col-lg-3">
-                    <h5>حساب کاربری</h5>
-                    <ul class="list-unstyled vstack gap-2">
-                        <li><a asp-controller="Account" asp-action="Login">ورود</a></li>
-                        <li><a asp-controller="Account" asp-action="Register">ثبت‌نام</a></li>
-                        <li><a asp-controller="Account" asp-action="Profile">پروفایل</a></li>
-                    </ul>
-                </div>
-                <div class="col-lg-3">
-                    <h5>تماس با ما</h5>
-                    <ul class="list-unstyled vstack gap-2">
-                        <li>📞 @phone</li>
-                        <li>✉️ @email</li>
-                        <li>
-                            <a href="@instagram" target="_blank">اینستاگرام</a> ·
-                            <a href="@telegram" target="_blank">تلگرام</a>
-                        </li>
-                    </ul>
+                <p class="hs-footer__brand-desc">@tagline</p>
+                <div class="hs-footer__social" style="margin-top:1.5rem;">
+                    @if (!string.IsNullOrEmpty(instagram) && instagram != "#")
+                    {
+                        <a href="@instagram" target="_blank" rel="noopener" class="hs-footer__social-link" aria-label="اینستاگرام">📷</a>
+                    }
+                    @if (!string.IsNullOrEmpty(telegram) && telegram != "#")
+                    {
+                        <a href="@telegram" target="_blank" rel="noopener" class="hs-footer__social-link" aria-label="تلگرام">✈️</a>
+                    }
+                    @if (!string.IsNullOrEmpty(phone))
+                    {
+                        <a href="tel:@phone" class="hs-footer__social-link" aria-label="تماس">📞</a>
+                    }
                 </div>
             </div>
-            <div class="footer-bottom text-center">
-                <span>© @DateTime.Now.Year @siteName — تمامی حقوق محفوظ است.</span>
+
+            <div>
+                <div class="hs-footer__col-title">خدمات</div>
+                <ul class="hs-footer__links">
+                    <li><a class="hs-footer__link" asp-controller="Services" asp-action="Index">همه خدمات</a></li>
+                    <li><a class="hs-footer__link" asp-controller="Experts"  asp-action="Index">کارشناسان</a></li>
+                    <li><a class="hs-footer__link" asp-controller="Home"     asp-action="HowItWorks">نحوه کار</a></li>
+                    <li><a class="hs-footer__link" asp-controller="ServiceRequests" asp-action="Create">ثبت درخواست</a></li>
+                </ul>
+            </div>
+
+            <div>
+                <div class="hs-footer__col-title">حساب کاربری</div>
+                <ul class="hs-footer__links">
+                    @if (isAuthenticated)
+                    {
+                        @if (isCustomer)
+                        {
+                            <li><a class="hs-footer__link" asp-controller="Customer" asp-action="Dashboard">داشبورد</a></li>
+                            <li><a class="hs-footer__link" asp-controller="Customer" asp-action="MyRequests">درخواست‌هایم</a></li>
+                            <li><a class="hs-footer__link" asp-controller="Customer" asp-action="MyOrders">سفارش‌هایم</a></li>
+                        }
+                        else if (isExpert)
+                        {
+                            <li><a class="hs-footer__link" asp-controller="Expert" asp-action="Dashboard">داشبورد</a></li>
+                            <li><a class="hs-footer__link" asp-controller="Expert" asp-action="OpenRequests">درخواست‌های باز</a></li>
+                            <li><a class="hs-footer__link" asp-controller="Expert" asp-action="MyJobs">کارهایم</a></li>
+                        }
+                        <li><a class="hs-footer__link" asp-controller="Account" asp-action="Profile">پروفایل من</a></li>
+                    }
+                    else
+                    {
+                        <li><a class="hs-footer__link" asp-controller="Account" asp-action="Login">ورود</a></li>
+                        <li><a class="hs-footer__link" asp-controller="Account" asp-action="Register">ثبت‌نام</a></li>
+                    }
+                </ul>
+            </div>
+
+            <div>
+                <div class="hs-footer__col-title">تماس با ما</div>
+                <ul class="hs-footer__links">
+                    @if (!string.IsNullOrEmpty(phone))
+                    {
+                        <li><a class="hs-footer__link" href="tel:@phone">📞 @phone</a></li>
+                    }
+                    @if (!string.IsNullOrEmpty(email))
+                    {
+                        <li><a class="hs-footer__link" href="mailto:@email">✉️ @email</a></li>
+                    }
+                    <li><a class="hs-footer__link" href="@instagram" target="_blank" rel="noopener">اینستاگرام</a></li>
+                    <li><a class="hs-footer__link" href="@telegram"  target="_blank" rel="noopener">تلگرام</a></li>
+                </ul>
+            </div>
+
+        </div>
+
+        <div class="hs-footer__bottom">
+            <div class="hs-footer__copyright">&copy; @DateTime.Now.Year @siteName — تمامی حقوق محفوظ است.</div>
+            <div style="display:flex;gap:1.5rem;">
+                <a class="hs-footer__link" href="#">حریم خصوصی</a>
+                <a class="hs-footer__link" href="#">شرایط استفاده</a>
             </div>
         </div>
-    </footer>
+    </div>
+</footer>
 
-    <script src="~/lib/jquery/dist/jquery.min.js"></script>
-    <script src="~/lib/bootstrap/dist/js/bootstrap.bundle.min.js"></script>
-    <script src="~/js/site.js" asp-append-version="true"></script>
-    @await RenderSectionAsync("Scripts", required: false)
+@* =========================================================
+   SCRIPTS
+   ========================================================= *@
+<script src="~/lib/jquery/dist/jquery.min.js"></script>
+<script src="~/lib/bootstrap/dist/js/bootstrap.bundle.min.js"></script>
+<script src="~/js/app.js" asp-append-version="true"></script>
+
+@* Show desktop dashboard link only on md+ via JS (avoids duplicate nav items on desktop) *@
+<script>
+    if (window.innerWidth >= 992) {
+        var lnk = document.getElementById('nav-dashboard-link');
+        if (lnk) lnk.style.display = '';
+    }
+</script>
+
+@await RenderSectionAsync("Scripts", required: false)
+
 </body>
 </html>

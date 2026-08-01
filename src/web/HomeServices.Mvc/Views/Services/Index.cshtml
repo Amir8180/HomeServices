@@ -3,421 +3,306 @@
 @{
     ViewData["Title"] = "خدمات";
     var categories = ViewBag.Categories as IReadOnlyList<CategoryDto> ?? Array.Empty<CategoryDto>();
-    var filter = ViewBag.CurrentFilter as ServiceFilterDto ?? new ServiceFilterDto();
+    var filter     = ViewBag.CurrentFilter as ServiceFilterDto ?? new ServiceFilterDto();
+    var hasFilter  = !string.IsNullOrEmpty(filter.SearchTerm) || filter.CategoryId.HasValue
+                     || filter.MinPrice.HasValue || filter.MaxPrice.HasValue;
+}
+@section Styles {
+<style>
+.services-page { padding: var(--space-10) 0 var(--space-20); }
+.page-hero {
+    background: linear-gradient(135deg, var(--primary-50) 0%, white 60%, var(--accent-50) 100%);
+    padding: var(--space-12) 0 var(--space-10);
+    border-bottom: 1px solid var(--color-border-subtle);
+    margin-bottom: var(--space-10);
+}
+.page-hero__title { font-size:clamp(2rem,4vw,3rem); font-weight:var(--font-black); letter-spacing:-.03em; margin-bottom:var(--space-2); }
+.page-hero__count { font-size:var(--text-lg); color:var(--color-text-secondary); }
+.page-hero__count strong { color:var(--primary-700); font-weight:var(--font-bold); }
+/* Filter panel */
+.filter-panel { background:white; border:1px solid var(--color-border-subtle); border-radius:var(--radius-2xl); padding:var(--space-6); position:sticky; top:88px; }
+.filter-section { padding:var(--space-4) 0; border-bottom:1px solid var(--color-border-subtle); }
+.filter-section:last-child { border-bottom:none; padding-bottom:0; }
+.filter-section__title { font-size:var(--text-xs); font-weight:var(--font-bold); text-transform:uppercase; letter-spacing:.06em; color:var(--color-text-tertiary); margin-bottom:var(--space-3); }
+/* Active filter chips */
+.filter-chips { display:flex; flex-wrap:wrap; gap:var(--space-2); }
+.filter-chip {
+    display:inline-flex; align-items:center; gap:var(--space-1-5);
+    padding:var(--space-1-5) var(--space-3);
+    background:var(--primary-100); color:var(--primary-700);
+    border-radius:var(--radius-full); font-size:var(--text-xs); font-weight:var(--font-semibold);
+}
+.filter-chip__remove { cursor:pointer; opacity:.6; transition:opacity .15s; line-height:1; }
+.filter-chip__remove:hover { opacity:1; }
+/* Results toolbar */
+.toolbar { display:flex; align-items:center; justify-content:space-between; gap:var(--space-4); flex-wrap:wrap; margin-bottom:var(--space-6); }
+.toolbar__count { font-size:var(--text-sm); color:var(--color-text-secondary); }
+.view-toggle { display:flex; gap:var(--space-1); }
+.view-btn { width:36px; height:36px; border-radius:var(--radius-md); border:1.5px solid var(--color-border); background:white; cursor:pointer; display:flex; align-items:center; justify-content:center; font-size:var(--text-base); transition:all .15s; }
+.view-btn.active { border-color:var(--primary-500); background:var(--primary-50); color:var(--primary-700); }
+/* List layout */
+.service-list-item {
+    display:flex; gap:var(--space-5); align-items:center;
+    background:white; border:1px solid var(--color-border-subtle);
+    border-radius:var(--radius-2xl); padding:var(--space-5);
+    transition:all .25s; cursor:pointer;
+}
+.service-list-item:hover { box-shadow:var(--shadow-lg); border-color:var(--primary-200); transform:translateX(-4px); }
+.service-list-thumb { width:96px; height:96px; flex-shrink:0; border-radius:var(--radius-xl); background:linear-gradient(135deg,var(--primary-100),var(--primary-200)); display:flex; align-items:center; justify-content:center; font-size:2.5rem; }
+</style>
 }
 
-<div class="container py-4">
-    @* Header with View Toggle *@
-    <div class="d-flex justify-content-between align-items-end mb-4 flex-wrap gap-3">
-        <div>
-            <h1 class="fw-800 mb-1">همه خدمات</h1>
-            <p class="text-muted mb-0">
-                <span class="fw-600">@Model.TotalCount</span> خدمت یافت شد
-                @if (!string.IsNullOrEmpty(filter.SearchTerm))
-                {
-                    <span> برای "<span class="fw-600">@filter.SearchTerm</span>"</span>
-                }
-            </p>
-        </div>
-        <div class="d-flex gap-2 align-items-center">
-            <small class="text-muted me-2">نمایش:</small>
-            <div class="btn-group btn-group-sm" role="group">
-                <button type="button" class="btn btn-outline-brand active" id="viewGrid" onclick="toggleView('grid')">
-                    <span style="font-size:1rem;">▦</span> شبکه
-                </button>
-                <button type="button" class="btn btn-outline-brand" id="viewList" onclick="toggleView('list')">
-                    <span style="font-size:1rem;">☰</span> لیست
-                </button>
-            </div>
-        </div>
+<div class="page-hero">
+    <div class="hs-container">
+        <nav style="font-size:var(--text-sm);color:var(--color-text-tertiary);margin-bottom:var(--space-4);">
+            <a asp-controller="Home" asp-action="Index" style="color:inherit;text-decoration:none;">خانه</a>
+            <span style="margin:0 var(--space-2);">/</span>
+            <span>خدمات</span>
+        </nav>
+        <h1 class="page-hero__title" data-reveal="up">همه خدمات</h1>
+        <p class="page-hero__count" data-reveal="up">
+            <strong>@Model.TotalCount</strong> خدمت یافت شد
+            @if (!string.IsNullOrEmpty(filter.SearchTerm))
+            {
+                <span> برای «<strong>@filter.SearchTerm</strong>»</span>
+            }
+        </p>
     </div>
+</div>
 
-    <div class="row g-4">
-        @* Enhanced Sidebar Filters *@
-        <div class="col-lg-3">
-            <div class="dashboard-card sticky-top" style="top:1rem;">
-                <div class="d-flex justify-content-between align-items-center mb-3">
-                    <h6 class="fw-800 mb-0">
-                        <span style="font-size:1.2rem;margin-left:0.5rem;">🔍</span>
-                        فیلترها
-                    </h6>
-                    @if (!string.IsNullOrEmpty(filter.SearchTerm) || filter.CategoryId.HasValue || filter.MinPrice.HasValue || filter.MaxPrice.HasValue)
-                    {
-                        <a asp-action="Index" class="btn btn-sm btn-link text-danger p-0" style="text-decoration:none;">پاک کردن</a>
-                    }
-                </div>
-                
-                <form method="get" asp-action="Index" class="vstack gap-3" id="filterForm">
-                    @* Search *@
-                    <div>
-                        <label class="form-label small fw-600 mb-2">
-                            <span style="font-size:1rem;margin-left:0.25rem;">🔎</span>
-                            جستجو
-                        </label>
-                        <input type="text" name="search" value="@filter.SearchTerm" class="form-control" placeholder="نام خدمت..." />
+<div class="services-page">
+    <div class="hs-container">
+        <div class="row g-6" style="--bs-gutter-x:2rem">
+
+            @* ── Filter Sidebar ── *@
+            <div class="col-lg-3">
+                <div class="filter-panel">
+                    <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:var(--space-5);">
+                        <span style="font-size:var(--text-sm);font-weight:var(--font-bold);text-transform:uppercase;letter-spacing:.06em;color:var(--color-text-secondary);">فیلترها</span>
+                        @if (hasFilter)
+                        {
+                            <a asp-action="Index" style="font-size:var(--text-xs);color:var(--accent-500);font-weight:var(--font-semibold);text-decoration:none;">پاک کردن</a>
+                        }
                     </div>
 
-                    @* Category Filter *@
-                    <div>
-                        <label class="form-label small fw-600 mb-2">
-                            <span style="font-size:1rem;margin-left:0.25rem;">🏷️</span>
-                            دسته‌بندی
-                        </label>
-                        <select name="categoryId" class="form-select" onchange="this.form.submit()">
-                            <option value="">همه دسته‌ها</option>
-                            @foreach (var cat in categories)
-                            {
-                                <option value="@cat.Id" selected="@(filter.CategoryId == cat.Id)">@cat.Name</option>
-                            }
-                        </select>
-                    </div>
-
-                    @* Price Range *@
-                    <div>
-                        <label class="form-label small fw-600 mb-2">
-                            <span style="font-size:1rem;margin-left:0.25rem;">💰</span>
-                            محدوده قیمت (تومان)
-                        </label>
-                        <div class="row g-2">
-                            <div class="col-6">
-                                <input type="number" name="minPrice" value="@filter.MinPrice" class="form-control" placeholder="از" step="10000" />
+                    <form method="get" asp-action="Index" class="filter-form">
+                        <div class="filter-section">
+                            <div class="filter-section__title">جستجو</div>
+                            <div style="position:relative;">
+                                <input type="text" name="search" value="@filter.SearchTerm"
+                                       class="form-control" placeholder="نام خدمت..."
+                                       data-live-search style="padding-right:var(--space-10);" />
+                                <span style="position:absolute;right:var(--space-3);top:50%;transform:translateY(-50%);color:var(--color-text-tertiary);">🔍</span>
                             </div>
-                            <div class="col-6">
+                        </div>
+
+                        <div class="filter-section">
+                            <div class="filter-section__title">دسته‌بندی</div>
+                            <div style="display:flex;flex-direction:column;gap:var(--space-2);">
+                                <label style="display:flex;align-items:center;gap:var(--space-2);cursor:pointer;font-size:var(--text-sm);">
+                                    <input type="radio" name="categoryId" value="" class="form-check-input" @(filter.CategoryId == null ? "checked" : "") />
+                                    همه دسته‌ها
+                                </label>
+                                @foreach (var cat in categories)
+                                {
+                                    <label style="display:flex;align-items:center;gap:var(--space-2);cursor:pointer;font-size:var(--text-sm);">
+                                        <input type="radio" name="categoryId" value="@cat.Id" class="form-check-input"
+                                               @(filter.CategoryId == cat.Id ? "checked" : "") />
+                                        @cat.Name
+                                    </label>
+                                }
+                            </div>
+                        </div>
+
+                        <div class="filter-section">
+                            <div class="filter-section__title">محدوده قیمت (تومان)</div>
+                            <div style="display:grid;grid-template-columns:1fr 1fr;gap:var(--space-2);">
+                                <input type="number" name="minPrice" value="@filter.MinPrice" class="form-control" placeholder="از" step="10000" />
                                 <input type="number" name="maxPrice" value="@filter.MaxPrice" class="form-control" placeholder="تا" step="10000" />
                             </div>
                         </div>
-                        <div class="d-flex justify-content-between mt-2">
-                            <small class="text-muted">۰</small>
-                            <small class="text-muted">۱۰M+</small>
+
+                        <div class="filter-section">
+                            <div class="filter-section__title">مرتب‌سازی</div>
+                            <select name="sortBy" class="form-control">
+                                @{ var sb = filter.SortBy ?? ""; }
+                                <option value=""          selected="@(sb==""         ? "selected" : null)">محبوب‌ترین</option>
+                                <option value="price"     selected="@(sb=="price"     ? "selected" : null)">ارزان‌ترین</option>
+                                <option value="pricedesc" selected="@(sb=="pricedesc" ? "selected" : null)">گران‌ترین</option>
+                                <option value="name"      selected="@(sb=="name"      ? "selected" : null)">الفبایی</option>
+                            </select>
                         </div>
-                    </div>
 
-                    @* Sort By *@
-                    <div>
-                        <label class="form-label small fw-600 mb-2">
-                            <span style="font-size:1rem;margin-left:0.25rem;">⚡</span>
-                            مرتب‌سازی
-                        </label>
-                        <select name="sortBy" class="form-select" onchange="this.form.submit()">
-                            <option value="" selected="@(string.IsNullOrEmpty(filter.SortBy))">محبوب‌ترین</option>
-                            <option value="price" selected="@(filter.SortBy == "price")">ارزان‌ترین</option>
-                            <option value="pricedesc" selected="@(filter.SortBy == "pricedesc")">گران‌ترین</option>
-                            <option value="name" selected="@(filter.SortBy == "name")">الفبایی (الف - ی)</option>
-                        </select>
-                    </div>
-
-                    @* Filter Actions *@
-                    <div class="d-grid gap-2">
-                        <button type="submit" class="btn btn-brand">
+                        <button type="submit" class="btn btn-primary btn-block" style="margin-top:var(--space-4);">
                             اعمال فیلترها
                         </button>
-                    </div>
-                </form>
-
-                @* Active Filters Display *@
-                @if (!string.IsNullOrEmpty(filter.SearchTerm) || filter.CategoryId.HasValue || filter.MinPrice.HasValue || filter.MaxPrice.HasValue)
-                {
-                    <hr class="my-3" />
-                    <div>
-                        <small class="text-muted d-block mb-2 fw-600">فیلترهای فعال:</small>
-                        <div class="d-flex flex-wrap gap-1">
-                            @if (!string.IsNullOrEmpty(filter.SearchTerm))
-                            {
-                                <span class="badge-soft badge-brand small">🔎 @filter.SearchTerm</span>
-                            }
-                            @if (filter.CategoryId.HasValue)
-                            {
-                                var selectedCat = categories.FirstOrDefault(c => c.Id == filter.CategoryId.Value);
-                                if (selectedCat != null)
-                                {
-                                    <span class="badge-soft badge-brand small">🏷️ @selectedCat.Name</span>
-                                }
-                            }
-                            @if (filter.MinPrice.HasValue || filter.MaxPrice.HasValue)
-                            {
-                                <span class="badge-soft badge-brand small">💰 @(filter.MinPrice?.ToString("N0") ?? "۰") - @(filter.MaxPrice?.ToString("N0") ?? "∞")</span>
-                            }
-                        </div>
-                    </div>
-                }
-
-                @* Quick Categories *@
-                <hr class="my-3" />
-                <div>
-                    <small class="text-muted d-block mb-2 fw-600">دسترسی سریع:</small>
-                    <div class="d-flex flex-wrap gap-1">
-                        @foreach (var cat in categories.Take(5))
-                        {
-                            <a asp-action="Index" asp-route-categoryId="@cat.Id" class="badge-soft badge-brand small text-decoration-none">
-                                @cat.Name
-                            </a>
-                        }
-                    </div>
+                    </form>
                 </div>
             </div>
-        </div>
 
-        @* Services Grid/List *@
-        <div class="col-lg-9">
-            @if (!Model.Items.Any())
-            {
-                <div class="empty-state dashboard-card">
-                    <div class="icon" style="font-size:4rem;margin-bottom:1rem;">🔍</div>
-                    <h5 class="fw-800 mb-2">خدمتی یافت نشد</h5>
-                    <p class="text-muted mb-3">متأسفانه با این فیلترها نتیجه‌ای یافت نشد.</p>
-                    <a asp-action="Index" class="btn btn-brand">مشاهده همه خدمات</a>
-                </div>
-            }
-            else
-            {
-                @* Grid View *@
-                <div id="servicesGrid" class="row g-3 row-cols-1 row-cols-md-2 row-cols-xl-3">
-                    @foreach (var svc in Model.Items)
-                    {
-                        <div class="col service-item">
-                            <div class="card-service" style="height:100%;transition:all 0.3s ease;" onmouseenter="this.style.transform='translateY(-8px)';this.style.boxShadow='var(--shadow-lg)';" onmouseleave="this.style.transform='translateY(0)';this.style.boxShadow='var(--shadow)';">
-                                <div class="card-thumb" style="position:relative;background:linear-gradient(135deg, var(--cream) 0%, var(--beige) 100%);">
-                                    <div style="font-size:3rem;opacity:0.3;">🛠️</div>
-                                    @if (svc.IsFixedPrice)
-                                    {
-                                        <span class="badge-soft badge-success-soft" style="position:absolute;top:0.5rem;right:0.5rem;font-size:0.75rem;">
-                                            ✓ قیمت ثابت
-                                        </span>
-                                    }
-                                </div>
-                                <div class="card-body">
-                                    <div class="d-flex justify-content-between align-items-start mb-2">
-                                        <a asp-action="Details" asp-route-id="@svc.Id" class="card-title-link flex-grow-1" style="line-height:1.4;">
-                                            @svc.Title
-                                        </a>
-                                    </div>
-                                    
-                                    <div class="mb-2">
-                                        <span class="badge-soft badge-brand small">@(svc.CategoryName ?? "خدمت عمومی")</span>
-                                    </div>
-                                    
-                                    @if (!string.IsNullOrEmpty(svc.Description))
-                                    {
-                                        <p class="small text-muted mb-3" style="line-height:1.5;min-height:3rem;">
-                                            @(svc.Description.Length > 80 ? svc.Description.Substring(0, 80) + "..." : svc.Description)
-                                        </p>
-                                    }
-                                    
-                                    <div class="d-flex justify-content-between align-items-center mt-auto">
-                                        @if (svc.BasePrice.HasValue)
-                                        {
-                                            <div>
-                                                <small class="text-muted d-block" style="font-size:0.7rem;">شروع از</small>
-                                                <span class="price-tag fw-700">@svc.BasePrice.Value.ToString("N0") ت</span>
-                                            </div>
-                                        }
-                                        else
-                                        {
-                                            <span class="card-meta">قیمت توافقی</span>
-                                        }
-                                        <a asp-controller="ServiceRequests" asp-action="Create" asp-route-serviceId="@svc.Id" class="btn btn-sm btn-brand" style="white-space:nowrap;">
-                                            ثبت درخواست
-                                        </a>
-                                    </div>
-                                </div>
-                            </div>
-                        </div>
-                    }
-                </div>
-
-                @* List View (Hidden by default) *@
-                <div id="servicesList" class="vstack gap-3" style="display:none;">
-                    @foreach (var svc in Model.Items)
-                    {
-                        <div class="dashboard-card service-item" style="transition:all 0.3s ease;" onmouseenter="this.style.boxShadow='var(--shadow-lg)';" onmouseleave="this.style.boxShadow='var(--shadow)';">
-                            <div class="row g-3 align-items-center">
-                                <div class="col-md-3">
-                                    <div class="card-thumb" style="height:140px;border-radius:var(--radius);background:linear-gradient(135deg, var(--cream) 0%, var(--beige) 100%);position:relative;">
-                                        <div style="font-size:3rem;opacity:0.3;">🛠️</div>
-                                        @if (svc.IsFixedPrice)
-                                        {
-                                            <span class="badge-soft badge-success-soft" style="position:absolute;top:0.5rem;right:0.5rem;font-size:0.7rem;">
-                                                ✓ ثابت
-                                            </span>
-                                        }
-                                    </div>
-                                </div>
-                                <div class="col-md-6">
-                                    <div class="mb-2">
-                                        <span class="badge-soft badge-brand small">@(svc.CategoryName ?? "عمومی")</span>
-                                    </div>
-                                    <a asp-action="Details" asp-route-id="@svc.Id" class="text-decoration-none">
-                                        <h5 class="fw-800 mb-2 text-dark">@svc.Title</h5>
-                                    </a>
-                                    @if (!string.IsNullOrEmpty(svc.Description))
-                                    {
-                                        <p class="text-muted small mb-0" style="line-height:1.6;">
-                                            @(svc.Description.Length > 120 ? svc.Description.Substring(0, 120) + "..." : svc.Description)
-                                        </p>
-                                    }
-                                </div>
-                                <div class="col-md-3 text-md-end">
-                                    @if (svc.BasePrice.HasValue)
-                                    {
-                                        <div class="mb-2">
-                                            <small class="text-muted d-block">شروع از</small>
-                                            <div class="price-tag fs-5">@svc.BasePrice.Value.ToString("N0")</div>
-                                            <small class="text-muted">تومان</small>
-                                        </div>
-                                    }
-                                    else
-                                    {
-                                        <div class="mb-2">
-                                            <span class="card-meta">قیمت توافقی</span>
-                                        </div>
-                                    }
-                                    <div class="d-grid gap-2">
-                                        <a asp-action="Details" asp-route-id="@svc.Id" class="btn btn-sm btn-outline-brand">
-                                            مشاهده جزئیات
-                                        </a>
-                                        <a asp-controller="ServiceRequests" asp-action="Create" asp-route-serviceId="@svc.Id" class="btn btn-sm btn-brand">
-                                            ثبت درخواست
-                                        </a>
-                                    </div>
-                                </div>
-                            </div>
-                        </div>
-                    }
-                </div>
-
-                @* Enhanced Pagination *@
-                @if (Model.TotalPages > 1)
+            @* ── Results ── *@
+            <div class="col-lg-9">
+                @* Active chips *@
+                @if (hasFilter)
                 {
-                    <nav class="mt-4">
-                        <ul class="pagination justify-content-center flex-wrap">
-                            <li class="page-item @(Model.HasPreviousPage ? "" : "disabled")">
-                                <a class="page-link" asp-action="Index" 
-                                   asp-route-page="@(Model.PageNumber-1)" 
-                                   asp-route-search="@filter.SearchTerm" 
-                                   asp-route-categoryId="@filter.CategoryId"
-                                   asp-route-minPrice="@filter.MinPrice"
-                                   asp-route-maxPrice="@filter.MaxPrice"
-                                   asp-route-sortBy="@filter.SortBy">
-                                    ← قبلی
-                                </a>
-                            </li>
-                            
-                            @{
-                                var startPage = Math.Max(1, Model.PageNumber - 2);
-                                var endPage = Math.Min(Model.TotalPages, Model.PageNumber + 2);
-                            }
-                            
-                            @if (startPage > 1)
-                            {
-                                <li class="page-item">
-                                    <a class="page-link" asp-action="Index" asp-route-page="1" 
-                                       asp-route-search="@filter.SearchTerm" 
-                                       asp-route-categoryId="@filter.CategoryId"
-                                       asp-route-minPrice="@filter.MinPrice"
-                                       asp-route-maxPrice="@filter.MaxPrice"
-                                       asp-route-sortBy="@filter.SortBy">۱</a>
-                                </li>
-                                @if (startPage > 2)
-                                {
-                                    <li class="page-item disabled"><span class="page-link">...</span></li>
-                                }
-                            }
-                            
-                            @for (int i = startPage; i <= endPage; i++)
-                            {
-                                <li class="page-item @(i == Model.PageNumber ? "active" : "")">
-                                    <a class="page-link" asp-action="Index" asp-route-page="@i" 
-                                       asp-route-search="@filter.SearchTerm" 
-                                       asp-route-categoryId="@filter.CategoryId"
-                                       asp-route-minPrice="@filter.MinPrice"
-                                       asp-route-maxPrice="@filter.MaxPrice"
-                                       asp-route-sortBy="@filter.SortBy">@i</a>
-                                </li>
-                            }
-                            
-                            @if (endPage < Model.TotalPages)
-                            {
-                                @if (endPage < Model.TotalPages - 1)
-                                {
-                                    <li class="page-item disabled"><span class="page-link">...</span></li>
-                                }
-                                <li class="page-item">
-                                    <a class="page-link" asp-action="Index" asp-route-page="@Model.TotalPages" 
-                                       asp-route-search="@filter.SearchTerm" 
-                                       asp-route-categoryId="@filter.CategoryId"
-                                       asp-route-minPrice="@filter.MinPrice"
-                                       asp-route-maxPrice="@filter.MaxPrice"
-                                       asp-route-sortBy="@filter.SortBy">@Model.TotalPages</a>
-                                </li>
-                            }
-                            
-                            <li class="page-item @(Model.HasNextPage ? "" : "disabled")">
-                                <a class="page-link" asp-action="Index" 
-                                   asp-route-page="@(Model.PageNumber+1)" 
-                                   asp-route-search="@filter.SearchTerm" 
-                                   asp-route-categoryId="@filter.CategoryId"
-                                   asp-route-minPrice="@filter.MinPrice"
-                                   asp-route-maxPrice="@filter.MaxPrice"
-                                   asp-route-sortBy="@filter.SortBy">
-                                    بعدی →
-                                </a>
-                            </li>
-                        </ul>
-                        <div class="text-center mt-2">
-                            <small class="text-muted">
-                                صفحه @Model.PageNumber از @Model.TotalPages
-                            </small>
-                        </div>
-                    </nav>
+                    <div class="filter-chips" style="margin-bottom:var(--space-5);">
+                        @if (!string.IsNullOrEmpty(filter.SearchTerm))
+                        {
+                            <span class="filter-chip">🔍 @filter.SearchTerm <a class="filter-chip__remove" asp-action="Index" asp-route-categoryId="@filter.CategoryId" asp-route-minPrice="@filter.MinPrice" asp-route-maxPrice="@filter.MaxPrice">✕</a></span>
+                        }
+                        @if (filter.CategoryId.HasValue)
+                        {
+                            var cname = categories.FirstOrDefault(c => c.Id == filter.CategoryId.Value)?.Name;
+                            <span class="filter-chip">🏷️ @cname <a class="filter-chip__remove" asp-action="Index" asp-route-search="@filter.SearchTerm" asp-route-minPrice="@filter.MinPrice" asp-route-maxPrice="@filter.MaxPrice">✕</a></span>
+                        }
+                        @if (filter.MinPrice.HasValue || filter.MaxPrice.HasValue)
+                        {
+                            <span class="filter-chip">💰 @(filter.MinPrice?.ToString("N0") ?? "۰") — @(filter.MaxPrice?.ToString("N0") ?? "∞") ت</span>
+                        }
+                    </div>
                 }
 
-                @* Results Info *@
-                <div class="text-center mt-3">
-                    <small class="text-muted">
-                        نمایش 
-                        <span class="fw-600">@((Model.PageNumber - 1) * Model.PageSize + 1)</span>
-                        تا 
-                        <span class="fw-600">@Math.Min(Model.PageNumber * Model.PageSize, Model.TotalCount)</span>
-                        از 
-                        <span class="fw-600">@Model.TotalCount</span>
-                        خدمت
-                    </small>
+                @* Toolbar *@
+                <div class="toolbar">
+                    <div class="toolbar__count">
+                        نمایش <strong>@((Model.PageNumber-1)*Model.PageSize+1)</strong>–<strong>@Math.Min(Model.PageNumber*Model.PageSize,Model.TotalCount)</strong> از <strong>@Model.TotalCount</strong>
+                    </div>
+                    <div class="view-toggle">
+                        <button class="view-btn active" id="btn-grid" onclick="switchView('grid')" title="نمایش شبکه">▦</button>
+                        <button class="view-btn"        id="btn-list" onclick="switchView('list')" title="نمایش لیست">☰</button>
+                    </div>
                 </div>
-            }
+
+                @if (!Model.Items.Any())
+                {
+                    <div class="empty-state">
+                        <div class="empty-state__icon">🔍</div>
+                        <div class="empty-state__title">خدمتی یافت نشد</div>
+                        <p class="empty-state__desc">با فیلترهای فعلی نتیجه‌ای پیدا نشد. فیلترها را تغییر دهید.</p>
+                        <a asp-action="Index" class="btn btn-primary">مشاهده همه خدمات</a>
+                    </div>
+                }
+                else
+                {
+                    @* Grid View *@
+                    <div id="view-grid" class="row g-4 row-cols-1 row-cols-md-2 row-cols-xl-3" data-stagger>
+                        @foreach (var svc in Model.Items)
+                        {
+                            <div class="col" data-reveal="up">
+                                <div class="service-card hover-lift" style="cursor:pointer"
+                                     onclick="window.location='@Url.Action("Details","Services",new{id=svc.Id})'">
+                                    <div class="service-card__image">
+                                        <span class="service-card__image-icon">🛠️</span>
+                                        @if (svc.IsFixedPrice)
+                                        {
+                                            <span class="badge badge--success" style="position:absolute;top:.75rem;right:.75rem;">قیمت ثابت</span>
+                                        }
+                                    </div>
+                                    <div class="service-card__body">
+                                        <div class="service-card__category">@(svc.CategoryName ?? "خدمات")</div>
+                                        <a asp-action="Details" asp-route-id="@svc.Id" class="service-card__title">@svc.Title</a>
+                                        @if (!string.IsNullOrEmpty(svc.Description))
+                                        {
+                                            <p class="service-card__desc">@svc.Description</p>
+                                        }
+                                        <div class="service-card__footer">
+                                            <div>
+                                                @if (svc.BasePrice.HasValue)
+                                                {
+                                                    <div class="service-card__price-label">شروع از</div>
+                                                    <div class="service-card__price">@svc.BasePrice.Value.ToString("N0") ت</div>
+                                                }
+                                                else { <span style="font-size:var(--text-sm);color:var(--color-text-tertiary);">توافقی</span> }
+                                            </div>
+                                            <a asp-controller="ServiceRequests" asp-action="Create" asp-route-serviceId="@svc.Id"
+                                               class="btn btn-primary btn-sm" onclick="event.stopPropagation()">درخواست</a>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        }
+                    </div>
+
+                    @* List View *@
+                    <div id="view-list" style="display:none;flex-direction:column;gap:var(--space-3);" data-stagger>
+                        @foreach (var svc in Model.Items)
+                        {
+                            <div class="service-list-item" data-reveal="up"
+                                 onclick="window.location='@Url.Action("Details","Services",new{id=svc.Id})'">
+                                <div class="service-list-thumb">🛠️</div>
+                                <div style="flex:1;min-width:0;">
+                                    @if (!string.IsNullOrEmpty(svc.CategoryName))
+                                    {
+                                        <div style="font-size:var(--text-xs);font-weight:var(--font-semibold);color:var(--primary-600);text-transform:uppercase;letter-spacing:.05em;margin-bottom:var(--space-1);">@svc.CategoryName</div>
+                                    }
+                                    <a asp-action="Details" asp-route-id="@svc.Id"
+                                       style="font-size:var(--text-base);font-weight:var(--font-bold);color:var(--gray-900);text-decoration:none;display:block;margin-bottom:var(--space-1);">@svc.Title</a>
+                                    @if (!string.IsNullOrEmpty(svc.Description))
+                                    {
+                                        <p style="font-size:var(--text-sm);color:var(--color-text-secondary);margin:0;overflow:hidden;display:-webkit-box;-webkit-line-clamp:1;-webkit-box-orient:vertical;">@svc.Description</p>
+                                    }
+                                </div>
+                                <div style="text-align:left;flex-shrink:0;">
+                                    @if (svc.BasePrice.HasValue)
+                                    {
+                                        <div style="font-size:var(--text-lg);font-weight:var(--font-extrabold);color:var(--primary-700);">@svc.BasePrice.Value.ToString("N0")</div>
+                                        <div style="font-size:var(--text-xs);color:var(--color-text-tertiary);">تومان</div>
+                                    }
+                                    else { <div style="font-size:var(--text-sm);color:var(--color-text-tertiary);">توافقی</div> }
+                                    <a asp-controller="ServiceRequests" asp-action="Create" asp-route-serviceId="@svc.Id"
+                                       class="btn btn-primary btn-sm" style="margin-top:var(--space-2);" onclick="event.stopPropagation()">درخواست</a>
+                                </div>
+                            </div>
+                        }
+                    </div>
+
+                    @* Pagination *@
+                    @if (Model.TotalPages > 1)
+                    {
+                        <nav style="margin-top:var(--space-10);" aria-label="صفحه‌بندی">
+                            <ul class="pagination" style="justify-content:center;">
+                                <li class="pagination__item">
+                                    <a class="pagination__link @(!Model.HasPreviousPage ? "pagination__link--disabled" : "")"
+                                       asp-action="Index" asp-route-page="@(Model.PageNumber-1)"
+                                       asp-route-search="@filter.SearchTerm" asp-route-categoryId="@filter.CategoryId"
+                                       asp-route-minPrice="@filter.MinPrice" asp-route-maxPrice="@filter.MaxPrice"
+                                       asp-route-sortBy="@filter.SortBy">←</a>
+                                </li>
+                                @for (int i = Math.Max(1,Model.PageNumber-2); i <= Math.Min(Model.TotalPages,Model.PageNumber+2); i++)
+                                {
+                                    <li class="pagination__item">
+                                        <a class="pagination__link @(i==Model.PageNumber ? "pagination__link--active" : "")"
+                                           asp-action="Index" asp-route-page="@i"
+                                           asp-route-search="@filter.SearchTerm" asp-route-categoryId="@filter.CategoryId"
+                                           asp-route-minPrice="@filter.MinPrice" asp-route-maxPrice="@filter.MaxPrice"
+                                           asp-route-sortBy="@filter.SortBy">@i</a>
+                                    </li>
+                                }
+                                <li class="pagination__item">
+                                    <a class="pagination__link @(!Model.HasNextPage ? "pagination__link--disabled" : "")"
+                                       asp-action="Index" asp-route-page="@(Model.PageNumber+1)"
+                                       asp-route-search="@filter.SearchTerm" asp-route-categoryId="@filter.CategoryId"
+                                       asp-route-minPrice="@filter.MinPrice" asp-route-maxPrice="@filter.MaxPrice"
+                                       asp-route-sortBy="@filter.SortBy">→</a>
+                                </li>
+                            </ul>
+                        </nav>
+                    }
+                }
+            </div>
         </div>
     </div>
 </div>
 
 @section Scripts {
-    <script>
-        function toggleView(view) {
-            const grid = document.getElementById('servicesGrid');
-            const list = document.getElementById('servicesList');
-            const btnGrid = document.getElementById('viewGrid');
-            const btnList = document.getElementById('viewList');
-            
-            if (view === 'grid') {
-                grid.style.display = 'flex';
-                list.style.display = 'none';
-                btnGrid.classList.add('active');
-                btnList.classList.remove('active');
-                localStorage.setItem('servicesView', 'grid');
-            } else {
-                grid.style.display = 'none';
-                list.style.display = 'block';
-                btnList.classList.add('active');
-                btnGrid.classList.remove('active');
-                localStorage.setItem('servicesView', 'list');
-            }
-        }
-        
-        // Restore view preference
-        document.addEventListener('DOMContentLoaded', function() {
-            const savedView = localStorage.getItem('servicesView');
-            if (savedView === 'list') {
-                toggleView('list');
-            }
-        });
-    </script>
+<script>
+function switchView(v) {
+    document.getElementById('view-grid').style.display = v==='grid' ? '' : 'none';
+    document.getElementById('view-list').style.display = v==='list' ? 'flex' : 'none';
+    document.getElementById('btn-grid').classList.toggle('active', v==='grid');
+    document.getElementById('btn-list').classList.toggle('active', v==='list');
+    localStorage.setItem('svc-view', v);
 }
-
+(function(){ var s=localStorage.getItem('svc-view'); if(s==='list') switchView('list'); })();
+</script>
+}

@@ -2,401 +2,258 @@
 @using HomeServices.Application.Dtos
 @{
     ViewData["Title"] = Model.BusinessName;
-    var reviews = ViewBag.Reviews as IReadOnlyList<ReviewDto> ?? Array.Empty<ReviewDto>();
-    var portfolio = ViewBag.Portfolio as IReadOnlyList<dynamic> ?? Array.Empty<dynamic>();
-    
-    // Calculate rating distribution
-    var totalReviews = reviews.Count();
-    var rating5 = totalReviews > 0 ? (int)Math.Round((double)reviews.Count(r => r.Rating == 5) / totalReviews * 100) : 0;
-    var rating4 = totalReviews > 0 ? (int)Math.Round((double)reviews.Count(r => r.Rating == 4) / totalReviews * 100) : 0;
-    var rating3 = totalReviews > 0 ? (int)Math.Round((double)reviews.Count(r => r.Rating == 3) / totalReviews * 100) : 0;
-    var rating2 = totalReviews > 0 ? (int)Math.Round((double)reviews.Count(r => r.Rating == 2) / totalReviews * 100) : 0;
-    var rating1 = totalReviews > 0 ? (int)Math.Round((double)reviews.Count(r => r.Rating == 1) / totalReviews * 100) : 0;
+    var reviews   = ViewBag.Reviews   as IReadOnlyList<ReviewDto>  ?? Array.Empty<ReviewDto>();
+    var portfolio = ViewBag.Portfolio  as IReadOnlyList<dynamic>   ?? Array.Empty<dynamic>();
+    int total     = reviews.Count;
+    int pct(int n) => total > 0 ? (int)Math.Round(reviews.Count(r=>r.Rating==n)*100.0/total) : 0;
+}
+@section Styles {
+<style>
+.expert-detail { padding:var(--space-10) 0 var(--space-20); }
+/* Profile cover */
+.profile-cover {
+    height:200px;
+    background:linear-gradient(135deg,var(--primary-600) 0%,var(--accent-500) 100%);
+    border-radius:var(--radius-3xl) var(--radius-3xl) 0 0;
+    position:relative;
+}
+.profile-card {
+    background:white; border:1px solid var(--color-border-subtle);
+    border-radius:var(--radius-3xl); overflow:hidden;
+    margin-bottom:var(--space-5); position:relative;
+}
+.profile-avatar-wrap {
+    position:absolute; bottom:-48px; right:var(--space-8);
+}
+.profile-avatar {
+    width:96px; height:96px; border-radius:50%;
+    background:var(--gradient-primary); color:white;
+    display:flex; align-items:center; justify-content:center;
+    font-size:2.5rem; font-weight:var(--font-black);
+    border:4px solid white; box-shadow:var(--shadow-lg);
+}
+.profile-body { padding:var(--space-6) var(--space-8) var(--space-8); padding-top:calc(var(--space-8)+48px); }
+.profile-name { font-size:var(--text-3xl); font-weight:var(--font-black); letter-spacing:-.03em; margin-bottom:var(--space-2); }
+.profile-meta { display:flex; flex-wrap:wrap; gap:var(--space-5); font-size:var(--text-sm); color:var(--color-text-secondary); margin-bottom:var(--space-5); }
+.profile-stats { display:grid; grid-template-columns:repeat(4,1fr); gap:var(--space-4); }
+@@media(max-width:640px) { .profile-stats { grid-template-columns:repeat(2,1fr); } }
+.profile-stat { text-align:center; background:var(--gray-50); border-radius:var(--radius-xl); padding:var(--space-4); }
+.profile-stat__val { font-size:var(--text-2xl); font-weight:var(--font-extrabold); color:var(--primary-700); line-height:1; margin-bottom:var(--space-1); }
+.profile-stat__lbl { font-size:var(--text-xs); color:var(--color-text-tertiary); }
+/* Section cards */
+.detail-card { background:white; border:1px solid var(--color-border-subtle); border-radius:var(--radius-2xl); padding:var(--space-7); margin-bottom:var(--space-5); }
+.detail-card__title { font-size:var(--text-xl); font-weight:var(--font-bold); margin-bottom:var(--space-5); }
+/* Skills */
+.skill-tag { display:inline-flex; align-items:center; gap:var(--space-2); padding:var(--space-2-5) var(--space-4); background:var(--primary-50); border:1.5px solid var(--primary-200); border-radius:var(--radius-full); font-size:var(--text-sm); font-weight:var(--font-semibold); color:var(--primary-700); }
+/* Rating bar */
+.rating-bar-row { display:flex; align-items:center; gap:var(--space-3); margin-bottom:var(--space-2); }
+.rating-bar-label { width:48px; font-size:var(--text-xs); color:var(--color-text-secondary); text-align:left; flex-shrink:0; }
+.rating-bar-track { flex:1; height:8px; background:var(--gray-100); border-radius:var(--radius-full); overflow:hidden; }
+.rating-bar-fill { height:100%; background:linear-gradient(90deg,var(--warning-400),var(--warning-500)); border-radius:var(--radius-full); transition:width 1s var(--ease-out); }
+.rating-bar-pct { width:36px; font-size:var(--text-xs); color:var(--color-text-tertiary); flex-shrink:0; }
+/* Review item */
+.review-item { background:var(--gray-50); border-radius:var(--radius-xl); padding:var(--space-5); margin-bottom:var(--space-4); }
+.review-item:last-child { margin-bottom:0; }
+/* CTA sidebar */
+.cta-card {
+    background:linear-gradient(135deg,var(--primary-600) 0%,var(--accent-500) 100%);
+    border-radius:var(--radius-2xl); padding:var(--space-7);
+    position:sticky; top:88px; color:white;
+}
+.cta-card__title { font-size:var(--text-xl); font-weight:var(--font-bold); color:white; margin-bottom:var(--space-2); }
+.cta-card__sub { font-size:var(--text-sm); opacity:.85; margin-bottom:var(--space-6); line-height:1.6; }
+/* Quick stats sidebar */
+.qs-card { background:white; border:1px solid var(--color-border-subtle); border-radius:var(--radius-2xl); padding:var(--space-6); margin-bottom:var(--space-5); }
+.qs-row { display:flex; justify-content:space-between; align-items:center; padding:var(--space-2-5) 0; border-bottom:1px solid var(--color-border-subtle); font-size:var(--text-sm); }
+.qs-row:last-child { border-bottom:none; }
+.qs-label { color:var(--color-text-secondary); }
+.qs-value { font-weight:var(--font-semibold); }
+</style>
 }
 
-<div class="container py-4">
-    <nav aria-label="breadcrumb" class="small mb-3">
-        <a asp-controller="Home" asp-action="Index" class="text-decoration-none">خانه</a> 
-        <span class="text-muted mx-1">/</span>
-        <a asp-controller="Experts" asp-action="Index" class="text-decoration-none">کارشناسان</a> 
-        <span class="text-muted mx-1">/</span>
-        <span class="text-muted">@Model.BusinessName</span>
-    </nav>
+<div class="expert-detail">
+    <div class="hs-container">
+        <nav style="font-size:var(--text-sm);color:var(--color-text-tertiary);margin-bottom:var(--space-6);">
+            <a asp-controller="Home"    asp-action="Index" style="color:inherit;text-decoration:none;">خانه</a> /
+            <a asp-controller="Experts" asp-action="Index" style="color:inherit;text-decoration:none;">کارشناسان</a> /
+            <span>@Model.BusinessName</span>
+        </nav>
 
-    @* Expert Profile Header *@
-    <div class="dashboard-card mb-4" style="background: linear-gradient(135deg, var(--cream) 0%, var(--beige) 100%);">
-        <div class="row g-4 align-items-center">
-            <div class="col-md-auto text-center">
-                <div class="position-relative d-inline-block">
-                    <span class="pro-avatar" style="width:110px;height:110px;font-size:3rem;box-shadow:var(--shadow-lg);">
-                        @(Model.BusinessName?.FirstOrDefault() ?? 'P')
-                    </span>
-                    @if (Model.IsVerified)
-                    {
-                        <span class="badge-soft badge-success-soft" style="position:absolute;bottom:-8px;left:50%;transform:translateX(-50%);font-size:0.75rem;white-space:nowrap;">
-                            ✓ تأیید شده
-                        </span>
-                    }
-                </div>
+        @* Profile Header *@
+        <div class="profile-card" data-reveal="up">
+            <div class="profile-cover"></div>
+            <div class="profile-avatar-wrap">
+                <div class="profile-avatar">@(Model.BusinessName?.FirstOrDefault() ?? 'P')</div>
             </div>
-            <div class="col-md">
-                <div class="d-flex align-items-start justify-content-between flex-wrap gap-2 mb-2">
+            <div class="profile-body">
+                <div style="display:flex;justify-content:space-between;align-items:flex-start;flex-wrap:wrap;gap:var(--space-4);margin-bottom:var(--space-3);">
                     <div>
-                        <h1 class="fw-800 mb-1" style="font-size:2rem;">@Model.BusinessName</h1>
-                        <div class="d-flex align-items-center gap-2 flex-wrap mb-2">
-                            @if (Model.IsVerified)
-                            {
-                                <span class="badge-soft badge-success-soft small">✓ تأیید هویت</span>
-                            }
-                            @if (Model.IsApproved)
-                            {
-                                <span class="badge-soft badge-info-soft small">✔ تأیید مدیریت</span>
-                            }
-                            @if (Model.JobsCompleted >= 50)
-                            {
-                                <span class="badge-soft badge-gold small">🏆 کارشناس برتر</span>
-                            }
-                            @if (Model.ResponseTimeMinutes.HasValue && Model.ResponseTimeMinutes.Value < 30)
-                            {
-                                <span class="badge-soft badge-brand small">⚡ پاسخ‌گویی سریع</span>
-                            }
+                        <div class="profile-name">@Model.BusinessName</div>
+                        <div style="display:flex;flex-wrap:wrap;gap:var(--space-2);">
+                            @if (Model.IsVerified) { <span class="badge badge--success">✓ تأیید هویت</span> }
+                            @if (Model.IsApproved) { <span class="badge badge--info">✔ تأیید مدیریت</span> }
+                            @if (Model.JobsCompleted >= 50) { <span class="badge badge--warning">🏆 کارشناس برتر</span> }
+                            @if (Model.ResponseTimeMinutes.HasValue && Model.ResponseTimeMinutes < 30) { <span class="badge badge--accent">⚡ پاسخ سریع</span> }
                         </div>
+                    </div>
+                    <div style="display:flex;align-items:center;gap:var(--space-2);">
+                        @for (int i=1;i<=5;i++) { <span style="font-size:1.3rem;color:@(i<=Math.Round(Model.RatingAverage)?"var(--warning-500)":"var(--gray-200)")">★</span> }
+                        <span style="font-size:var(--text-xl);font-weight:var(--font-bold);">@Model.RatingAverage.ToString("0.0")</span>
+                        <span style="font-size:var(--text-sm);color:var(--color-text-tertiary);">(@Model.ReviewCount نظر)</span>
                     </div>
                 </div>
-                
-                <div class="d-flex align-items-center gap-2 mb-3">
-                    <div class="rating-stars" style="font-size:1.3rem;">
-                        @for (int i = 1; i <= 5; i++)
-                        {
-                            <span>@(i <= Math.Round(Model.RatingAverage) ? "★" : "☆")</span>
-                        }
-                    </div>
-                    <span class="fw-700" style="font-size:1.1rem;">@Model.RatingAverage.ToString("0.0")</span>
-                    <span class="text-muted">(@Model.ReviewCount نظر)</span>
+                <div class="profile-meta">
+                    <span>📍 @Model.City</span>
+                    @if (Model.ResponseTimeMinutes.HasValue) { <span>⏱ پاسخ در @Model.ResponseTimeMinutes دقیقه</span> }
+                    <span>📅 عضو از @Model.JoinedAt.ToPersianDate()</span>
                 </div>
-                
-                <div class="row g-3">
-                    <div class="col-auto">
-                        <div class="d-flex align-items-center gap-2">
-                            <span style="font-size:1.2rem;">📍</span>
-                            <div>
-                                <small class="text-muted d-block" style="font-size:0.75rem;">موقعیت</small>
-                                <span class="fw-600">@Model.City</span>
-                            </div>
-                        </div>
-                    </div>
-                    <div class="col-auto">
-                        <div class="d-flex align-items-center gap-2">
-                            <span style="font-size:1.2rem;">✅</span>
-                            <div>
-                                <small class="text-muted d-block" style="font-size:0.75rem;">پروژه‌ها</small>
-                                <span class="fw-600">@Model.JobsCompleted</span>
-                            </div>
-                        </div>
-                    </div>
-                    @if (Model.ResponseTimeMinutes.HasValue)
-                    {
-                        <div class="col-auto">
-                            <div class="d-flex align-items-center gap-2">
-                                <span style="font-size:1.2rem;">⏱️</span>
-                                <div>
-                                    <small class="text-muted d-block" style="font-size:0.75rem;">پاسخ‌گویی</small>
-                                    <span class="fw-600">@Model.ResponseTimeMinutes دقیقه</span>
-                                </div>
-                            </div>
-                        </div>
-                    }
-                    <div class="col-auto">
-                        <div class="d-flex align-items-center gap-2">
-                            <span style="font-size:1.2rem;">📅</span>
-                            <div>
-                                <small class="text-muted d-block" style="font-size:0.75rem;">عضویت</small>
-                                <span class="fw-600">@Model.JoinedAt.ToPersianDate()</span>
-                            </div>
-                        </div>
-                    </div>
+                <div class="profile-stats">
+                    <div class="profile-stat"><div class="profile-stat__val" data-counter="@Model.JobsCompleted">@Model.JobsCompleted</div><div class="profile-stat__lbl">پروژه انجام‌شده</div></div>
+                    <div class="profile-stat"><div class="profile-stat__val">@Model.RatingAverage.ToString("0.0")</div><div class="profile-stat__lbl">امتیاز میانگین</div></div>
+                    <div class="profile-stat"><div class="profile-stat__val" data-counter="@Model.ReviewCount">@Model.ReviewCount</div><div class="profile-stat__lbl">نظر</div></div>
+                    <div class="profile-stat"><div class="profile-stat__val">@(Model.ResponseTimeMinutes ?? 60)</div><div class="profile-stat__lbl">دقیقه پاسخ</div></div>
                 </div>
             </div>
         </div>
-    </div>
 
-    <div class="row g-4">
-        <div class="col-lg-8">
-            @* About Section *@
-            @if (!string.IsNullOrEmpty(Model.Bio))
-            {
-                <div class="dashboard-card mb-4">
-                    <h5 class="fw-800 mb-3">
-                        <span style="font-size:1.3rem;margin-left:0.5rem;">👤</span>
-                        درباره کارشناس
-                    </h5>
-                    <p class="mb-0" style="line-height:1.8;">@Model.Bio</p>
-                </div>
-            }
+        <div class="row g-6" style="--bs-gutter-x:2rem;align-items:flex-start;">
+            <div class="col-lg-8">
 
-            @* Skills & Expertise *@
-            <div class="dashboard-card mb-4">
-                <h5 class="fw-800 mb-3">
-                    <span style="font-size:1.3rem;margin-left:0.5rem;">⚡</span>
-                    مهارت‌ها و تخصص‌ها
-                </h5>
+                @if (!string.IsNullOrEmpty(Model.Bio))
+                {
+                    <div class="detail-card" data-reveal="up">
+                        <div class="detail-card__title">👤 درباره کارشناس</div>
+                        <p style="font-size:var(--text-base);color:var(--color-text-secondary);line-height:var(--leading-relaxed);margin:0;">@Model.Bio</p>
+                    </div>
+                }
+
                 @if (Model.CategoryNames.Any())
                 {
-                    <div class="row g-2">
-                        @foreach (var category in Model.CategoryNames)
-                        {
-                            <div class="col-auto">
-                                <div class="skill-badge" style="padding:0.75rem 1.25rem;background:var(--cream);border:2px solid var(--primary);border-radius:var(--radius);display:inline-flex;align-items:center;gap:0.5rem;">
-                                    <span style="font-size:1.2rem;">✓</span>
-                                    <span class="fw-600">@category</span>
-                                    <div style="width:50px;height:4px;background:var(--beige);border-radius:2px;overflow:hidden;margin-right:0.5rem;">
-                                        <div style="width:85%;height:100%;background:var(--primary);"></div>
-                                    </div>
-                                </div>
-                            </div>
-                        }
-                    </div>
-                }
-                else
-                {
-                    <p class="text-muted small mb-0">اطلاعاتی ثبت نشده است.</p>
-                }
-            </div>
-
-            @* Service Area Map *@
-            @if (!string.IsNullOrEmpty(Model.ServiceArea))
-            {
-                <div class="dashboard-card mb-4">
-                    <h5 class="fw-800 mb-3">
-                        <span style="font-size:1.3rem;margin-left:0.5rem;">🗺️</span>
-                        محدوده خدمات‌رسانی
-                    </h5>
-                    <div class="alert alert-soft bg-soft d-flex align-items-center gap-2 mb-0">
-                        <span style="font-size:1.5rem;">📍</span>
-                        <div>
-                            <div class="fw-600 mb-1">@Model.ServiceArea</div>
-                            <small class="text-muted">این کارشناس در مناطق مذکور فعالیت می‌کند</small>
+                    <div class="detail-card" data-reveal="up">
+                        <div class="detail-card__title">⚡ مهارت‌ها و تخصص‌ها</div>
+                        <div style="display:flex;flex-wrap:wrap;gap:var(--space-2);">
+                            @foreach (var cat in Model.CategoryNames)
+                            {
+                                <span class="skill-tag">✓ @cat</span>
+                            }
                         </div>
                     </div>
-                </div>
-            }
-
-            @* Portfolio/Work Samples *@
-            <div class="dashboard-card mb-4">
-                <h5 class="fw-800 mb-3">
-                    <span style="font-size:1.3rem;margin-left:0.5rem;">🎨</span>
-                    نمونه کارها
-                    <span class="badge-soft badge-brand ms-2">@portfolio.Count</span>
-                </h5>
-                @if (portfolio.Any())
-                {
-                    <div class="row g-3">
-                        @foreach (var item in portfolio)
-                        {
-                            <div class="col-md-4">
-                                <div class="card-service" style="cursor:pointer;" data-bs-toggle="modal" data-bs-target="#portfolioModal">
-                                    <div class="card-thumb" style="height:180px;background:linear-gradient(135deg, var(--beige) 0%, var(--cream) 100%);">
-                                        <div style="font-size:3rem;opacity:0.4;">📸</div>
-                                    </div>
-                                    <div class="card-body">
-                                        <div class="fw-600 small">نمونه کار</div>
-                                    </div>
-                                </div>
-                            </div>
-                        }
-                    </div>
                 }
-                else
-                {
-                    <div class="text-center py-4">
-                        <div style="font-size:3rem;opacity:0.3;margin-bottom:1rem;">📸</div>
-                        <p class="text-muted mb-0">هنوز نمونه کاری ثبت نشده است</p>
-                    </div>
-                }
-            </div>
 
-            @* Reviews Section with Rating Distribution *@
-            <div class="dashboard-card">
-                <div class="d-flex justify-content-between align-items-center mb-4">
-                    <h5 class="fw-800 mb-0">
-                        <span style="font-size:1.3rem;margin-left:0.5rem;">⭐</span>
-                        نظرات و امتیازات
-                        <span class="badge-soft badge-brand ms-2">@Model.ReviewCount</span>
-                    </h5>
-                    <div class="dropdown">
-                        <button class="btn btn-sm btn-outline-brand dropdown-toggle" type="button" data-bs-toggle="dropdown">
-                            فیلتر نظرات
-                        </button>
-                        <ul class="dropdown-menu">
-                            <li><a class="dropdown-item" href="#">جدیدترین</a></li>
-                            <li><a class="dropdown-item" href="#">بالاترین امتیاز</a></li>
-                            <li><a class="dropdown-item" href="#">پایین‌ترین امتیاز</a></li>
-                        </ul>
-                    </div>
-                </div>
-
-                @if (reviews.Any())
+                @if (!string.IsNullOrEmpty(Model.ServiceArea))
                 {
-                    @* Rating Summary *@
-                    <div class="row g-4 mb-4 pb-4 border-bottom">
-                        <div class="col-md-4 text-center">
-                            <div style="font-size:3.5rem;font-weight:800;background:linear-gradient(135deg,var(--primary) 0%,var(--terracotta) 100%);-webkit-background-clip:text;-webkit-text-fill-color:transparent;background-clip:text;">
-                                @Model.RatingAverage.ToString("0.0")
+                    <div class="detail-card" data-reveal="up">
+                        <div class="detail-card__title">🗺️ محدوده خدمات‌رسانی</div>
+                        <div style="display:flex;align-items:center;gap:var(--space-3);background:var(--gray-50);padding:var(--space-4);border-radius:var(--radius-xl);">
+                            <span style="font-size:1.5rem;">📍</span>
+                            <div>
+                                <div style="font-weight:var(--font-semibold);">@Model.ServiceArea</div>
+                                <div style="font-size:var(--text-xs);color:var(--color-text-tertiary);">مناطق پوشش‌دهی</div>
                             </div>
-                            <div class="rating-stars" style="font-size:1.2rem;margin-bottom:0.5rem;">
-                                @for (int i = 1; i <= 5; i++)
-                                {
-                                    <span>@(i <= Math.Round(Model.RatingAverage) ? "★" : "☆")</span>
-                                }
-                            </div>
-                            <small class="text-muted">بر اساس @Model.ReviewCount نظر</small>
                         </div>
-                        <div class="col-md-8">
-                            <div class="vstack gap-2">
-                                @for (int i = 5; i >= 1; i--)
+                    </div>
+                }
+
+                @* Reviews *@
+                <div class="detail-card" data-reveal="up">
+                    <div class="detail-card__title">⭐ نظرات و امتیازات
+                        <span class="badge badge--primary" style="margin-right:var(--space-2);">@Model.ReviewCount</span>
+                    </div>
+                    @if (reviews.Any())
+                    {
+                        <div style="display:grid;grid-template-columns:auto 1fr;gap:var(--space-8);align-items:start;margin-bottom:var(--space-8);padding-bottom:var(--space-8);border-bottom:1px solid var(--color-border-subtle);">
+                            <div style="text-align:center;">
+                                <div style="font-size:4rem;font-weight:var(--font-black);background:var(--gradient-primary);-webkit-background-clip:text;-webkit-text-fill-color:transparent;background-clip:text;line-height:1;margin-bottom:var(--space-2);">@Model.RatingAverage.ToString("0.0")</div>
+                                <div style="display:flex;justify-content:center;gap:2px;margin-bottom:var(--space-1);">
+                                    @for (int i=1;i<=5;i++) { <span style="color:@(i<=Math.Round(Model.RatingAverage)?"var(--warning-500)":"var(--gray-200)");font-size:1.1rem;">★</span> }
+                                </div>
+                                <div style="font-size:var(--text-xs);color:var(--color-text-tertiary);">از @Model.ReviewCount نظر</div>
+                            </div>
+                            <div>
+                                @foreach (var n in new[]{5,4,3,2,1})
                                 {
-                                    var percentage = i switch {
-                                        5 => rating5,
-                                        4 => rating4,
-                                        3 => rating3,
-                                        2 => rating2,
-                                        _ => rating1
-                                    };
-                                    <div class="d-flex align-items-center gap-2">
-                                        <span class="text-muted small" style="width:60px;">@i ستاره</span>
-                                        <div class="flex-grow-1" style="height:8px;background:var(--beige);border-radius:4px;overflow:hidden;">
-                                            <div style="width:@percentage%;height:100%;background:var(--gold);transition:width 0.3s;"></div>
+                                    <div class="rating-bar-row">
+                                        <div class="rating-bar-label">@n ستاره</div>
+                                        <div class="rating-bar-track" data-progress="@pct(n)">
+                                            <div class="rating-bar-fill progress-fill" style="width:0%"></div>
                                         </div>
-                                        <span class="text-muted small" style="width:40px;text-align:left;">@percentage%</span>
+                                        <div class="rating-bar-pct">@pct(n)٪</div>
                                     </div>
                                 }
                             </div>
                         </div>
-                    </div>
-
-                    @* Reviews List *@
-                    <div class="vstack gap-4">
                         @foreach (var review in reviews)
                         {
-                            <div class="review-item" style="padding:1.25rem;background:var(--cream);border-radius:var(--radius);">
-                                <div class="d-flex justify-content-between align-items-start mb-2">
-                                    <div class="d-flex align-items-center gap-2">
-                                        <span class="pro-avatar" style="width:40px;height:40px;font-size:1rem;">
+                            <div class="review-item">
+                                <div style="display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:var(--space-3);">
+                                    <div style="display:flex;align-items:center;gap:var(--space-3);">
+                                        <div style="width:40px;height:40px;border-radius:50%;background:var(--gradient-primary);color:white;display:flex;align-items:center;justify-content:center;font-weight:var(--font-bold);font-size:var(--text-sm);">
                                             @(review.CustomerName?.FirstOrDefault() ?? 'U')
-                                        </span>
+                                        </div>
                                         <div>
-                                            <div class="fw-700">@review.CustomerName</div>
-                                            <small class="text-muted">@review.CreatedAt.ToPersianDate()</small>
+                                            <div style="font-weight:var(--font-semibold);font-size:var(--text-sm);">@review.CustomerName</div>
+                                            <div style="font-size:var(--text-xs);color:var(--color-text-tertiary);">@review.CreatedAt.ToPersianDate()</div>
                                         </div>
                                     </div>
-                                    <div class="rating-stars">
-                                        @for (int i = 1; i <= 5; i++)
-                                        {
-                                            <span class="@(i <= review.Rating ? "text-warning" : "text-muted")">★</span>
-                                        }
+                                    <div style="display:flex;gap:1px;">
+                                        @for (int i=1;i<=5;i++) { <span style="color:@(i<=review.Rating?"var(--warning-500)":"var(--gray-200)");">★</span> }
                                     </div>
                                 </div>
                                 @if (!string.IsNullOrEmpty(review.Comment))
                                 {
-                                    <p class="mb-0" style="line-height:1.7;">@review.Comment</p>
+                                    <p style="font-size:var(--text-sm);color:var(--color-text-secondary);line-height:var(--leading-relaxed);margin:0;">@review.Comment</p>
                                 }
                             </div>
                         }
-                    </div>
-                }
-                else
-                {
-                    <div class="text-center py-4">
-                        <div style="font-size:3rem;opacity:0.3;margin-bottom:1rem;">💬</div>
-                        <p class="text-muted mb-0">هنوز نظری ثبت نشده است</p>
-                    </div>
-                }
+                    }
+                    else
+                    {
+                        <div class="empty-state" style="padding:var(--space-12) var(--space-8);">
+                            <div class="empty-state__icon">💬</div>
+                            <div class="empty-state__title">هنوز نظری ثبت نشده</div>
+                        </div>
+                    }
+                </div>
             </div>
-        </div>
 
-        @* Sidebar *@
-        <div class="col-lg-4">
-            @* CTA Card *@
-            <div class="dashboard-card sticky-top mb-3" style="top:1rem;box-shadow:var(--shadow-lg);background:linear-gradient(135deg,var(--primary) 0%,var(--terracotta) 100%);color:white;">
-                <div class="text-center">
-                    <h5 class="fw-800 mb-2" style="color:white;">آماده همکاری با این کارشناس؟</h5>
-                    <p class="mb-3" style="opacity:0.95;font-size:0.9rem;">درخواست خود را ثبت کنید تا پیشنهاد دریافت کنید</p>
-                    <a asp-controller="ServiceRequests" asp-action="Create" class="btn w-100 py-3 mb-2" style="background:white;color:var(--primary);font-weight:700;">
+            @* Sidebar *@
+            <div class="col-lg-4">
+                <div class="cta-card" data-reveal="left">
+                    <div class="cta-card__title">آماده همکاری؟</div>
+                    <p class="cta-card__sub">درخواست خود را ثبت کنید تا این کارشناس پیشنهاد ارسال کند.</p>
+                    <a asp-controller="ServiceRequests" asp-action="Create"
+                       class="btn btn-xl btn-block hover-lift"
+                       style="background:white;color:var(--primary-700);font-weight:var(--font-bold);">
                         📝 ثبت درخواست رایگان
                     </a>
-                    <small style="opacity:0.9;">بدون هیچ هزینه‌ای</small>
+                    <div style="text-align:center;font-size:var(--text-xs);opacity:.75;margin-top:var(--space-3);">بدون هیچ هزینه‌ای</div>
                 </div>
-            </div>
 
-            @* Quick Stats *@
-            <div class="dashboard-card mb-3">
-                <h6 class="fw-800 mb-3">📊 آمار عملکرد</h6>
-                <div class="vstack gap-3">
-                    <div class="d-flex justify-content-between align-items-center">
-                        <span class="text-muted small">میزان رضایت</span>
-                        <div class="d-flex align-items-center gap-2">
-                            <div style="width:60px;height:6px;background:var(--beige);border-radius:3px;overflow:hidden;">
-                                <div style="width:@(Model.RatingAverage * 20)%;height:100%;background:var(--primary);"></div>
-                            </div>
-                            <span class="fw-700">@((Model.RatingAverage * 20).ToString("0"))%</span>
-                        </div>
-                    </div>
-                    <div class="d-flex justify-content-between align-items-center">
-                        <span class="text-muted small">پروژه تکمیل شده</span>
-                        <span class="fw-700">@Model.JobsCompleted</span>
-                    </div>
+                <div class="qs-card" data-reveal="left">
+                    <div style="font-size:var(--text-sm);font-weight:var(--font-bold);margin-bottom:var(--space-4);">📊 آمار عملکرد</div>
+                    <div class="qs-row"><span class="qs-label">میزان رضایت</span><span class="qs-value">@((Model.RatingAverage*20).ToString("0"))٪</span></div>
+                    <div class="qs-row"><span class="qs-label">پروژه تکمیل‌شده</span><span class="qs-value">@Model.JobsCompleted</span></div>
                     @if (Model.ResponseTimeMinutes.HasValue)
                     {
-                        <div class="d-flex justify-content-between align-items-center">
-                            <span class="text-muted small">میانگین پاسخ</span>
-                            <span class="fw-700">@Model.ResponseTimeMinutes دقیقه</span>
-                        </div>
+                        <div class="qs-row"><span class="qs-label">زمان پاسخ</span><span class="qs-value">@Model.ResponseTimeMinutes دقیقه</span></div>
                     }
-                    <div class="d-flex justify-content-between align-items-center">
-                        <span class="text-muted small">نرخ تکمیل</span>
-                        <span class="fw-700 text-success">@(Model.JobsCompleted > 0 ? "98%" : "0%")</span>
-                    </div>
+                    <div class="qs-row"><span class="qs-label">نرخ تکمیل</span><span class="qs-value" style="color:var(--success-600);">@(Model.JobsCompleted>0?"98٪":"—")</span></div>
                 </div>
-            </div>
 
-            @* Business Hours *@
-            @if (!string.IsNullOrEmpty(Model.BusinessHours))
-            {
-                <div class="dashboard-card mb-3">
-                    <h6 class="fw-800 mb-3">🕐 ساعات کاری</h6>
-                    <div class="small">@Model.BusinessHours</div>
-                </div>
-            }
-
-            @* Trust Indicators *@
-            <div class="dashboard-card">
-                <h6 class="fw-800 mb-3">🛡️ نشانه‌های اعتماد</h6>
-                <div class="vstack gap-2">
-                    @if (Model.IsVerified)
-                    {
-                        <div class="d-flex align-items-center gap-2">
-                            <span class="badge-soft badge-success-soft">✓</span>
-                            <small>هویت تأیید شده</small>
-                        </div>
-                    }
-                    @if (Model.IsApproved)
-                    {
-                        <div class="d-flex align-items-center gap-2">
-                            <span class="badge-soft badge-info-soft">✓</span>
-                            <small>تأیید شده توسط مدیریت</small>
-                        </div>
-                    }
-                    @if (Model.JobsCompleted > 0)
-                    {
-                        <div class="d-flex align-items-center gap-2">
-                            <span class="badge-soft badge-brand">✓</span>
-                            <small>دارای سابقه کاری معتبر</small>
-                        </div>
-                    }
-                    <div class="d-flex align-items-center gap-2">
-                        <span class="badge-soft badge-gold">✓</span>
-                        <small>پرداخت امن تضمین شده</small>
+                @if (!string.IsNullOrEmpty(Model.BusinessHours))
+                {
+                    <div class="qs-card" data-reveal="left">
+                        <div style="font-size:var(--text-sm);font-weight:var(--font-bold);margin-bottom:var(--space-3);">🕐 ساعات کاری</div>
+                        <p style="font-size:var(--text-sm);color:var(--color-text-secondary);margin:0;">@Model.BusinessHours</p>
                     </div>
+                }
+
+                <div class="qs-card" data-reveal="left">
+                    <div style="font-size:var(--text-sm);font-weight:var(--font-bold);margin-bottom:var(--space-4);">🛡️ نشانه‌های اعتماد</div>
+                    @if (Model.IsVerified) { <div class="qs-row"><span class="qs-label">هویت تأییدشده</span><span class="badge badge--success">✓</span></div> }
+                    @if (Model.IsApproved) { <div class="qs-row"><span class="qs-label">تأیید مدیریت</span><span class="badge badge--info">✓</span></div> }
+                    <div class="qs-row"><span class="qs-label">پرداخت امن</span><span class="badge badge--success">✓</span></div>
+                    <div class="qs-row"><span class="qs-label">ضمانت کیفیت</span><span class="badge badge--success">✓</span></div>
                 </div>
             </div>
         </div>

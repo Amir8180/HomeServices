@@ -1,413 +1,310 @@
 @{
-    ViewData["Title"] = "داشبورد مشتری";
-    var open = (int)ViewBag.OpenRequestsCount;
-    var booked = (int)ViewBag.BookedRequestsCount;
+    ViewData["Title"] = "داشبورد";
+    var open      = (int)ViewBag.OpenRequestsCount;
+    var booked    = (int)ViewBag.BookedRequestsCount;
     var completed = (int)ViewBag.CompletedOrdersCount;
-    var active = (int)ViewBag.ActiveOrdersCount;
+    var active    = (int)ViewBag.ActiveOrdersCount;
     var recentRequests = ViewBag.RecentRequests as IReadOnlyList<ServiceRequestDto> ?? Array.Empty<ServiceRequestDto>();
-    var recentOrders = ViewBag.RecentOrders as IReadOnlyList<OrderDto> ?? Array.Empty<OrderDto>();
-    var userName = User.Identity?.Name ?? "کاربر";
-    
-    var totalSpent = ViewBag.TotalSpent as decimal? ?? 0;
-    var totalRequests = open + booked + completed;
+    var recentOrders   = ViewBag.RecentOrders   as IReadOnlyList<OrderDto>          ?? Array.Empty<OrderDto>();
+    var userName       = User.Identity?.Name ?? "کاربر";
+    var totalSpent     = ViewBag.TotalSpent   as decimal? ?? 0;
+    var total          = open + booked + completed + active;
+}
+@section Styles {
+<style>
+.dash { padding:var(--space-8) 0 var(--space-20); }
+/* Welcome */
+.dash-welcome {
+    background:linear-gradient(135deg,var(--primary-700) 0%,var(--accent-600) 100%);
+    border-radius:var(--radius-3xl); padding:var(--space-10) var(--space-10);
+    color:white; margin-bottom:var(--space-8);
+    position:relative; overflow:hidden;
+}
+.dash-welcome::before {
+    content:''; position:absolute; width:400px; height:400px;
+    border-radius:50%; background:rgba(255,255,255,.05);
+    top:-100px; left:-100px; pointer-events:none;
+}
+.dash-welcome::after {
+    content:''; position:absolute; width:300px; height:300px;
+    border-radius:50%; background:rgba(255,255,255,.04);
+    bottom:-80px; right:-50px; pointer-events:none;
+}
+.dash-welcome__inner { position:relative; z-index:1; display:flex; align-items:center; justify-content:space-between; flex-wrap:wrap; gap:var(--space-6); }
+.dash-welcome__greeting { font-size:var(--text-xs); font-weight:var(--font-semibold); text-transform:uppercase; letter-spacing:.1em; opacity:.75; margin-bottom:var(--space-2); }
+.dash-welcome__name { font-size:clamp(1.5rem,3vw,2.5rem); font-weight:var(--font-black); letter-spacing:-.03em; color:white; margin-bottom:var(--space-2); line-height:1.1; }
+.dash-welcome__sub { opacity:.8; font-size:var(--text-sm); line-height:1.6; }
+/* Stat cards grid */
+.stats-grid { display:grid; grid-template-columns:repeat(4,1fr); gap:var(--space-4); margin-bottom:var(--space-8); }
+@@media(max-width:1024px) { .stats-grid { grid-template-columns:repeat(2,1fr); } }
+@@media(max-width:640px)  { .stats-grid { grid-template-columns:1fr 1fr; } }
+.stat-tile {
+    background:white; border:1px solid var(--color-border-subtle);
+    border-radius:var(--radius-2xl); padding:var(--space-6);
+    transition:all .25s; text-decoration:none; display:block;
+    position:relative; overflow:hidden;
+}
+.stat-tile::after { content:''; position:absolute; bottom:0; right:0; left:0; height:3px; background:var(--tile-color,var(--primary-400)); opacity:0; transition:opacity .25s; }
+.stat-tile:hover { box-shadow:var(--shadow-lg); transform:translateY(-4px); }
+.stat-tile:hover::after { opacity:1; }
+.stat-tile__icon { width:44px; height:44px; border-radius:var(--radius-xl); display:flex; align-items:center; justify-content:center; font-size:1.25rem; margin-bottom:var(--space-4); }
+.stat-tile__val { font-size:var(--text-4xl); font-weight:var(--font-black); letter-spacing:-.04em; line-height:1; margin-bottom:var(--space-1); color:var(--gray-900); }
+.stat-tile__lbl { font-size:var(--text-sm); font-weight:var(--font-medium); color:var(--color-text-secondary); }
+.stat-tile__sub { font-size:var(--text-xs); color:var(--color-text-tertiary); margin-top:var(--space-1); }
+/* Section card */
+.dash-card { background:white; border:1px solid var(--color-border-subtle); border-radius:var(--radius-2xl); padding:var(--space-7); margin-bottom:var(--space-5); }
+.dash-card__header { display:flex; align-items:center; justify-content:space-between; margin-bottom:var(--space-5); }
+.dash-card__title { font-size:var(--text-base); font-weight:var(--font-bold); color:var(--gray-900); }
+/* Activity chart (pure CSS bars) */
+.bar-chart { display:flex; align-items:flex-end; gap:var(--space-3); height:120px; padding:0 var(--space-2); }
+.bar-col { flex:1; display:flex; flex-direction:column; align-items:center; gap:var(--space-2); height:100%; }
+.bar-col__fill { width:100%; border-radius:var(--radius-md) var(--radius-md) 0 0; transition:height 1s var(--ease-out); min-height:4px; }
+.bar-col__label { font-size:10px; color:var(--color-text-tertiary); white-space:nowrap; }
+.bar-col__val { font-size:var(--text-xs); font-weight:var(--font-bold); color:var(--color-text-secondary); }
+/* Request row */
+.request-row { display:flex; align-items:center; gap:var(--space-4); padding:var(--space-4) 0; border-bottom:1px solid var(--color-border-subtle); }
+.request-row:last-child { border-bottom:none; }
+.request-row__icon { width:40px; height:40px; border-radius:var(--radius-xl); flex-shrink:0; display:flex; align-items:center; justify-content:center; font-size:1.1rem; }
+.request-row__body { flex:1; min-width:0; }
+.request-row__title { font-size:var(--text-sm); font-weight:var(--font-semibold); color:var(--gray-900); white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
+.request-row__meta { font-size:var(--text-xs); color:var(--color-text-tertiary); margin-top:2px; }
+/* Timeline */
+.timeline { position:relative; padding-right:var(--space-8); }
+.timeline::before { content:''; position:absolute; right:11px; top:0; bottom:0; width:2px; background:var(--color-border-subtle); }
+.tl-item { position:relative; padding-bottom:var(--space-5); }
+.tl-item:last-child { padding-bottom:0; }
+.tl-dot { position:absolute; right:0; top:4px; width:24px; height:24px; border-radius:50%; display:flex; align-items:center; justify-content:center; font-size:.65rem; font-weight:var(--font-bold); border:2px solid white; box-shadow:var(--shadow-sm); transform:translateX(50%); z-index:1; color:white; }
+.tl-content { background:var(--gray-50); border-radius:var(--radius-xl); padding:var(--space-4); }
+.tl-content__title { font-size:var(--text-xs); font-weight:var(--font-bold); color:var(--gray-900); margin-bottom:2px; }
+.tl-content__sub { font-size:var(--text-xs); color:var(--color-text-tertiary); }
+/* Quick actions */
+.qa-grid { display:grid; grid-template-columns:repeat(4,1fr); gap:var(--space-3); }
+@@media(max-width:640px) { .qa-grid { grid-template-columns:repeat(2,1fr); } }
+.qa-item { display:flex; flex-direction:column; align-items:center; gap:var(--space-2); padding:var(--space-4); background:var(--gray-50); border-radius:var(--radius-xl); text-decoration:none; transition:all .2s; border:1.5px solid transparent; }
+.qa-item:hover { background:var(--primary-50); border-color:var(--primary-200); transform:translateY(-3px); box-shadow:var(--shadow-md); }
+.qa-item__icon { font-size:1.5rem; }
+.qa-item__label { font-size:var(--text-xs); font-weight:var(--font-semibold); color:var(--gray-700); text-align:center; }
+</style>
 }
 
-<style>
-    .welcome-banner {
-        background: linear-gradient(135deg, var(--primary) 0%, var(--terracotta) 100%);
-        color: white;
-        border-radius: var(--radius-lg);
-        padding: 2rem;
-        margin-bottom: 2rem;
-        position: relative;
-        overflow: hidden;
-    }
-    .welcome-banner::before {
-        content: '🏠';
-        position: absolute;
-        top: -20px;
-        left: -20px;
-        font-size: 10rem;
-        opacity: 0.1;
-    }
-    .quick-action {
-        text-align: center;
-        padding: 1.5rem 1rem;
-        background: var(--cream);
-        border-radius: var(--radius);
-        text-decoration: none;
-        color: inherit;
-        transition: all 0.3s ease;
-        border: 2px solid transparent;
-    }
-    .quick-action:hover {
-        transform: translateY(-4px);
-        box-shadow: var(--shadow-lg);
-        border-color: var(--primary);
-        color: var(--primary);
-    }
-    .quick-action-icon {
-        font-size: 2rem;
-        margin-bottom: 0.5rem;
-    }
-    .quick-action-label {
-        font-weight: 700;
-        font-size: 0.875rem;
-    }
-    .activity-timeline {
-        position: relative;
-        padding-right: 2rem;
-    }
-    .activity-timeline::before {
-        content: '';
-        position: absolute;
-        right: 8px;
-        top: 0;
-        bottom: 0;
-        width: 2px;
-        background: var(--beige);
-    }
-    .activity-item {
-        position: relative;
-        padding-bottom: 1.5rem;
-    }
-    .activity-item:last-child {
-        padding-bottom: 0;
-    }
-    .activity-dot {
-        position: absolute;
-        right: 0;
-        top: 0;
-        width: 18px;
-        height: 18px;
-        border-radius: 50%;
-        background: white;
-        border: 3px solid var(--primary);
-        transform: translateX(50%);
-        z-index: 1;
-    }
-    .activity-dot.success {
-        border-color: var(--sage);
-    }
-    .activity-dot.warning {
-        border-color: var(--gold);
-    }
-    .activity-content {
-        background: var(--cream);
-        padding: 1rem;
-        border-radius: var(--radius);
-    }
-    .chart-container {
-        position: relative;
-        height: 200px;
-    }
-    .chart-bar {
-        display: flex;
-        align-items: flex-end;
-        height: 100%;
-        gap: 0.5rem;
-    }
-    .chart-bar-item {
-        flex: 1;
-        background: var(--beige);
-        border-radius: var(--radius-sm) var(--radius-sm) 0 0;
-        position: relative;
-        transition: all 0.3s ease;
-        cursor: pointer;
-    }
-    .chart-bar-item:hover {
-        opacity: 0.8;
-    }
-    .chart-bar-item.active {
-        background: var(--primary);
-    }
-    .chart-bar-label {
-        position: absolute;
-        bottom: -25px;
-        left: 50%;
-        transform: translateX(-50%);
-        font-size: 0.75rem;
-        color: var(--text-muted);
-        white-space: nowrap;
-    }
-    .chart-bar-value {
-        position: absolute;
-        top: -25px;
-        left: 50%;
-        transform: translateX(-50%);
-        font-size: 0.75rem;
-        font-weight: 700;
-        color: var(--primary);
-    }
-</style>
+<div class="dash">
+    <div class="hs-container">
 
-<div class="container py-4">
-    @* Welcome Banner *@
-    <div class="welcome-banner">
-        <div class="row align-items-center">
-            <div class="col-md-8">
-                <h2 class="fw-800 mb-2">سلام، @userName! 👋</h2>
-                <p class="mb-0" style="opacity:0.95;">به داشبورد خود خوش آمدید. در اینجا می‌توانید درخواست‌ها و سفارش‌های خود را مدیریت کنید.</p>
-            </div>
-            <div class="col-md-4 text-md-end mt-3 mt-md-0">
-                <a asp-controller="ServiceRequests" asp-action="Create" class="btn btn-lg" style="background:white;color:var(--primary);font-weight:700;">
-                    ✨ ثبت درخواست جدید
+        @* Welcome Banner *@
+        <div class="dash-welcome" data-reveal="up">
+            <div class="dash-welcome__inner">
+                <div>
+                    <div class="dash-welcome__greeting">داشبورد مشتری</div>
+                    <div class="dash-welcome__name">سلام، @userName 👋</div>
+                    <div class="dash-welcome__sub">مدیریت درخواست‌ها و سفارش‌های خود را از اینجا انجام دهید.</div>
+                </div>
+                <a asp-controller="ServiceRequests" asp-action="Create"
+                   class="btn btn-xl hover-lift"
+                   style="background:white;color:var(--primary-700);font-weight:var(--font-bold);white-space:nowrap;flex-shrink:0;">
+                    ✨ درخواست جدید
                 </a>
             </div>
         </div>
-    </div>
 
-    @* Statistics Cards *@
-    <div class="row g-3 mb-4">
-        <div class="col-6 col-lg-3">
-            <a asp-action="MyRequests" class="text-decoration-none">
-                <div class="stat-card" style="cursor:pointer;" onmouseenter="this.style.transform='translateY(-4px)'" onmouseleave="this.style.transform='translateY(0)'">
-                    <div class="stat-value">@open</div>
-                    <div class="stat-label">درخواست باز</div>
-                    <small class="text-muted d-block mt-1">نیاز به پیشنهاد</small>
-                </div>
+        @* Stats Grid *@
+        <div class="stats-grid" data-stagger>
+            <a asp-action="MyRequests" class="stat-tile" style="--tile-color:var(--primary-400);" data-reveal="up">
+                <div class="stat-tile__icon" style="background:var(--primary-100);">📋</div>
+                <div class="stat-tile__val" data-counter="@open">@open</div>
+                <div class="stat-tile__lbl">درخواست باز</div>
+                <div class="stat-tile__sub">در انتظار پیشنهاد</div>
             </a>
-        </div>
-        <div class="col-6 col-lg-3">
-            <div class="stat-card" style="border-inline-start-color: var(--secondary);">
-                <div class="stat-value">@booked</div>
-                <div class="stat-label">در حال انجام</div>
-                <small class="text-muted d-block mt-1">در حال اجرا</small>
+            <div class="stat-tile" style="--tile-color:var(--info-400);" data-reveal="up">
+                <div class="stat-tile__icon" style="background:var(--info-100);">🔨</div>
+                <div class="stat-tile__val" data-counter="@booked">@booked</div>
+                <div class="stat-tile__lbl">در حال انجام</div>
+                <div class="stat-tile__sub">در دست کارشناس</div>
             </div>
-        </div>
-        <div class="col-6 col-lg-3">
-            <a asp-action="MyOrders" class="text-decoration-none">
-                <div class="stat-card" style="border-inline-start-color: #F59E0B;cursor:pointer;" onmouseenter="this.style.transform='translateY(-4px)'" onmouseleave="this.style.transform='translateY(0)'">
-                    <div class="stat-value">@active</div>
-                    <div class="stat-label">سفارش فعال</div>
-                    <small class="text-muted d-block mt-1">نیاز به پیگیری</small>
-                </div>
+            <a asp-action="MyOrders" class="stat-tile" style="--tile-color:var(--warning-400);" data-reveal="up">
+                <div class="stat-tile__icon" style="background:var(--warning-100);">📦</div>
+                <div class="stat-tile__val" data-counter="@active">@active</div>
+                <div class="stat-tile__lbl">سفارش فعال</div>
+                <div class="stat-tile__sub">نیاز به پیگیری</div>
             </a>
-        </div>
-        <div class="col-6 col-lg-3">
-            <div class="stat-card" style="border-inline-start-color: #15803D;">
-                <div class="stat-value">@completed</div>
-                <div class="stat-label">تکمیل شده</div>
-                <small class="text-muted d-block mt-1">موفقیت‌آمیز</small>
+            <div class="stat-tile" style="--tile-color:var(--success-400);" data-reveal="up">
+                <div class="stat-tile__icon" style="background:var(--success-100);">✅</div>
+                <div class="stat-tile__val" data-counter="@completed">@completed</div>
+                <div class="stat-tile__lbl">تکمیل‌شده</div>
+                <div class="stat-tile__sub">با موفقیت</div>
             </div>
         </div>
-    </div>
 
-    @* Quick Actions *@
-    <div class="dashboard-card mb-4">
-        <h6 class="fw-800 mb-3">⚡ دسترسی سریع</h6>
-        <div class="row g-3">
-            <div class="col-6 col-md-3">
-                <a asp-controller="ServiceRequests" asp-action="Create" class="quick-action d-block">
-                    <div class="quick-action-icon">📝</div>
-                    <div class="quick-action-label">ثبت درخواست</div>
+        @* Quick Actions *@
+        <div class="dash-card" data-reveal="up">
+            <div class="dash-card__header"><span class="dash-card__title">⚡ دسترسی سریع</span></div>
+            <div class="qa-grid">
+                <a asp-controller="ServiceRequests" asp-action="Create" class="qa-item">
+                    <span class="qa-item__icon">📝</span><span class="qa-item__label">ثبت درخواست</span>
                 </a>
-            </div>
-            <div class="col-6 col-md-3">
-                <a asp-action="MyRequests" class="quick-action d-block">
-                    <div class="quick-action-icon">📋</div>
-                    <div class="quick-action-label">درخواست‌های من</div>
+                <a asp-action="MyRequests" class="qa-item">
+                    <span class="qa-item__icon">📋</span><span class="qa-item__label">درخواست‌هایم</span>
                 </a>
-            </div>
-            <div class="col-6 col-md-3">
-                <a asp-action="MyOrders" class="quick-action d-block">
-                    <div class="quick-action-icon">📦</div>
-                    <div class="quick-action-label">سفارش‌های من</div>
+                <a asp-action="MyOrders" class="qa-item">
+                    <span class="qa-item__icon">📦</span><span class="qa-item__label">سفارش‌هایم</span>
                 </a>
-            </div>
-            <div class="col-6 col-md-3">
-                <a asp-controller="Services" asp-action="Index" class="quick-action d-block">
-                    <div class="quick-action-icon">🔍</div>
-                    <div class="quick-action-label">جستجوی خدمات</div>
+                <a asp-controller="Services" asp-action="Index" class="qa-item">
+                    <span class="qa-item__icon">🔍</span><span class="qa-item__label">جستجو خدمات</span>
                 </a>
             </div>
         </div>
-    </div>
 
-    <div class="row g-4">
-        @* Activity Chart *@
-        <div class="col-lg-8">
-            <div class="dashboard-card mb-4">
-                <h6 class="fw-800 mb-3">📊 نمای کلی فعالیت</h6>
-                <div class="chart-container mb-4">
-                    <div class="chart-bar">
-                        <div class="chart-bar-item" style="height:@(totalRequests > 0 ? (open * 100.0 / totalRequests) : 0)%;">
-                            <div class="chart-bar-value">@open</div>
-                            <div class="chart-bar-label">باز</div>
-                        </div>
-                        <div class="chart-bar-item" style="height:@(totalRequests > 0 ? (booked * 100.0 / totalRequests) : 0)%;background:var(--secondary);">
-                            <div class="chart-bar-value">@booked</div>
-                            <div class="chart-bar-label">در حال انجام</div>
-                        </div>
-                        <div class="chart-bar-item" style="height:@(totalRequests > 0 ? (active * 100.0 / totalRequests) : 0)%;background:var(--gold);">
-                            <div class="chart-bar-value">@active</div>
-                            <div class="chart-bar-label">فعال</div>
-                        </div>
-                        <div class="chart-bar-item active" style="height:@(totalRequests > 0 ? (completed * 100.0 / totalRequests) : 0)%;background:var(--sage);">
-                            <div class="chart-bar-value">@completed</div>
-                            <div class="chart-bar-label">تکمیل شده</div>
-                        </div>
-                    </div>
-                </div>
-                <div class="row g-3 text-center">
-                    <div class="col-6">
-                        <div style="font-size:2rem;font-weight:800;color:var(--primary);">@totalRequests</div>
-                        <small class="text-muted">کل درخواست‌ها</small>
-                    </div>
-                    <div class="col-6">
-                        <div style="font-size:2rem;font-weight:800;color:var(--sage);">@totalSpent.ToString("N0")</div>
-                        <small class="text-muted">هزینه کل (تومان)</small>
-                    </div>
-                </div>
-            </div>
+        <div class="row g-5" style="--bs-gutter-x:1.5rem">
+            <div class="col-lg-8">
 
-            @* Recent Requests *@
-            <div class="dashboard-card">
-                <div class="d-flex justify-content-between align-items-center mb-3">
-                    <h6 class="fw-800 mb-0">📋 درخواست‌های اخیر</h6>
-                    <a asp-action="MyRequests" class="btn btn-sm btn-outline-brand">همه ←</a>
-                </div>
-                @if (!recentRequests.Any())
-                {
-                    <div class="text-center py-4">
-                        <div style="font-size:3rem;opacity:0.3;margin-bottom:1rem;">📋</div>
-                        <p class="text-muted mb-3">هنوز درخواستی ثبت نکرده‌اید</p>
-                        <a asp-controller="ServiceRequests" asp-action="Create" class="btn btn-brand">ثبت اولین درخواست</a>
+                @* Activity Chart *@
+                <div class="dash-card" data-reveal="up">
+                    <div class="dash-card__header">
+                        <span class="dash-card__title">📊 نمای کلی فعالیت</span>
+                        <div style="display:flex;gap:var(--space-4);font-size:var(--text-xs);color:var(--color-text-tertiary);">
+                            <span>مجموع: <strong style="color:var(--gray-900);">@total</strong></span>
+                            <span>هزینه: <strong style="color:var(--primary-700);">@totalSpent.ToString("N0") ت</strong></span>
+                        </div>
                     </div>
-                }
-                else
-                {
-                    <div class="vstack gap-2">
-                        @foreach (var request in recentRequests.Take(5))
+                    <div class="bar-chart" id="activityChart">
+                        @{
+                            var bars = new[]{
+                                (open,     "باز",       "var(--primary-400)"),
+                                (booked,   "در انجام",  "var(--info-400)"),
+                                (active,   "سفارش",     "var(--warning-400)"),
+                                (completed,"تکمیل",     "var(--success-500)"),
+                            };
+                            int maxVal = bars.Max(b=>b.Item1); if(maxVal==0) maxVal=1;
+                        }
+                        @foreach (var bar in bars)
                         {
-                            <div class="d-flex justify-content-between align-items-center p-2 rounded" style="background:var(--cream);">
-                                <div class="flex-grow-1">
-                                    <a asp-controller="ServiceRequests" asp-action="Details" asp-route-id="@request.Id" class="fw-700 text-decoration-none d-block">
-                                        @request.Title
-                                    </a>
-                                    <div class="d-flex gap-2 align-items-center mt-1">
-                                        <span class="badge-soft @request.Status.StatusClass() small">@request.Status.ToDisplay()</span>
-                                        <small class="text-muted">💬 @request.ProposalCount پیشنهاد</small>
-                                        <small class="text-muted">🕒 @request.CreatedAt.ToPersianDate()</small>
-                                    </div>
-                                </div>
-                                @if ((request.Status == RequestStatus.Open || request.Status == RequestStatus.Quoted) && request.ProposalCount > 0)
-                                {
-                                    <a asp-controller="Proposals" asp-action="Compare" asp-route-requestId="@request.Id" class="btn btn-sm btn-brand">
-                                        مشاهده پیشنهادها
-                                    </a>
-                                }
+                            var pct = (int)(bar.Item1 * 90.0 / maxVal);
+                            <div class="bar-col">
+                                <div class="bar-col__val">@bar.Item1</div>
+                                <div class="bar-col__fill" data-target-height="@pct" style="height:0;background:@bar.Item3;"></div>
+                                <div class="bar-col__label">@bar.Item2</div>
                             </div>
                         }
                     </div>
-                }
-            </div>
-        </div>
+                </div>
 
-        @* Activity Timeline & Recent Orders *@
-        <div class="col-lg-4">
-            @* Activity Timeline *@
-            <div class="dashboard-card mb-4">
-                <h6 class="fw-800 mb-3">📅 فعالیت‌های اخیر</h6>
-                <div class="activity-timeline">
-                    @if (recentRequests.Any() || recentOrders.Any())
+                @* Recent Requests *@
+                <div class="dash-card" data-reveal="up">
+                    <div class="dash-card__header">
+                        <span class="dash-card__title">📋 درخواست‌های اخیر</span>
+                        <a asp-action="MyRequests" class="btn btn-secondary btn-sm">مشاهده همه ←</a>
+                    </div>
+                    @if (!recentRequests.Any())
                     {
-                        var activities = new List<dynamic>();
-                        
-                        @foreach (var request in recentRequests.Take(3))
-                        {
-                            <div class="activity-item">
-                                <div class="activity-dot"></div>
-                                <div class="activity-content">
-                                    <div class="d-flex justify-content-between align-items-start mb-1">
-                                        <small class="fw-700">درخواست جدید</small>
-                                        <small class="text-muted">@request.CreatedAt.ToPersianDate()</small>
-                                    </div>
-                                    <small class="text-muted d-block">@request.Title</small>
-                                </div>
-                            </div>
-                        }
-                        
-                        @foreach (var order in recentOrders.Take(2))
-                        {
-                            <div class="activity-item">
-                                <div class="activity-dot @(order.Status == OrderStatus.Completed ? "success" : "warning")"></div>
-                                <div class="activity-content">
-                                    <div class="d-flex justify-content-between align-items-start mb-1">
-                                        <small class="fw-700">@order.Status.ToDisplay()</small>
-                                        <small class="text-muted">@order.CreatedAt.ToPersianDate()</small>
-                                    </div>
-                                    <small class="text-muted d-block">@order.RequestTitle</small>
-                                    <small class="text-muted d-block mt-1">💰 @order.TotalAmount.ToString("N0") تومان</small>
-                                </div>
-                            </div>
-                        }
+                        <div class="empty-state" style="padding:var(--space-12);">
+                            <div class="empty-state__icon">📋</div>
+                            <div class="empty-state__title">هنوز درخواستی ندارید</div>
+                            <a asp-controller="ServiceRequests" asp-action="Create" class="btn btn-primary">ثبت اولین درخواست</a>
+                        </div>
                     }
                     else
                     {
-                        <div class="text-center py-4">
-                            <div style="font-size:2rem;opacity:0.3;">📅</div>
-                            <small class="text-muted">فعالیتی ثبت نشده</small>
-                        </div>
+                        @foreach (var req in recentRequests.Take(5))
+                        {
+                            <div class="request-row">
+                                <div class="request-row__icon" style="background:var(--primary-100);">📋</div>
+                                <div class="request-row__body">
+                                    <a asp-controller="ServiceRequests" asp-action="Details" asp-route-id="@req.Id" class="request-row__title" style="text-decoration:none;">@req.Title</a>
+                                    <div class="request-row__meta">@req.CreatedAt.ToPersianDate() · @req.ProposalCount پیشنهاد</div>
+                                </div>
+                                <div style="display:flex;align-items:center;gap:var(--space-2);flex-shrink:0;">
+                                    <span class="badge badge--@(req.Status.ToString().ToLower())">@req.Status.ToDisplay()</span>
+                                    @if (req.ProposalCount > 0)
+                                    {
+                                        <a asp-controller="Proposals" asp-action="Compare" asp-route-requestId="@req.Id"
+                                           class="btn btn-primary btn-sm">مقایسه</a>
+                                    }
+                                </div>
+                            </div>
+                        }
                     }
                 </div>
-            </div>
 
-            @* Recent Orders *@
-            <div class="dashboard-card">
-                <div class="d-flex justify-content-between align-items-center mb-3">
-                    <h6 class="fw-800 mb-0">📦 سفارش‌های اخیر</h6>
-                    <a asp-action="MyOrders" class="btn btn-sm btn-outline-brand">همه ←</a>
-                </div>
-                @if (!recentOrders.Any())
+                @* Recent Orders *@
+                @if (recentOrders.Any())
                 {
-                    <div class="text-center py-3">
-                        <div style="font-size:2rem;opacity:0.3;margin-bottom:0.5rem;">📦</div>
-                        <small class="text-muted">هنوز سفارشی ندارید</small>
-                    </div>
-                }
-                else
-                {
-                    <div class="vstack gap-2">
+                    <div class="dash-card" data-reveal="up">
+                        <div class="dash-card__header">
+                            <span class="dash-card__title">📦 سفارش‌های اخیر</span>
+                            <a asp-action="MyOrders" class="btn btn-secondary btn-sm">مشاهده همه ←</a>
+                        </div>
                         @foreach (var order in recentOrders.Take(3))
                         {
-                            <a asp-controller="Orders" asp-action="Details" asp-route-id="@order.Id" class="text-decoration-none">
-                                <div class="p-2 rounded" style="background:var(--cream);transition:all 0.2s;" onmouseenter="this.style.boxShadow='var(--shadow)'" onmouseleave="this.style.boxShadow='none'">
-                                    <div class="d-flex justify-content-between align-items-start mb-1">
-                                        <small class="fw-700 text-dark">@order.OrderNumber</small>
-                                        <span class="badge-soft @order.Status.StatusClass()" style="font-size:0.7rem;">@order.Status.ToDisplay()</span>
-                                    </div>
-                                    <small class="text-muted d-block">@(order.RequestTitle?.Length > 30 ? order.RequestTitle.Substring(0, 30) + "..." : order.RequestTitle)</small>
-                                    <div class="d-flex justify-content-between align-items-center mt-1">
-                                        <small class="price-tag" style="font-size:0.75rem;">@order.TotalAmount.ToString("N0") ت</small>
-                                        <small class="text-muted">@order.CreatedAt.ToPersianDate()</small>
-                                    </div>
+                            <div class="request-row">
+                                <div class="request-row__icon" style="background:var(--warning-100);">📦</div>
+                                <div class="request-row__body">
+                                    <a asp-controller="Orders" asp-action="Details" asp-route-id="@order.Id" class="request-row__title" style="text-decoration:none;">@order.OrderNumber</a>
+                                    <div class="request-row__meta">@(order.RequestTitle?.Length>35?order.RequestTitle.Substring(0,35)+"…":order.RequestTitle) · @order.TotalAmount.ToString("N0") ت</div>
                                 </div>
-                            </a>
+                                <span class="badge badge--@(order.Status.ToString().ToLower())">@order.Status.ToDisplay()</span>
+                            </div>
                         }
                     </div>
                 }
             </div>
-        </div>
-    </div>
 
-    @* Tips Section *@
-    <div class="dashboard-card mt-4" style="background:linear-gradient(135deg, var(--cream) 0%, var(--beige) 100%);">
-        <div class="row align-items-center">
-            <div class="col-md-8">
-                <div class="d-flex align-items-start gap-3">
-                    <span style="font-size:2.5rem;">💡</span>
-                    <div>
-                        <h6 class="fw-800 mb-2">نکته مفید</h6>
-                        <p class="small mb-0">برای دریافت بهترین پیشنهادها، حتماً جزئیات کامل درخواست خود را بنویسید و در صورت امکان عکس اضافه کنید.</p>
-                    </div>
+            <div class="col-lg-4">
+                @* Activity Timeline *@
+                <div class="dash-card" data-reveal="left">
+                    <div class="dash-card__header"><span class="dash-card__title">🕐 فعالیت‌های اخیر</span></div>
+                    @if (!recentRequests.Any() && !recentOrders.Any())
+                    {
+                        <div style="text-align:center;padding:var(--space-8);color:var(--color-text-tertiary);font-size:var(--text-sm);">هنوز فعالیتی ثبت نشده</div>
+                    }
+                    else
+                    {
+                        <div class="timeline">
+                            @foreach (var req in recentRequests.Take(3))
+                            {
+                                <div class="tl-item">
+                                    <div class="tl-dot" style="background:var(--primary-500);">📋</div>
+                                    <div class="tl-content">
+                                        <div class="tl-content__title">درخواست جدید</div>
+                                        <div class="tl-content__sub">@req.Title · @req.CreatedAt.ToPersianDate()</div>
+                                    </div>
+                                </div>
+                            }
+                            @foreach (var order in recentOrders.Take(2))
+                            {
+                                <div class="tl-item">
+                                    <div class="tl-dot" style="background:@(order.Status==OrderStatus.Completed?"var(--success-500)":"var(--warning-500)");">📦</div>
+                                    <div class="tl-content">
+                                        <div class="tl-content__title">@order.Status.ToDisplay()</div>
+                                        <div class="tl-content__sub">@order.OrderNumber · @order.CreatedAt.ToPersianDate()</div>
+                                    </div>
+                                </div>
+                            }
+                        </div>
+                    }
                 </div>
-            </div>
-            <div class="col-md-4 text-md-end mt-3 mt-md-0">
-                <a asp-controller="Home" asp-action="HowItWorks" class="btn btn-outline-brand">
-                    نحوه کار ←
-                </a>
+
+                @* Tip card *@
+                <div style="background:linear-gradient(135deg,var(--primary-50) 0%,var(--accent-50) 100%);border:1px solid var(--color-border-subtle);border-radius:var(--radius-2xl);padding:var(--space-6);" data-reveal="left">
+                    <div style="font-size:2rem;margin-bottom:var(--space-3);">💡</div>
+                    <div style="font-size:var(--text-sm);font-weight:var(--font-bold);margin-bottom:var(--space-2);">نکته مفید</div>
+                    <p style="font-size:var(--text-sm);color:var(--color-text-secondary);line-height:1.6;margin:0 0 var(--space-4);">توضیحات کامل و عکس در درخواست، احتمال دریافت پیشنهادهای بهتر را بالا می‌برد.</p>
+                    <a asp-controller="Home" asp-action="HowItWorks" class="btn btn-secondary btn-sm">نحوه کار ←</a>
+                </div>
             </div>
         </div>
     </div>
 </div>
+
+@section Scripts {
+<script>
+// Animate bar chart on load
+(function(){
+    var cols = document.querySelectorAll('.bar-col__fill');
+    setTimeout(function(){
+        cols.forEach(function(el){
+            el.style.transition = 'height 1s var(--ease-out)';
+            el.style.height = el.dataset.targetHeight + '%';
+        });
+    }, 300);
+})();
+</script>
+}

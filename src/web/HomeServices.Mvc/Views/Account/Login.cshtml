@@ -1,45 +1,102 @@
 @model LoginViewModel
-@{
-    ViewData["Title"] = "ورود";
+@{ ViewData["Title"] = "ورود"; }
+@section Styles {
+<style>
+.auth-page { min-height:100vh; display:grid; grid-template-columns:1fr 1fr; padding-top:0; }
+@@media(max-width:768px) { .auth-page { grid-template-columns:1fr; } }
+.auth-panel {
+    display:flex; align-items:center; justify-content:center;
+    padding:var(--space-16) var(--space-8);
+    min-height:100vh;
+}
+.auth-form-wrap { width:100%; max-width:420px; }
+.auth-brand { display:flex; align-items:center; gap:var(--space-2-5); margin-bottom:var(--space-10); }
+.auth-brand__icon { width:40px; height:40px; background:var(--gradient-primary); border-radius:var(--radius-xl); display:flex; align-items:center; justify-content:center; font-size:1.25rem; box-shadow:var(--shadow-brand); }
+.auth-brand__name { font-size:var(--text-xl); font-weight:var(--font-bold); color:var(--gray-900); }
+.auth-title { font-size:var(--text-4xl); font-weight:var(--font-black); letter-spacing:-.04em; margin-bottom:var(--space-2); line-height:1.1; }
+.auth-sub { font-size:var(--text-base); color:var(--color-text-secondary); margin-bottom:var(--space-8); }
+.auth-visual {
+    background:linear-gradient(135deg,var(--primary-600) 0%,var(--accent-500) 100%);
+    display:flex; align-items:center; justify-content:center;
+    position:relative; overflow:hidden; min-height:100vh;
+}
+@@media(max-width:768px) { .auth-visual { display:none; } }
+.auth-visual__content { text-align:center; color:white; padding:var(--space-10); position:relative; z-index:1; max-width:420px; }
+.auth-visual__icon { font-size:5rem; margin-bottom:var(--space-6); display:block; animation:float 4s ease-in-out infinite; }
+.auth-visual__title { font-size:var(--text-4xl); font-weight:var(--font-black); color:white; letter-spacing:-.04em; margin-bottom:var(--space-4); line-height:1.1; }
+.auth-visual__sub { font-size:var(--text-base); opacity:.85; line-height:var(--leading-relaxed); margin-bottom:var(--space-8); }
+.auth-trust { display:flex; flex-direction:column; gap:var(--space-3); }
+.auth-trust-item { display:flex; align-items:center; gap:var(--space-3); background:rgba(255,255,255,.12); border-radius:var(--radius-xl); padding:var(--space-3) var(--space-4); font-size:var(--text-sm); }
+.auth-visual::before { content:''; position:absolute; inset:-50%; background:radial-gradient(ellipse,rgba(255,255,255,.08) 0%,transparent 60%); animation:float 12s ease-in-out infinite; }
+.divider-text { display:flex; align-items:center; gap:var(--space-3); color:var(--color-text-tertiary); font-size:var(--text-sm); margin:var(--space-5) 0; }
+.divider-text::before, .divider-text::after { content:''; flex:1; height:1px; background:var(--color-border); }
+</style>
 }
 
-<div class="auth-card">
-    <div class="text-center mb-4">
-        <span class="brand-icon" style="width:60px;height:60px;font-size:1.8rem;">🔑</span>
-        <h2 class="fw-800 mt-3 mb-1">ورود به حساب</h2>
-        <p class="text-muted mb-0">خوش آمدید! لطفاً وارد شوید.</p>
+<div class="auth-page">
+    <div class="auth-panel">
+        <div class="auth-form-wrap animate-fade-in-up">
+            <a class="auth-brand" asp-controller="Home" asp-action="Index">
+                <div class="auth-brand__icon">🏠</div>
+                <span class="auth-brand__name">خدمات منزل</span>
+            </a>
+            <h1 class="auth-title">خوش آمدید</h1>
+            <p class="auth-sub">وارد حساب کاربری خود شوید.</p>
+
+            <form asp-action="Login" method="post" data-loading="bar">
+                <input type="hidden" asp-for="ReturnUrl" />
+                <div asp-validation-summary="All" class="alert alert--error" style="display:@(ViewData.ModelState.IsValid?"none":"flex");margin-bottom:var(--space-5);">
+                    <span class="alert__icon">⚠</span>
+                    <div class="alert__content" asp-validation-summary="All"></div>
+                </div>
+
+                <div class="form-group" style="margin-bottom:var(--space-4);">
+                    <label asp-for="Email" class="form-label">ایمیل</label>
+                    <input asp-for="Email" class="form-control" placeholder="email@example.com" autocomplete="username" />
+                    <span asp-validation-for="Email" class="form-error"></span>
+                </div>
+
+                <div class="form-group" style="margin-bottom:var(--space-5);">
+                    <label asp-for="Password" class="form-label">رمز عبور</label>
+                    <input asp-for="Password" class="form-control" placeholder="••••••••" autocomplete="current-password" />
+                    <span asp-validation-for="Password" class="form-error"></span>
+                </div>
+
+                <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:var(--space-6);">
+                    <label class="form-check" style="cursor:pointer;">
+                        <input asp-for="RememberMe" type="checkbox" />
+                        <span class="form-check__label">مرا به خاطر بسپار</span>
+                    </label>
+                </div>
+
+                <button type="submit" class="btn btn-primary btn-block btn-lg hover-lift">
+                    ورود به حساب
+                </button>
+            </form>
+
+            <div class="divider-text">یا</div>
+
+            <div style="text-align:center;">
+                <span style="font-size:var(--text-sm);color:var(--color-text-secondary);">حساب ندارید؟ </span>
+                <a asp-action="Register" style="font-size:var(--text-sm);font-weight:var(--font-semibold);color:var(--primary-600);text-decoration:none;">ثبت‌نام رایگان ←</a>
+            </div>
+        </div>
     </div>
 
-    <form asp-action="Login" method="post">
-        <input type="hidden" asp-for="ReturnUrl" />
-        <div asp-validation-summary="All" class="text-danger mb-3"></div>
-
-        <div class="mb-3">
-            <label asp-for="Email" class="form-label">ایمیل</label>
-            <input asp-for="Email" class="form-control" placeholder="email@example.com" autocomplete="username" />
-            <span asp-validation-for="Email" class="text-danger small"></span>
+    <div class="auth-visual">
+        <div class="auth-visual__content">
+            <span class="auth-visual__icon">🏠</span>
+            <h2 class="auth-visual__title">متخصصان باکیفیت در خدمت شما</h2>
+            <p class="auth-visual__sub">به هزاران مشتری راضی بپیوندید که خدمات خانگی خود را از طریق ما دریافت کرده‌اند.</p>
+            <div class="auth-trust">
+                <div class="auth-trust-item"><span>✓</span> بیش از ۵۰۰ کارشناس تأییدشده</div>
+                <div class="auth-trust-item"><span>✓</span> ضمانت کیفیت و بازگشت وجه</div>
+                <div class="auth-trust-item"><span>✓</span> پرداخت ۱۰۰٪ امن</div>
+            </div>
         </div>
-
-        <div class="mb-3">
-            <label asp-for="Password" class="form-label">رمز عبور</label>
-            <input asp-for="Password" class="form-control" placeholder="********" autocomplete="current-password" />
-            <span asp-validation-for="Password" class="text-danger small"></span>
-        </div>
-
-        <div class="form-check mb-4">
-            <input asp-for="RememberMe" class="form-check-input" />
-            <label asp-for="RememberMe" class="form-check-label">مرا به خاطر بسپار</label>
-        </div>
-
-        <button type="submit" class="btn btn-brand w-100 py-2">ورود</button>
-    </form>
-
-    <hr class="my-4" />
-    <p class="text-center mb-0">
-        حساب ندارید؟ <a asp-action="Register">ثبت‌نام کنید</a>
-    </p>
+    </div>
 </div>
 
 @section Scripts {
-    @{await Html.RenderPartialAsync("_ValidationScriptsPartial");}
+    @{ await Html.RenderPartialAsync("_ValidationScriptsPartial"); }
 }
