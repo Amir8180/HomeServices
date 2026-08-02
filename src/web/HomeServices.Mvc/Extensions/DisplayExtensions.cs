@@ -87,16 +87,27 @@ public static class DisplayExtensions
     };
 
     /// <summary>
-    /// Returns a Persian (Jalali) short date string. Falls back to Gregorian when
-    /// the System.Globalization.PersianCalendar is unavailable. Avoids pulling in an
-    /// external Persian calendar NuGet dependency for this resume project.
+    /// Persian (Jalali) month names in the order used by the Iranian calendar.
+    /// </summary>
+    private static readonly string[] PersianMonths =
+    {
+        "فروردین", "اردیبهشت", "خرداد", "تیر", "مرداد", "شهریور",
+        "مهر", "آبان", "آذر", "دی", "بهمن", "اسفند"
+    };
+
+    /// <summary>
+    /// Returns a Persian (Jalali) date with the Iranian month name, e.g. "۱۲ مرداد ۱۴۰۳".
+    /// Falls back to a numeric Gregorian string if the PersianCalendar is unavailable.
+    /// Avoids pulling in an external Persian calendar NuGet dependency.
     /// </summary>
     public static string ToPersianDate(this DateTime dt)
     {
         try
         {
             var pc = new System.Globalization.PersianCalendar();
-            return $"{pc.GetYear(dt):0000}/{pc.GetMonth(dt):00}/{pc.GetDayOfMonth(dt):00}";
+            var month = pc.GetMonth(dt);
+            var monthName = month >= 1 && month <= 12 ? PersianMonths[month - 1] : month.ToString();
+            return $"{pc.GetDayOfMonth(dt)} {monthName} {pc.GetYear(dt):0000}";
         }
         catch
         {

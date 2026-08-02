@@ -6,6 +6,7 @@ using HomeServices.Application.Interfaces;
 using HomeServices.Mvc.Extensions;
 using Microsoft.AspNetCore.Authentication;
 using Microsoft.AspNetCore.Authentication.Cookies;
+using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using SharedDtos = HomeServices.Shared.Dtos;
 using SharedEnums = HomeServices.Shared.Enums;
@@ -117,15 +118,24 @@ public class AccountController : Controller
 
     // -------------------- Profile --------------------
     [HttpGet]
+    [Authorize]
     public async Task<IActionResult> Profile()
     {
-        if (!(User.Identity?.IsAuthenticated ?? false)) return RedirectToAction(nameof(Login));
+        // Experts manage a business profile; route them straight there.
+        if (User.IsInRole("Expert"))
+            return RedirectToAction(nameof(Profile), "Expert");
 
         var userId = User.FindFirstValue(ClaimTypes.NameIdentifier);
         if (userId == null) return RedirectToAction(nameof(Login));
 
         var user = await _identity.GetUserByIdAsync(Guid.Parse(userId), HttpContext.RequestAborted);
-        if (user == null) return NotFound();
+        if (user == null)
+        {
+            // Identity service unreachable / user removed. Show a friendly page
+            // instead of a raw 404, with a path to recover (sign in again).
+            TempData["Error"] = "اطلاعات حساب کاربری یافت نشد. لطفاً مجدداً وارد شوید.";
+            return RedirectToAction(nameof(Login));
+        }
 
         var model = new ProfileViewModel
         {

@@ -7,10 +7,11 @@
     var isDone     = Model.Status == OrderStatus.Completed;
 
     var stages = new[]{
-        new{St=OrderStatus.PendingPayment, Lbl="پرداخت",    Icon="💳"},
-        new{St=OrderStatus.Paid,           Lbl="پرداخت شد", Icon="✓"},
-        new{St=OrderStatus.InProgress,     Lbl="در انجام",  Icon="🔨"},
-        new{St=OrderStatus.Completed,      Lbl="تکمیل",     Icon="🎉"},
+        new{St=OrderStatus.PendingPayment, Lbl="پرداخت",     Icon="💳"},
+        new{St=OrderStatus.Paid,           Lbl="پرداخت شد",  Icon="✓"},
+        new{St=OrderStatus.Scheduled,      Lbl="زمان‌بندی",  Icon="📅"},
+        new{St=OrderStatus.InProgress,     Lbl="در انجام",   Icon="🔨"},
+        new{St=OrderStatus.Completed,      Lbl="تکمیل",      Icon="🎉"},
     };
     var curIdx = Array.FindIndex(stages, s => s.St == Model.Status);
     if (curIdx < 0) curIdx = 0;

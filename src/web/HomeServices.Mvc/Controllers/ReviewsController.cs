@@ -73,7 +73,7 @@ public class ReviewsController : Controller
                 ServiceDate = vm.ServiceDate,
             };
             await _reviews.CreateAsync(dto, userId.Value, HttpContext.RequestAborted);
-            TempData["Success"] = "نظر شما با موفقیت ثبت شد. متشکریم!";
+            TempData["Success"] = "نظر شما ثبت شد و پس از تأیید مدیر، در پروفایل کارشناس نمایش داده خواهد شد. متشکریم!";
             return RedirectToAction("Details", "Orders", new { id = vm.OrderId });
         }
         catch (InvalidOperationException ex)

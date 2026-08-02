@@ -102,12 +102,51 @@
     box-shadow: 0 0 0 3px rgba(184,148,86,.12);
     background: white;
 }
-/* Category pills */
-.cat-scroll {
-    display: flex; gap: var(--space-2); overflow-x: auto;
-    padding-bottom: var(--space-2); scrollbar-width: none;
+/* Category select — Bootstrap-style custom select */
+.hero-search__select-wrap {
+    position: relative;
+    margin-bottom: var(--space-4);
 }
-.cat-scroll::-webkit-scrollbar { display: none; }
+.hero-search__select-wrap::after {
+    content: '▾';
+    position: absolute;
+    left: var(--space-5);
+    top: 50%;
+    transform: translateY(-50%);
+    pointer-events: none;
+    color: var(--color-text-tertiary);
+    font-size: 1rem;
+}
+.hero-search__field--select {
+    appearance: none;
+    -webkit-appearance: none;
+    padding-left: var(--space-10) !important;
+    cursor: pointer;
+    background-image: none !important;
+}
+.hero-search__field--select:focus {
+    background-color: white;
+}
+/* Marquee-style auto-scroll for quick access */
+.marquee-track {
+    display: flex; gap: var(--space-3);
+    overflow: hidden;
+    padding: var(--space-2) 0;
+    mask-image: linear-gradient(to left, transparent, black 60px, black calc(100% - 60px), transparent);
+    -webkit-mask-image: linear-gradient(to left, transparent, black 60px, black calc(100% - 60px), transparent);
+}
+.marquee-track__inner {
+    display: flex; gap: var(--space-3);
+    animation: marquee-scroll 30s linear infinite;
+    width: max-content;
+}
+.marquee-track:hover .marquee-track__inner {
+    animation-play-state: paused;
+}
+@@keyframes marquee-scroll {
+    0%   { transform: translateX(0); }
+    100% { transform: translateX(-50%); }
+}
 .cat-pill {
     flex-shrink: 0; display: flex; flex-direction: column;
     align-items: center; gap: var(--space-1-5);
@@ -239,25 +278,38 @@
                     <form asp-controller="Services" asp-action="Index" method="get">
                         <input type="text" name="search" class="hero-search__field"
                                placeholder="مثلاً لوله‌کشی، نظافت، برق‌کاری..." autocomplete="off" />
-                        <select name="categoryId" class="hero-search__field form-control" style="margin-bottom:var(--space-4);"
-                                asp-items="@(new SelectList(Model.Categories, "Id", "Name"))">
-                            <option value="">همه دسته‌بندی‌ها</option>
-                        </select>
+                        <div class="hero-search__select-wrap">
+                            <select name="categoryId" class="hero-search__field hero-search__field--select"
+                                    asp-items="@(new SelectList(Model.Categories, "Id", "Name"))">
+                                <option value="">همه دسته‌بندی‌ها</option>
+                            </select>
+                        </div>
                         <button type="submit" class="btn btn-primary btn-block btn-lg">
                             🔍 جستجو در خدمات
                         </button>
                     </form>
                     <div style="margin-top:var(--space-5);">
                         <div style="font-size:var(--text-xs);color:var(--color-text-tertiary);margin-bottom:var(--space-3);font-weight:var(--font-semibold);">دسترسی سریع:</div>
-                        <div class="cat-scroll">
-                            @foreach (var cat in Model.Categories.Take(6))
-                            {
-                                <a class="cat-pill" asp-controller="Services" asp-action="Index" asp-route-categoryId="@cat.Id">
-                                    <span class="cat-pill__icon">@(cat.IconUrl ?? "🛠️")</span>
-                                    <span class="cat-pill__name">@cat.Name</span>
-                                </a>
-                            }
-                        </div>
+                        @{
+                            var quickCats = Model.Categories.Take(8).ToList();
+                        }
+                        @if (quickCats.Any())
+                        {
+                            <div class="marquee-track">
+                                <div class="marquee-track__inner">
+                                    @for (int dup = 0; dup < 2; dup++)
+                                    {
+                                        foreach (var cat in quickCats)
+                                        {
+                                            <a class="cat-pill" asp-controller="Services" asp-action="Index" asp-route-categoryId="@cat.Id">
+                                                <span class="cat-pill__icon">@(cat.IconUrl ?? "🛠️")</span>
+                                                <span class="cat-pill__name">@cat.Name</span>
+                                            </a>
+                                        }
+                                    }
+                                </div>
+                            </div>
+                        }
                     </div>
                 </div>
             </div>

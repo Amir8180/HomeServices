@@ -44,7 +44,14 @@
                                 <td>
                                     <div class="d-flex gap-1 flex-wrap justify-content-end">
                                         <a asp-controller="Orders" asp-action="Details" asp-route-id="@o.Id" class="btn btn-sm btn-outline-brand">جزئیات</a>
-                                        @if (o.Status == OrderStatus.Paid || o.Status == OrderStatus.Scheduled)
+                                        @if (o.Status == OrderStatus.Paid)
+                                        {
+                                            <form asp-action="UpdateOrderStatus" asp-route-id="@o.Id" asp-route-status="@OrderStatus.Scheduled" method="post"
+                                                  onsubmit="return confirm('زمان‌بندی پیشنهادی را تأیید می‌کنید؟');">
+                                                <button type="submit" class="btn btn-sm btn-outline-brand">تأیید زمان‌بندی</button>
+                                            </form>
+                                        }
+                                        else if (o.Status == OrderStatus.Scheduled)
                                         {
                                             <form asp-action="UpdateOrderStatus" asp-route-id="@o.Id" asp-route-status="@OrderStatus.InProgress" method="post">
                                                 <button type="submit" class="btn btn-sm btn-brand">شروع کار</button>

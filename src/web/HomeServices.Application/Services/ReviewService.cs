@@ -90,15 +90,14 @@ public class ReviewService : IReviewService
         review.CustomerId = customerId;
         review.ExpertId = order.ExpertId;
         review.RequestId = order.RequestId;
-        review.Status = ReviewStatus.Approved; // auto-approve; admins can reject via the panel
-        review.IsVerified = true;
+        review.Status = ReviewStatus.Pending; // hold for admin moderation before going public
+        review.IsVerified = false;
         review.CreatedBy = customerId;
 
         await _uow.Repository<Review>().AddAsync(review, cancellationToken);
         await _uow.SaveChangesAsync(cancellationToken);
 
-        // Recalculate the expert's rolling rating immediately on approval.
-        await RecalculateExpertRatingAsync(order.ExpertId, cancellationToken);
+        // Rating is recalculated only when an admin approves the review (see UpdateStatusAsync).
         await _cache.RemoveAsync(CacheKeys.Reviews.ByExpert(order.ExpertId), cancellationToken);
 
         _logger.LogInformation("Review {Id} created by {Customer} for expert {Expert}.", review.Id, customerId, order.ExpertId);

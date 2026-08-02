@@ -241,6 +241,8 @@ public class ExpertController : Controller
         // Experts may only progress their jobs forward along the allowed path.
         var allowed = status switch
         {
+            // Expert confirms the customer's requested date → scheduled.
+            OrderStatus.Scheduled when order.Status == OrderStatus.Paid => true,
             OrderStatus.InProgress when order.Status == OrderStatus.Scheduled || order.Status == OrderStatus.Paid => true,
             OrderStatus.Completed when order.Status == OrderStatus.InProgress => true,
             _ => false,

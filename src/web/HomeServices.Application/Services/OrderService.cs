@@ -116,7 +116,9 @@ public class OrderService : IOrderService
             OrderNumber = orderNumber,
             Status = OrderStatus.PendingPayment,
             TotalAmount = proposal.Price,
-            ScheduledDate = proposal.AvailableStartDate,
+            // Prefer the customer's requested date so the expert confirms the time
+            // the customer actually wants; fall back to the proposal's availability.
+            ScheduledDate = request.PreferredDate ?? proposal.AvailableStartDate,
             CreatedBy = customerId,
         };
 
@@ -139,6 +141,8 @@ public class OrderService : IOrderService
         if (order == null) return null;
 
         order.Status = status;
+        if (status == OrderStatus.Scheduled && !order.ScheduledDate.HasValue)
+            order.ScheduledDate = DateTime.UtcNow;
         if (status == OrderStatus.Completed) order.CompletedDate = DateTime.UtcNow;
         _uow.Repository<Order>().Update(order);
         await _uow.SaveChangesAsync(cancellationToken);
@@ -150,6 +154,7 @@ public class OrderService : IOrderService
             request.Status = status switch
             {
                 OrderStatus.Paid => RequestStatus.Booked,
+                OrderStatus.Scheduled => RequestStatus.Booked,
                 OrderStatus.InProgress => RequestStatus.InProgress,
                 OrderStatus.Completed => RequestStatus.Completed,
                 OrderStatus.Cancelled => RequestStatus.Cancelled,
