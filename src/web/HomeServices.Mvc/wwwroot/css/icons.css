@@ -1,0 +1,203 @@
+/* ==========================================================================
+   HOMESERVICES — SVG ICON SYSTEM
+   Inline SVG icons via CSS. Usage: <i class="hs-icon hs-icon--home"></i>
+   Icons sourced from Heroicons (MIT License) & Tabler Icons (MIT License)
+   ========================================================================== */
+
+.hs-icon {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 1em;
+    height: 1em;
+    flex-shrink: 0;
+    fill: none;
+    stroke: currentColor;
+    stroke-width: 1.75;
+    stroke-linecap: round;
+    stroke-linejoin: round;
+    vertical-align: -0.125em;
+    line-height: 1;
+}
+
+.hs-icon svg {
+    width: 100%;
+    height: 100%;
+    display: block;
+}
+
+/* Size modifiers */
+.hs-icon--xs  { font-size: 0.75rem; }
+.hs-icon--sm  { font-size: 0.875rem; }
+.hs-icon--md  { font-size: 1.125rem; }
+.hs-icon--lg  { font-size: 1.375rem; }
+.hs-icon--xl  { font-size: 1.75rem; }
+.hs-icon--2xl { font-size: 2.25rem; }
+.hs-icon--3xl { font-size: 3rem; }
+.hs-icon--hero { font-size: 5rem; }
+
+/* ==========================================================================
+   INLINE ICON STYLES — Nav logo icon box
+   ========================================================================== */
+
+/* Logo icon background box */
+.hs-nav__logo-icon {
+    width: 36px;
+    height: 36px;
+    background: var(--gradient-primary);
+    border-radius: var(--radius-lg);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    box-shadow: var(--shadow-brand);
+    transition: transform var(--duration-fast) var(--ease-spring);
+    flex-shrink: 0;
+}
+
+.hs-nav__logo:hover .hs-nav__logo-icon {
+    transform: rotate(-10deg) scale(1.1);
+}
+
+/* Nav dropdown & drawer icon container */
+.nav-icon {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 18px;
+    height: 18px;
+    flex-shrink: 0;
+    color: currentColor;
+    opacity: 0.75;
+}
+
+/* Footer social icon container */
+.hs-footer__social-link {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+}
+
+/* Auth visual icon */
+.auth-visual__icon {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    width: 80px;
+    height: 80px;
+    background: rgba(255,255,255,0.2);
+    border-radius: var(--radius-2xl);
+    margin: 0 auto var(--space-6);
+    animation: float 4s ease-in-out infinite;
+}
+
+/* Auth brand icon */
+.auth-brand__icon {
+    width: 40px;
+    height: 40px;
+    background: var(--gradient-primary);
+    border-radius: var(--radius-xl);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    box-shadow: var(--shadow-brand);
+    flex-shrink: 0;
+    color: white;
+}
+
+/* User type option icon */
+.user-type-option__icon {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    width: 44px;
+    height: 44px;
+    background: var(--primary-100);
+    border-radius: var(--radius-xl);
+    color: var(--primary-700);
+}
+
+.user-type-option.selected .user-type-option__icon {
+    background: var(--primary-600);
+    color: white;
+}
+
+/* Trust checkmark */
+.trust-check {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 20px;
+    height: 20px;
+    background: rgba(255,255,255,0.2);
+    border-radius: 50%;
+    flex-shrink: 0;
+    color: white;
+}
+
+/* Toast type icons */
+.toast__icon svg,
+.alert__icon svg {
+    width: 20px;
+    height: 20px;
+    display: block;
+}
+
+/* Info tile icon */
+.info-tile__icon {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    width: 36px;
+    height: 36px;
+    border-radius: var(--radius-lg);
+    background: var(--primary-100);
+    color: var(--primary-700);
+    margin-bottom: var(--space-2);
+}
+
+/* Timeline event dot icon */
+.evt-dot svg {
+    width: 14px;
+    height: 14px;
+}
+
+/* Status stage dot icon */
+.status-dot svg {
+    width: 16px;
+    height: 16px;
+}
+
+/* Stat icon container (admin) */
+.stat-icon {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    width: 44px;
+    height: 44px;
+    border-radius: var(--radius-xl);
+    background: var(--primary-100);
+    color: var(--primary-700);
+    flex-shrink: 0;
+}
+
+/* Category pill icon */
+.cat-pill__icon {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    width: 32px;
+    height: 32px;
+    color: var(--primary-700);
+}
+
+/* Tile icon in dashboard */
+.stat-tile__icon {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    width: 44px;
+    height: 44px;
+    border-radius: var(--radius-xl);
+    margin-bottom: var(--space-4);
+    flex-shrink: 0;
+}

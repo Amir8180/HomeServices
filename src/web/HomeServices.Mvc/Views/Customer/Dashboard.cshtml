@@ -95,13 +95,13 @@
             <div class="dash-welcome__inner">
                 <div>
                     <div class="dash-welcome__greeting">داشبورد مشتری</div>
-                    <div class="dash-welcome__name">سلام، @userName 👋</div>
+                    <div class="dash-welcome__name">سلام، @userName</div>
                     <div class="dash-welcome__sub">مدیریت درخواست‌ها و سفارش‌های خود را از اینجا انجام دهید.</div>
                 </div>
                 <a asp-controller="ServiceRequests" asp-action="Create"
                    class="btn btn-xl hover-lift"
                    style="background:white;color:var(--primary-700);font-weight:var(--font-bold);white-space:nowrap;flex-shrink:0;">
-                    ✨ درخواست جدید
+                    درخواست جدید
                 </a>
             </div>
         </div>
@@ -109,25 +109,33 @@
         @* Stats Grid *@
         <div class="stats-grid" data-stagger>
             <a asp-action="MyRequests" class="stat-tile" style="--tile-color:var(--primary-400);" data-reveal="up">
-                <div class="stat-tile__icon" style="background:var(--primary-100);">📋</div>
+                <div class="stat-tile__icon" style="background:var(--primary-100);">
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" style="width:22px;height:22px;"><path d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2"/><rect x="9" y="3" width="6" height="4" rx="1"/><path d="M9 12h6M9 16h4"/></svg>
+                </div>
                 <div class="stat-tile__val" data-counter="@open">@open</div>
                 <div class="stat-tile__lbl">درخواست باز</div>
                 <div class="stat-tile__sub">در انتظار پیشنهاد</div>
             </a>
             <div class="stat-tile" style="--tile-color:var(--info-400);" data-reveal="up">
-                <div class="stat-tile__icon" style="background:var(--info-100);">🔨</div>
+                <div class="stat-tile__icon" style="background:var(--info-100);">
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" style="width:22px;height:22px;"><path d="M14.7 6.3a1 1 0 000 1.4l1.6 1.6a1 1 0 001.4 0l3.77-3.77a6 6 0 01-7.94 7.94l-6.91 6.91a2.12 2.12 0 01-3-3l6.91-6.91a6 6 0 017.94-7.94l-3.76 3.76z"/></svg>
+                </div>
                 <div class="stat-tile__val" data-counter="@booked">@booked</div>
                 <div class="stat-tile__lbl">در حال انجام</div>
                 <div class="stat-tile__sub">در دست کارشناس</div>
             </div>
             <a asp-action="MyOrders" class="stat-tile" style="--tile-color:var(--warning-400);" data-reveal="up">
-                <div class="stat-tile__icon" style="background:var(--warning-100);">📦</div>
+                <div class="stat-tile__icon" style="background:var(--warning-100);">
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" style="width:22px;height:22px;"><path d="M21 16V8a2 2 0 00-1-1.73l-7-4a2 2 0 00-2 0l-7 4A2 2 0 003 8v8a2 2 0 001 1.73l7 4a2 2 0 002 0l7-4A2 2 0 0021 16z"/><polyline points="3.27 6.96 12 12.01 20.73 6.96"/><line x1="12" y1="22.08" x2="12" y2="12"/></svg>
+                </div>
                 <div class="stat-tile__val" data-counter="@active">@active</div>
                 <div class="stat-tile__lbl">سفارش فعال</div>
                 <div class="stat-tile__sub">نیاز به پیگیری</div>
             </a>
             <div class="stat-tile" style="--tile-color:var(--success-400);" data-reveal="up">
-                <div class="stat-tile__icon" style="background:var(--success-100);">✅</div>
+                <div class="stat-tile__icon" style="background:var(--success-100);">
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" style="width:22px;height:22px;"><path d="M22 11.08V12a10 10 0 11-5.93-9.14"/><polyline points="22 4 12 14.01 9 11.01"/></svg>
+                </div>
                 <div class="stat-tile__val" data-counter="@completed">@completed</div>
                 <div class="stat-tile__lbl">تکمیل‌شده</div>
                 <div class="stat-tile__sub">با موفقیت</div>
@@ -136,19 +144,23 @@
 
         @* Quick Actions *@
         <div class="dash-card" data-reveal="up">
-            <div class="dash-card__header"><span class="dash-card__title">⚡ دسترسی سریع</span></div>
+            <div class="dash-card__header"><span class="dash-card__title">دسترسی سریع</span></div>
             <div class="qa-grid">
                 <a asp-controller="ServiceRequests" asp-action="Create" class="qa-item">
-                    <span class="qa-item__icon">📝</span><span class="qa-item__label">ثبت درخواست</span>
+                    <span class="qa-item__icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" style="width:24px;height:24px;"><path d="M14 2H6a2 2 0 00-2 2v16a2 2 0 002 2h12a2 2 0 002-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="12" y1="18" x2="12" y2="12"/><line x1="9" y1="15" x2="15" y2="15"/></svg></span>
+                    <span class="qa-item__label">ثبت درخواست</span>
                 </a>
                 <a asp-action="MyRequests" class="qa-item">
-                    <span class="qa-item__icon">📋</span><span class="qa-item__label">درخواست‌هایم</span>
+                    <span class="qa-item__icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" style="width:24px;height:24px;"><path d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2"/><rect x="9" y="3" width="6" height="4" rx="1"/><path d="M9 12h6M9 16h4"/></svg></span>
+                    <span class="qa-item__label">درخواست‌هایم</span>
                 </a>
                 <a asp-action="MyOrders" class="qa-item">
-                    <span class="qa-item__icon">📦</span><span class="qa-item__label">سفارش‌هایم</span>
+                    <span class="qa-item__icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" style="width:24px;height:24px;"><path d="M21 16V8a2 2 0 00-1-1.73l-7-4a2 2 0 00-2 0l-7 4A2 2 0 003 8v8a2 2 0 001 1.73l7 4a2 2 0 002 0l7-4A2 2 0 0021 16z"/><polyline points="3.27 6.96 12 12.01 20.73 6.96"/><line x1="12" y1="22.08" x2="12" y2="12"/></svg></span>
+                    <span class="qa-item__label">سفارش‌هایم</span>
                 </a>
                 <a asp-controller="Services" asp-action="Index" class="qa-item">
-                    <span class="qa-item__icon">🔍</span><span class="qa-item__label">جستجو خدمات</span>
+                    <span class="qa-item__icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" style="width:24px;height:24px;"><circle cx="11" cy="11" r="8"/><path d="M21 21l-4.35-4.35"/></svg></span>
+                    <span class="qa-item__label">جستجو خدمات</span>
                 </a>
             </div>
         </div>
@@ -159,7 +171,7 @@
                 @* Activity Chart *@
                 <div class="dash-card" data-reveal="up">
                     <div class="dash-card__header">
-                        <span class="dash-card__title">📊 نمای کلی فعالیت</span>
+                        <span class="dash-card__title">نمای کلی فعالیت</span>
                         <div style="display:flex;gap:var(--space-4);font-size:var(--text-xs);color:var(--color-text-tertiary);">
                             <span>مجموع: <strong style="color:var(--gray-900);">@total</strong></span>
                             <span>هزینه: <strong style="color:var(--primary-700);">@totalSpent.ToString("N0") ت</strong></span>
@@ -190,13 +202,15 @@
                 @* Recent Requests *@
                 <div class="dash-card" data-reveal="up">
                     <div class="dash-card__header">
-                        <span class="dash-card__title">📋 درخواست‌های اخیر</span>
+                        <span class="dash-card__title">درخواست‌های اخیر</span>
                         <a asp-action="MyRequests" class="btn btn-secondary btn-sm">مشاهده همه ←</a>
                     </div>
                     @if (!recentRequests.Any())
                     {
                         <div class="empty-state" style="padding:var(--space-12);">
-                            <div class="empty-state__icon">📋</div>
+                            <div class="empty-state__icon">
+                                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" style="width:36px;height:36px;color:var(--gray-400);"><path d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2"/><rect x="9" y="3" width="6" height="4" rx="1"/><path d="M9 12h6M9 16h4"/></svg>
+                            </div>
                             <div class="empty-state__title">هنوز درخواستی ندارید</div>
                             <a asp-controller="ServiceRequests" asp-action="Create" class="btn btn-primary">ثبت اولین درخواست</a>
                         </div>
@@ -206,7 +220,9 @@
                         @foreach (var req in recentRequests.Take(5))
                         {
                             <div class="request-row">
-                                <div class="request-row__icon" style="background:var(--primary-100);">📋</div>
+                                <div class="request-row__icon" style="background:var(--primary-100);">
+                                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" style="width:18px;height:18px;color:var(--primary-600);"><path d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2"/><rect x="9" y="3" width="6" height="4" rx="1"/></svg>
+                                </div>
                                 <div class="request-row__body">
                                     <a asp-controller="ServiceRequests" asp-action="Details" asp-route-id="@req.Id" class="request-row__title" style="text-decoration:none;">@req.Title</a>
                                     <div class="request-row__meta">@req.CreatedAt.ToPersianDate() · @req.ProposalCount پیشنهاد</div>
@@ -229,13 +245,15 @@
                 {
                     <div class="dash-card" data-reveal="up">
                         <div class="dash-card__header">
-                            <span class="dash-card__title">📦 سفارش‌های اخیر</span>
+                            <span class="dash-card__title">سفارش‌های اخیر</span>
                             <a asp-action="MyOrders" class="btn btn-secondary btn-sm">مشاهده همه ←</a>
                         </div>
                         @foreach (var order in recentOrders.Take(3))
                         {
                             <div class="request-row">
-                                <div class="request-row__icon" style="background:var(--warning-100);">📦</div>
+                                <div class="request-row__icon" style="background:var(--warning-100);">
+                                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" style="width:18px;height:18px;color:var(--warning-600);"><path d="M21 16V8a2 2 0 00-1-1.73l-7-4a2 2 0 00-2 0l-7 4A2 2 0 003 8v8a2 2 0 001 1.73l7 4a2 2 0 002 0l7-4A2 2 0 0021 16z"/><polyline points="3.27 6.96 12 12.01 20.73 6.96"/><line x1="12" y1="22.08" x2="12" y2="12"/></svg>
+                                </div>
                                 <div class="request-row__body">
                                     <a asp-controller="Orders" asp-action="Details" asp-route-id="@order.Id" class="request-row__title" style="text-decoration:none;">@order.OrderNumber</a>
                                     <div class="request-row__meta">@(order.RequestTitle?.Length>35?order.RequestTitle.Substring(0,35)+"…":order.RequestTitle) · @order.TotalAmount.ToString("N0") ت</div>
@@ -250,7 +268,7 @@
             <div class="col-lg-4">
                 @* Activity Timeline *@
                 <div class="dash-card" data-reveal="left">
-                    <div class="dash-card__header"><span class="dash-card__title">🕐 فعالیت‌های اخیر</span></div>
+                    <div class="dash-card__header"><span class="dash-card__title">فعالیت‌های اخیر</span></div>
                     @if (!recentRequests.Any() && !recentOrders.Any())
                     {
                         <div style="text-align:center;padding:var(--space-8);color:var(--color-text-tertiary);font-size:var(--text-sm);">هنوز فعالیتی ثبت نشده</div>
@@ -261,7 +279,9 @@
                             @foreach (var req in recentRequests.Take(3))
                             {
                                 <div class="tl-item">
-                                    <div class="tl-dot" style="background:var(--primary-500);">📋</div>
+                                <div class="tl-dot" style="background:var(--primary-500);">
+                                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="width:10px;height:10px;"><path d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2"/><rect x="9" y="3" width="6" height="4" rx="1"/></svg>
+                                </div>
                                     <div class="tl-content">
                                         <div class="tl-content__title">درخواست جدید</div>
                                         <div class="tl-content__sub">@req.Title · @req.CreatedAt.ToPersianDate()</div>
@@ -271,7 +291,9 @@
                             @foreach (var order in recentOrders.Take(2))
                             {
                                 <div class="tl-item">
-                                    <div class="tl-dot" style="background:@(order.Status==OrderStatus.Completed?"var(--success-500)":"var(--warning-500)");">📦</div>
+                                <div class="tl-dot" style="background:@(order.Status==OrderStatus.Completed?"var(--success-500)":"var(--warning-500)");">
+                                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="width:10px;height:10px;"><path d="M21 16V8a2 2 0 00-1-1.73l-7-4a2 2 0 00-2 0l-7 4A2 2 0 003 8v8a2 2 0 001 1.73l7 4a2 2 0 002 0l7-4A2 2 0 0021 16z"/></svg>
+                                </div>
                                     <div class="tl-content">
                                         <div class="tl-content__title">@order.Status.ToDisplay()</div>
                                         <div class="tl-content__sub">@order.OrderNumber · @order.CreatedAt.ToPersianDate()</div>

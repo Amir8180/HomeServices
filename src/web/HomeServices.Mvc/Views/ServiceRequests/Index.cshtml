@@ -18,7 +18,7 @@
     <div class="row g-4">
         <div class="col-lg-3">
             <div class="dashboard-card">
-                <h6 class="fw-800 mb-3">🔍 فیلترها</h6>
+                <h6 class="fw-800 mb-3">فیلترها</h6>
                 <form method="get" class="vstack gap-3">
                     <div>
                         <label class="form-label small fw-600">جستجو</label>
@@ -54,7 +54,9 @@
             @if (!Model.Items.Any())
             {
                 <div class="empty-state dashboard-card">
-                    <div class="icon">📋</div>
+                    <div class="icon" style="font-size:2rem;margin-bottom:.5rem;">
+                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" style="width:40px;height:40px;color:var(--gray-400);"><path d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2"/><rect x="9" y="3" width="6" height="4" rx="1"/><path d="M9 12h6M9 16h4"/></svg>
+                    </div>
                     <h5 class="fw-800">درخواستی یافت نشد</h5>
                 </div>
             }
@@ -71,17 +73,17 @@
                                         <span class="badge-soft @(r.Urgency == UrgencyLevel.Emergency ? "badge-warning-soft" : "badge-info-soft")">@r.Urgency.ToDisplay()</span>
                                     </div>
                                     <p class="text-muted small mb-2">@(r.Description.Length > 120 ? r.Description.Substring(0, 120) + "..." : r.Description)</p>
-                                    <div class="d-flex gap-3 flex-wrap small text-muted">
+                    <div class="d-flex gap-3 flex-wrap small text-muted">
                                         @if (!string.IsNullOrEmpty(r.CategoryName))
                                         {
-                                            <span>🏷️ @r.CategoryName</span>
+                                            <span>@r.CategoryName</span>
                                         }
                                         @if (!string.IsNullOrEmpty(r.City))
                                         {
-                                            <span>📍 @r.City</span>
+                                            <span>@r.City</span>
                                         }
-                                        <span>💬 @r.ProposalCount پیشنهاد</span>
-                                        <span>🕒 @r.CreatedAt.ToPersianDate()</span>
+                                        <span>@r.ProposalCount پیشنهاد</span>
+                                        <span>@r.CreatedAt.ToPersianDate()</span>
                                     </div>
                                 </div>
                                 <div class="text-start">

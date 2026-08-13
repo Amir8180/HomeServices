@@ -59,6 +59,7 @@
     background:linear-gradient(135deg,var(--primary-600) 0%,var(--accent-500) 100%);
     border-radius:var(--radius-2xl); padding:var(--space-7);
     color:white;
+    margin-bottom:var(--space-5);
 }
 .cta-card__title { font-size:var(--text-xl); font-weight:var(--font-bold); color:white; margin-bottom:var(--space-2); }
 .cta-card__sub { font-size:var(--text-sm); opacity:.85; margin-bottom:var(--space-6); line-height:1.6; }
@@ -90,10 +91,10 @@
                     <div>
                         <div class="profile-name">@Model.BusinessName</div>
                         <div style="display:flex;flex-wrap:wrap;gap:var(--space-2);">
-                            @if (Model.IsVerified) { <span class="badge badge--success">✓ تأیید هویت</span> }
-                            @if (Model.IsApproved) { <span class="badge badge--info">✔ تأیید مدیریت</span> }
-                            @if (Model.JobsCompleted >= 50) { <span class="badge badge--warning">🏆 کارشناس برتر</span> }
-                            @if (Model.ResponseTimeMinutes.HasValue && Model.ResponseTimeMinutes < 30) { <span class="badge badge--accent">⚡ پاسخ سریع</span> }
+                            @if (Model.IsVerified) { <span class="badge badge--success">تأیید هویت</span> }
+                            @if (Model.IsApproved) { <span class="badge badge--info">تأیید مدیریت</span> }
+                            @if (Model.JobsCompleted >= 50) { <span class="badge badge--warning">کارشناس برتر</span> }
+                            @if (Model.ResponseTimeMinutes.HasValue && Model.ResponseTimeMinutes < 30) { <span class="badge badge--accent">پاسخ سریع</span> }
                         </div>
                     </div>
                     <div style="display:flex;align-items:center;gap:var(--space-2);">
@@ -103,9 +104,9 @@
                     </div>
                 </div>
                 <div class="profile-meta">
-                    <span>📍 @Model.City</span>
-                    @if (Model.ResponseTimeMinutes.HasValue) { <span>⏱ پاسخ در @Model.ResponseTimeMinutes دقیقه</span> }
-                    <span>📅 عضو از @Model.JoinedAt.ToPersianDate()</span>
+                    <span>@Model.City</span>
+                    @if (Model.ResponseTimeMinutes.HasValue) { <span>پاسخ در @Model.ResponseTimeMinutes دقیقه</span> }
+                    <span>عضو از @Model.JoinedAt.ToPersianDate()</span>
                 </div>
                 <div class="profile-stats">
                     <div class="profile-stat"><div class="profile-stat__val" data-counter="@Model.JobsCompleted">@Model.JobsCompleted</div><div class="profile-stat__lbl">پروژه انجام‌شده</div></div>

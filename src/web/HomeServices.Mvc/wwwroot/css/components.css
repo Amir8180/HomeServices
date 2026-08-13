@@ -266,11 +266,11 @@
 }
 
 .hs-dropdown__menu {
-    position: absolute;
-    bottom: calc(100% + 8px);
-    left: 0;
-    min-width: 220px;
-    max-height: 380px;
+    position: fixed;
+    top: 0;    /* JS overrides these */
+    right: 0;  /* JS overrides these */
+    min-width: 240px;
+    max-height: 360px;
     overflow-y: auto;
     background: var(--color-surface);
     border: 1px solid var(--color-border);
@@ -279,30 +279,21 @@
     padding: var(--space-2);
     opacity: 0;
     visibility: hidden;
-    transform: translateY(8px) scale(0.97);
-    transform-origin: bottom left;
-    transition: all var(--duration-fast) var(--ease-spring);
+    /* NO transform here — JS positions it via top/right directly */
+    transition: opacity var(--duration-fast) var(--ease-out),
+                visibility var(--duration-fast) var(--ease-out);
     z-index: var(--z-dropdown);
-    /* Custom thin scrollbar */
     scrollbar-width: thin;
-    scrollbar-color: var(--color-border) transparent;
+    scrollbar-color: var(--primary-200) transparent;
 }
-.hs-dropdown__menu::-webkit-scrollbar { width: 5px; }
+.hs-dropdown__menu::-webkit-scrollbar       { width: 4px; }
 .hs-dropdown__menu::-webkit-scrollbar-track { background: transparent; }
-.hs-dropdown__menu::-webkit-scrollbar-thumb { background: var(--color-border); border-radius: 999px; }
-.hs-dropdown__menu::-webkit-scrollbar-thumb:hover { background: var(--color-text-tertiary); }
+.hs-dropdown__menu::-webkit-scrollbar-thumb { background: var(--primary-200); border-radius: 999px; }
+.hs-dropdown__menu::-webkit-scrollbar-thumb:hover { background: var(--primary-400); }
 
-[dir="rtl"] .hs-dropdown__menu {
-    left: auto;
-    right: 0;
-    transform-origin: bottom right;
-}
-
-.hs-dropdown:hover .hs-dropdown__menu,
 .hs-dropdown.open .hs-dropdown__menu {
     opacity: 1;
     visibility: visible;
-    transform: translateY(0) scale(1);
 }
 
 .hs-dropdown__item {
@@ -412,9 +403,10 @@
 }
 
 .btn-secondary:hover {
-    border-color: var(--color-border-strong);
-    box-shadow: var(--shadow-sm);
-    background: var(--color-surface-sunken);
+    border-color: var(--primary-400);
+    box-shadow: var(--shadow-md);
+    background: var(--primary-50);
+    color: var(--primary-700);
 }
 
 /* Ghost */
@@ -1762,3 +1754,110 @@ select.form-control {
     transform: translateY(-2px);
 }
 
+
+/* ==========================================================================
+   PATCH — Bug Fixes (Phase 3 Polish)
+   ========================================================================== */
+
+/* ── 1. btn-secondary & btn-ghost: block shimmer pseudo, keep text visible ── */
+.btn-secondary::before,
+.btn-ghost::before {
+    display: none !important;
+}
+
+.btn-secondary:not(.loading):hover {
+    background: var(--primary-50);
+    border-color: var(--primary-400);
+    color: var(--primary-700);
+    box-shadow: var(--shadow-md);
+}
+
+.btn-ghost:not(.loading):hover {
+    background: var(--color-surface-sunken);
+    color: var(--color-text-primary);
+}
+
+/* ── 2. CTA buttons with inline white background (expert sidebar, CTA section) ── */
+/* These use style="background:white;color:..." — on hover we keep text dark */
+.btn.hover-lift:hover {
+    /* override nothing that makes text transparent */
+    color: inherit;
+}
+
+/* The only place color becomes transparent is .btn.loading — that's intentional */
+.btn-secondary.loading { color: transparent !important; }
+.btn-ghost.loading     { color: transparent !important; }
+
+/* ── 3. Expert/Order sidebars: no sticky ── */
+.expert-detail .col-lg-4 > .cta-card,
+.expert-detail .col-lg-4 > .qs-card,
+.order-page    .col-lg-4 > .action-card {
+    position: static !important;
+    top: auto !important;
+}
+
+/* ── 4. Dropdown extra scrollbar coverage ── */
+.hs-dropdown__menu,
+.hs-nav__drawer,
+.modal {
+    scrollbar-width: thin;
+    scrollbar-color: var(--primary-200) transparent;
+}
+.hs-dropdown__menu::-webkit-scrollbar,
+.hs-nav__drawer::-webkit-scrollbar,
+.modal::-webkit-scrollbar              { width: 4px; }
+.hs-dropdown__menu::-webkit-scrollbar-track,
+.hs-nav__drawer::-webkit-scrollbar-track,
+.modal::-webkit-scrollbar-track       { background: transparent; }
+.hs-dropdown__menu::-webkit-scrollbar-thumb,
+.hs-nav__drawer::-webkit-scrollbar-thumb,
+.modal::-webkit-scrollbar-thumb       { background: var(--primary-200); border-radius: 999px; }
+
+/* ── 5. Marquee track ── */
+.marquee-track {
+    overflow: hidden;
+    mask-image: linear-gradient(to left, transparent, black 60px, black calc(100% - 60px), transparent);
+    -webkit-mask-image: linear-gradient(to left, transparent, black 60px, black calc(100% - 60px), transparent);
+}
+.marquee-track__inner {
+    display: flex;
+    gap: var(--space-3);
+    animation: marquee-scroll 30s linear infinite;
+    width: max-content;
+    will-change: transform;
+}
+.marquee-track:hover .marquee-track__inner { animation-play-state: paused; }
+
+@keyframes marquee-scroll {
+    from { transform: translateX(0); }
+    to   { transform: translateX(-50%); }
+}
+
+/* ── 6. Hero search Bootstrap-style select ── */
+.hero-search__select-wrap {
+    position: relative;
+    margin-bottom: var(--space-4);
+}
+.hero-search__select-wrap::after {
+    content: '▾';
+    position: absolute;
+    left: var(--space-5);
+    top: 50%;
+    transform: translateY(-50%);
+    pointer-events: none;
+    color: var(--color-text-tertiary);
+    font-size: 1rem;
+    line-height: 1;
+}
+.hero-search__field--select {
+    appearance: none;
+    -webkit-appearance: none;
+    padding-left: var(--space-10) !important;
+    background-image: none !important;
+    cursor: pointer;
+}
+
+/* ── 7. Viewport clamp for dropdown on small screens ── */
+@media (max-width: 991px) {
+    .hs-dropdown__menu { max-width: calc(100vw - 32px); }
+}

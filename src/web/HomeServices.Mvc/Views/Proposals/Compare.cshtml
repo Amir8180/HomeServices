@@ -34,7 +34,7 @@
     border:2px solid var(--warning-300); border-radius:var(--radius-2xl);
     padding:var(--space-7); margin-bottom:var(--space-6); position:relative; overflow:hidden;
 }
-.recommend-card::before { content:'⭐'; position:absolute; top:-10px; right:-10px; font-size:5rem; opacity:.08; }
+.recommend-card::before { content:''; position:absolute; top:-10px; right:-10px; width:80px; height:80px; background:rgba(234,179,8,.1); border-radius:50%; pointer-events:none; }
 .winner-tag { display:inline-flex; align-items:center; gap:var(--space-2); padding:var(--space-1-5) var(--space-4); background:linear-gradient(135deg,var(--warning-500),var(--primary-600)); color:white; border-radius:var(--radius-full); font-size:var(--text-xs); font-weight:var(--font-bold); margin-bottom:var(--space-4); }
 /* Proposal card */
 .proposal-card { background:white; border:1.5px solid var(--color-border-subtle); border-radius:var(--radius-2xl); padding:var(--space-6); height:100%; display:flex; flex-direction:column; transition:all .25s; }
@@ -63,7 +63,7 @@
             </div>
             @if (!canChoose)
             {
-                <span class="badge badge--success" style="font-size:var(--text-sm);padding:var(--space-2) var(--space-4);">✅ پیشنهاد انتخاب شده است</span>
+                <span class="badge badge--success" style="font-size:var(--text-sm);padding:var(--space-2) var(--space-4);">پیشنهاد انتخاب شده است</span>
             }
             else if (Model.Any())
             {
@@ -114,7 +114,10 @@
             {
                 var re = experts.ContainsKey(recommended.ExpertId) ? experts[recommended.ExpertId] : null;
                 <div class="recommend-card" data-reveal="up">
-                    <div class="winner-tag">🏆 پیشنهاد برتر هوشمند</div>
+                    <div class="winner-tag">
+                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="width:14px;height:14px;"><polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"/></svg>
+                        پیشنهاد برتر هوشمند
+                    </div>
                     <div style="display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:var(--space-5);">
                         <div style="display:flex;align-items:center;gap:var(--space-4);">
                             <div style="width:64px;height:64px;border-radius:50%;background:var(--gradient-primary);color:white;display:flex;align-items:center;justify-content:center;font-size:1.75rem;font-weight:var(--font-bold);flex-shrink:0;">
@@ -137,7 +140,7 @@
                             <div style="font-size:var(--text-xs);color:var(--color-text-tertiary);margin-bottom:var(--space-3);">تومان</div>
                             <form asp-action="Accept" asp-route-proposalId="@recommended.Id" asp-route-requestId="@recommended.RequestId" method="post"
                                   data-confirm="این پیشنهاد را انتخاب می‌کنید؟" data-confirm-ok="انتخاب">
-                                <button type="submit" class="btn btn-primary btn-lg">✓ انتخاب این پیشنهاد</button>
+                                <button type="submit" class="btn btn-primary btn-lg">انتخاب این پیشنهاد</button>
                             </form>
                         </div>
                     </div>
@@ -163,9 +166,9 @@
                         <div class="col" data-reveal="up">
                             <div class="proposal-card @(accepted?"accepted":"")">
                                 <div style="display:flex;flex-wrap:wrap;gap:var(--space-1);margin-bottom:var(--space-4);">
-                                    @if (accepted)   { <span class="badge badge--success">✅ انتخاب شده</span> }
+                                    @if (accepted)   { <span class="badge badge--success">انتخاب شده</span> }
                                     @if (p.Status == ProposalStatus.Rejected) { <span class="badge badge--error">رد شده</span> }
-                                    @if (isBestP)    { <span class="badge badge--success">💰 بهترین قیمت</span> }
+                                    @if (isBestP)    { <span class="badge badge--success">بهترین قیمت</span> }
                                     @if (isBestR)    { <span class="badge badge--warning">⭐ بالاترین امتیاز</span> }
                                 </div>
                                 <div style="display:flex;align-items:center;gap:var(--space-3);margin-bottom:var(--space-4);">

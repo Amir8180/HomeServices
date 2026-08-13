@@ -37,7 +37,9 @@
     <div class="auth-panel">
         <div class="auth-form-wrap animate-fade-in-up">
             <a class="auth-brand" asp-controller="Home" asp-action="Index">
-                <div class="auth-brand__icon">🏠</div>
+                <div class="auth-brand__icon">
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" style="width:20px;height:20px;"><path d="M3 9.5L12 3l9 6.5V20a1 1 0 01-1 1H4a1 1 0 01-1-1V9.5z"/><path d="M9 21V12h6v9"/></svg>
+                </div>
                 <span class="auth-brand__name">خدمات منزل</span>
             </a>
             <h1 class="auth-title">خوش آمدید</h1>
@@ -46,7 +48,9 @@
             <form asp-action="Login" method="post" data-loading="bar">
                 <input type="hidden" asp-for="ReturnUrl" />
                 <div asp-validation-summary="All" class="alert alert--error" style="display:@(ViewData.ModelState.IsValid?"none":"flex");margin-bottom:var(--space-5);">
-                    <span class="alert__icon">⚠</span>
+                    <span class="alert__icon">
+                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" style="width:20px;height:20px;"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/></svg>
+                    </span>
                     <div class="alert__content" asp-validation-summary="All"></div>
                 </div>
 
@@ -85,13 +89,24 @@
 
     <div class="auth-visual">
         <div class="auth-visual__content">
-            <span class="auth-visual__icon">🏠</span>
+            <div class="auth-visual__icon">
+                <svg viewBox="0 0 24 24" fill="none" stroke="white" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" style="width:40px;height:40px;"><path d="M3 9.5L12 3l9 6.5V20a1 1 0 01-1 1H4a1 1 0 01-1-1V9.5z"/><path d="M9 21V12h6v9"/></svg>
+            </div>
             <h2 class="auth-visual__title">متخصصان باکیفیت در خدمت شما</h2>
             <p class="auth-visual__sub">به هزاران مشتری راضی بپیوندید که خدمات خانگی خود را از طریق ما دریافت کرده‌اند.</p>
             <div class="auth-trust">
-                <div class="auth-trust-item"><span>✓</span> بیش از ۵۰۰ کارشناس تأییدشده</div>
-                <div class="auth-trust-item"><span>✓</span> ضمانت کیفیت و بازگشت وجه</div>
-                <div class="auth-trust-item"><span>✓</span> پرداخت ۱۰۰٪ امن</div>
+                <div class="auth-trust-item">
+                    <span class="trust-check"><svg viewBox="0 0 24 24" fill="none" stroke="white" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" style="width:12px;height:12px;"><polyline points="20 6 9 17 4 12"/></svg></span>
+                    بیش از ۵۰۰ کارشناس تأییدشده
+                </div>
+                <div class="auth-trust-item">
+                    <span class="trust-check"><svg viewBox="0 0 24 24" fill="none" stroke="white" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" style="width:12px;height:12px;"><polyline points="20 6 9 17 4 12"/></svg></span>
+                    ضمانت کیفیت و بازگشت وجه
+                </div>
+                <div class="auth-trust-item">
+                    <span class="trust-check"><svg viewBox="0 0 24 24" fill="none" stroke="white" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" style="width:12px;height:12px;"><polyline points="20 6 9 17 4 12"/></svg></span>
+                    پرداخت ۱۰۰٪ امن
+                </div>
             </div>
         </div>
     </div>

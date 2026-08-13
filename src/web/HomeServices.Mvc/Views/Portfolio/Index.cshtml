@@ -1,0 +1,298 @@
+﻿@{
+    Layout = null;
+}
+<!DOCTYPE html>
+<html lang="fa" dir="rtl">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>Portfolio</title>
+<link href="https://cdn.jsdelivr.net/gh/rastikerdar/vazirmatn@v33.003/Vazirmatn-font-face.css" rel="stylesheet" />
+<style>
+*,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
+:root{
+    --acc:#8b7355;--text:#2c2416;
+    --glass:rgba(255,255,255,0.72);
+}
+html,body{width:100%;height:100%;overflow:hidden;font-family:'Vazirmatn',sans-serif}
+body{
+    background:linear-gradient(180deg,#b8ddf0 0%,#dff0f8 45%,#f5f0e8 70%,#e8d5a3 85%,#b8965a 100%);
+    display:flex;align-items:center;justify-content:center;
+    min-height:100vh;overflow:hidden;
+}
+.scene{position:fixed;inset:0;pointer-events:none;z-index:0}
+
+.cloud{animation:drift linear infinite;opacity:0.6}
+.c1{animation-duration:60s;animation-delay:0s}
+.c2{animation-duration:80s;animation-delay:-25s}
+.c3{animation-duration:100s;animation-delay:-50s}
+@@keyframes drift{from{transform:translateX(110vw)}to{transform:translateX(-30vw)}}
+
+.cy{transform-origin:bottom center;animation:sway ease-in-out infinite}
+.cy1{animation-duration:4s;animation-delay:0s}
+.cy2{animation-duration:4.8s;animation-delay:-1.2s}
+.cy3{animation-duration:3.8s;animation-delay:-0.6s}
+.cy4{animation-duration:5.2s;animation-delay:-2s}
+.cy5{animation-duration:4.3s;animation-delay:-3s}
+.cy6{animation-duration:4.6s;animation-delay:-1.8s}
+@@keyframes sway{
+    0%{transform:rotate(0deg)}
+    25%{transform:rotate(1.8deg) skewX(0.5deg)}
+    50%{transform:rotate(0deg)}
+    75%{transform:rotate(-1.4deg) skewX(-0.3deg)}
+    100%{transform:rotate(0deg)}
+}
+
+.bird{animation:bird-rise ease-in-out infinite}
+.b1{animation-duration:8s;animation-delay:2s}
+.b2{animation-duration:9s;animation-delay:3.5s}
+.b3{animation-duration:7s;animation-delay:5s}
+.b4{animation-duration:10s;animation-delay:1s}
+@@keyframes bird-rise{
+    0%{transform:translate(0,0) scale(1);opacity:0}
+    10%{opacity:1}
+    40%{transform:translate(-60px,-90px) scale(0.85)}
+    70%{transform:translate(-130px,-160px) scale(0.7)}
+    90%{opacity:0.3}
+    100%{transform:translate(-200px,-220px) scale(0.55);opacity:0}
+}
+.wl{animation:flap ease-in-out infinite;animation-duration:0.45s;animation-delay:0s;transform-origin:right center}
+.wr{animation:flap ease-in-out infinite;animation-duration:0.45s;animation-delay:0.22s;transform-origin:left center}
+@@keyframes flap{0%,100%{transform:scaleY(1)}50%{transform:scaleY(-0.5)}}
+
+.ds{animation:ds-move 6s ease-in-out infinite;opacity:0.18}
+@@keyframes ds-move{0%,100%{transform:translateX(0)}50%{transform:translateX(12px)}}
+
+.card{
+    position:relative;z-index:10;
+    background:var(--glass);
+    backdrop-filter:blur(18px);-webkit-backdrop-filter:blur(18px);
+    border:1px solid rgba(255,255,255,0.55);
+    border-radius:32px;
+    padding:52px 60px 48px;
+    max-width:720px;width:calc(100% - 48px);
+    box-shadow:0 8px 40px rgba(139,115,85,0.18),0 2px 8px rgba(0,0,0,0.06),inset 0 1px 0 rgba(255,255,255,0.8);
+    text-align:right;
+    animation:card-in 0.9s cubic-bezier(0.16,1,0.3,1) both;
+}
+@@keyframes card-in{from{opacity:0;transform:translateY(32px) scale(0.97)}to{opacity:1;transform:translateY(0) scale(1)}}
+
+.avatar-wrap{position:absolute;top:-56px;left:52px;width:108px;height:108px}
+.avatar-ring{
+    width:108px;height:108px;border-radius:50%;
+    border:3px solid rgba(139,115,85,0.45);
+    background:rgba(255,255,255,0.6);
+    backdrop-filter:blur(10px);
+    box-shadow:0 8px 32px rgba(139,115,85,0.25),inset 0 1px 0 rgba(255,255,255,0.9);
+    overflow:hidden;display:flex;align-items:center;justify-content:center;
+    transition:box-shadow 0.3s,transform 0.3s;
+}
+.avatar-ring:hover{transform:scale(1.05);box-shadow:0 12px 40px rgba(139,115,85,0.38)}
+.avatar-ring img{width:100%;height:100%;object-fit:cover;border-radius:50%;display:block}
+
+.bio{margin-top:32px;font-size:1.05rem;line-height:2;color:var(--text);font-weight:400;letter-spacing:0.01em}
+.bio strong{color:var(--acc);font-weight:700}
+.bio p+p{margin-top:1rem}
+
+.cta-wrap{margin-top:36px;display:flex;justify-content:center}
+.cta-btn{
+    position:relative;display:inline-flex;align-items:center;gap:10px;
+    padding:15px 42px;
+    background:linear-gradient(135deg,#8b7355 0%,#c9a96e 50%,#8b7355 100%);
+    background-size:200% 200%;
+    color:white;text-decoration:none;border-radius:100px;
+    font-size:1.05rem;font-weight:700;font-family:'Vazirmatn',sans-serif;letter-spacing:0.02em;
+    box-shadow:0 6px 28px rgba(139,115,85,0.38),0 2px 8px rgba(0,0,0,0.12);
+    transition:all 0.35s cubic-bezier(0.16,1,0.3,1);overflow:hidden;
+    animation:grad-shift 4s ease infinite;
+}
+@@keyframes grad-shift{0%{background-position:0% 50%}50%{background-position:100% 50%}100%{background-position:0% 50%}}
+.cta-btn::before{
+    content:'';position:absolute;inset:0;
+    background:linear-gradient(120deg,transparent 0%,rgba(255,255,255,0.22) 50%,transparent 100%);
+    transform:translateX(-100%);transition:transform 0.55s ease;
+}
+.cta-btn:hover{transform:translateY(-3px) scale(1.03);box-shadow:0 12px 40px rgba(139,115,85,0.50),0 4px 12px rgba(0,0,0,0.15);color:white}
+.cta-btn:hover::before{transform:translateX(100%)}
+.cta-btn:active{transform:translateY(-1px) scale(1.01)}
+.arr{display:inline-block;animation:arr-pulse 1.8s ease-in-out infinite;font-style:normal}
+@@keyframes arr-pulse{0%,100%{transform:translateX(0)}50%{transform:translateX(-5px)}}
+
+@@media(max-width:600px){
+    .card{padding:48px 24px 36px;border-radius:24px}
+    .avatar-wrap{left:24px;top:-48px;width:90px;height:90px}
+    .avatar-ring{width:90px;height:90px}
+    .bio{font-size:0.95rem;line-height:1.9}
+    .cta-btn{padding:13px 32px;font-size:0.95rem}
+}
+@@media(prefers-reduced-motion:reduce){
+    .cy,.bird,.cloud,.ds,.arr,.wl,.wr,.cta-btn,.card{animation:none!important}
+}
+</style>
+</head>
+<body>
+
+<svg class="scene" viewBox="0 0 1440 900" preserveAspectRatio="xMidYMid slice"
+     xmlns="http://www.w3.org/2000/svg" aria-hidden="true">
+<defs>
+    <linearGradient id="sky" x1="0" y1="0" x2="0" y2="1">
+        <stop offset="0%"   stop-color="#b8ddf0"/>
+        <stop offset="50%"  stop-color="#dff0f8"/>
+        <stop offset="100%" stop-color="#f5f0e8"/>
+    </linearGradient>
+    <linearGradient id="grd" x1="0" y1="0" x2="0" y2="1">
+        <stop offset="0%"   stop-color="#e8d5a3"/>
+        <stop offset="100%" stop-color="#b8965a"/>
+    </linearGradient>
+    <linearGradient id="cy-g" x1="0" y1="0" x2="0" y2="1">
+        <stop offset="0%"   stop-color="#4a7a4a"/>
+        <stop offset="100%" stop-color="#2a4a2a"/>
+    </linearGradient>
+</defs>
+
+<rect width="1440" height="900" fill="url(#sky)"/>
+
+<circle cx="1320" cy="130" r="52" fill="#fff5cc" opacity="0.55"/>
+<circle cx="1320" cy="130" r="38" fill="#ffe97a" opacity="0.45"/>
+<circle cx="1320" cy="130" r="25" fill="#ffd740" opacity="0.5"/>
+
+<g class="cloud c1" transform="translate(0,80)">
+    <ellipse cx="200" cy="0"   rx="90" ry="28" fill="white" opacity="0.85"/>
+    <ellipse cx="260" cy="-12" rx="60" ry="22" fill="white" opacity="0.9"/>
+    <ellipse cx="150" cy="-8"  rx="50" ry="18" fill="white" opacity="0.8"/>
+</g>
+<g class="cloud c2" transform="translate(-200,140)">
+    <ellipse cx="400" cy="0"   rx="110" ry="32" fill="white" opacity="0.7"/>
+    <ellipse cx="480" cy="-14" rx="70"  ry="24" fill="white" opacity="0.75"/>
+    <ellipse cx="340" cy="-10" rx="55"  ry="20" fill="white" opacity="0.65"/>
+</g>
+<g class="cloud c3" transform="translate(-100,50)">
+    <ellipse cx="900" cy="0"   rx="75" ry="22" fill="white" opacity="0.6"/>
+    <ellipse cx="955" cy="-10" rx="48" ry="17" fill="white" opacity="0.65"/>
+</g>
+
+<path d="M0 680 Q360 640 720 660 Q1080 680 1440 650 L1440 900 L0 900 Z" fill="url(#grd)"/>
+
+<g class="ds">
+    <path d="M80 710 Q200 700 320 712 Q440 724 560 710"     stroke="#f5e8c0" stroke-width="2"   fill="none" opacity="0.5"/>
+    <path d="M200 740 Q380 728 560 742 Q740 756 900 738"    stroke="#f5e8c0" stroke-width="1.5" fill="none" opacity="0.4"/>
+    <path d="M600 720 Q800 708 1000 720 Q1200 732 1380 715" stroke="#f5e8c0" stroke-width="2"   fill="none" opacity="0.45"/>
+</g>
+
+<path d="M0 780 Q150 740 300 770 Q450 800 600 760 Q750 720 900 758 Q1050 796 1200 765 Q1320 740 1440 770 L1440 900 L0 900 Z" fill="#c9a96e" opacity="0.35"/>
+<path d="M0 830 Q200 800 400 820 Q600 840 800 815 Q1000 790 1200 812 Q1320 825 1440 810 L1440 900 L0 900 Z" fill="#b8965a" opacity="0.25"/>
+
+<g class="cy cy1" transform="translate(68,495)">
+    <path d="M0 0 Q-18 -45 0 -160 Q18 -45 0 0 Z"          fill="url(#cy-g)" opacity="0.85"/>
+    <path d="M0 -40 Q-22 -90 0 -195 Q22 -90 0 -40 Z"      fill="#4a7a4a"    opacity="0.75"/>
+    <path d="M0 -90 Q-16 -130 0 -220 Q16 -130 0 -90 Z"    fill="#5a9a5a"    opacity="0.65"/>
+    <rect x="-4" y="0" width="8" height="40" rx="2" fill="#5a3a1a"/>
+</g>
+<g class="cy cy2" transform="translate(120,510)">
+    <path d="M0 0 Q-22 -55 0 -200 Q22 -55 0 0 Z"          fill="url(#cy-g)" opacity="0.9"/>
+    <path d="M0 -50 Q-26 -110 0 -245 Q26 -110 0 -50 Z"    fill="#4a7a4a"    opacity="0.8"/>
+    <path d="M0 -110 Q-19 -160 0 -275 Q19 -160 0 -110 Z"  fill="#5a9a5a"    opacity="0.7"/>
+    <rect x="-4" y="0" width="8" height="35" rx="2" fill="#5a3a1a"/>
+</g>
+<g class="cy cy3" transform="translate(170,525)">
+    <path d="M0 0 Q-14 -36 0 -130 Q14 -36 0 0 Z"          fill="url(#cy-g)" opacity="0.8"/>
+    <path d="M0 -32 Q-17 -72 0 -165 Q17 -72 0 -32 Z"      fill="#4a7a4a"    opacity="0.7"/>
+    <path d="M0 -72 Q-12 -108 0 -190 Q12 -108 0 -72 Z"    fill="#5a9a5a"    opacity="0.6"/>
+    <rect x="-3" y="0" width="6" height="28" rx="2" fill="#5a3a1a"/>
+</g>
+<g class="cy cy4" transform="translate(1280,500)">
+    <path d="M0 0 Q-20 -50 0 -180 Q20 -50 0 0 Z"          fill="url(#cy-g)" opacity="0.85"/>
+    <path d="M0 -45 Q-24 -100 0 -218 Q24 -100 0 -45 Z"    fill="#4a7a4a"    opacity="0.75"/>
+    <path d="M0 -100 Q-17 -145 0 -248 Q17 -145 0 -100 Z"  fill="#5a9a5a"    opacity="0.65"/>
+    <rect x="-4" y="0" width="8" height="38" rx="2" fill="#5a3a1a"/>
+</g>
+<g class="cy cy5" transform="translate(1330,488)">
+    <path d="M0 0 Q-24 -60 0 -215 Q24 -60 0 0 Z"          fill="url(#cy-g)" opacity="0.92"/>
+    <path d="M0 -55 Q-28 -118 0 -262 Q28 -118 0 -55 Z"    fill="#4a7a4a"    opacity="0.82"/>
+    <path d="M0 -118 Q-20 -170 0 -295 Q20 -170 0 -118 Z"  fill="#5a9a5a"    opacity="0.72"/>
+    <rect x="-4" y="0" width="8" height="42" rx="2" fill="#5a3a1a"/>
+</g>
+<g class="cy cy6" transform="translate(1375,515)">
+    <path d="M0 0 Q-15 -38 0 -140 Q15 -38 0 0 Z"          fill="url(#cy-g)" opacity="0.8"/>
+    <path d="M0 -35 Q-18 -75 0 -175 Q18 -75 0 -35 Z"      fill="#4a7a4a"    opacity="0.7"/>
+    <path d="M0 -78 Q-13 -115 0 -200 Q13 -115 0 -78 Z"    fill="#5a9a5a"    opacity="0.62"/>
+    <rect x="-3" y="0" width="6" height="30" rx="2" fill="#5a3a1a"/>
+</g>
+
+<g class="bird b1" transform="translate(110,360)">
+    <ellipse cx="0" cy="0" rx="5" ry="2.5" fill="#2a3a2a"/>
+    <path class="wl" d="M-1-1 Q-10-8-16-4 Q-10-2-1-1" fill="#2a3a2a"/>
+    <path class="wr" d="M1-1 Q10-8 16-4 Q10-2 1-1"   fill="#2a3a2a"/>
+</g>
+<g class="bird b2" transform="translate(145,380)">
+    <g transform="scale(0.85)">
+        <ellipse cx="0" cy="0" rx="5" ry="2.5" fill="#3a4a3a"/>
+        <path class="wl" d="M-1-1 Q-10-8-16-4 Q-10-2-1-1" fill="#3a4a3a"/>
+        <path class="wr" d="M1-1 Q10-8 16-4 Q10-2 1-1"   fill="#3a4a3a"/>
+    </g>
+</g>
+<g class="bird b3" transform="translate(1300,350)">
+    <g transform="scale(-1,1)">
+        <ellipse cx="0" cy="0" rx="5" ry="2.5" fill="#2a3a2a"/>
+        <path class="wl" d="M-1-1 Q-10-8-16-4 Q-10-2-1-1" fill="#2a3a2a"/>
+        <path class="wr" d="M1-1 Q10-8 16-4 Q10-2 1-1"   fill="#2a3a2a"/>
+    </g>
+</g>
+<g class="bird b4" transform="translate(1340,320)">
+    <g transform="scale(-0.75,0.75)">
+        <ellipse cx="0" cy="0" rx="5" ry="2.5" fill="#3a4a3a"/>
+        <path class="wl" d="M-1-1 Q-10-8-16-4 Q-10-2-1-1" fill="#3a4a3a"/>
+        <path class="wr" d="M1-1 Q10-8 16-4 Q10-2 1-1"   fill="#3a4a3a"/>
+    </g>
+</g>
+</svg>
+
+<div class="card" role="main">
+    <div class="avatar-wrap">
+        <div class="avatar-ring">
+            <img src="/images/perseneli.jpg" alt="profile" />
+        </div>
+    </div>
+    <div class="bio" id="bio-text"></div>
+    <div class="cta-wrap">
+        <a href="/" class="cta-btn" id="cta-link">
+            <i class="arr" aria-hidden="true">&larr;</i>
+            <span id="cta-label"></span>
+        </a>
+    </div>
+</div>
+
+<script>
+(function() {
+    var bio = document.getElementById('bio-text');
+    var p1  = document.createElement('p');
+    var p2  = document.createElement('p');
+    var br  = document.createElement('br');
+
+    p1.innerHTML =
+        '\u062F\u0627\u0646\u0634\u200C\u0622\u0645\u0648\u062E\u062A\u0647 \u0645\u0647\u0646\u062F\u0633\u06CC \u0635\u0646\u0627\u06CC\u0639 \u0628\u0627 \u062A\u062C\u0631\u0628\u0647 \u0639\u0645\u0644\u06CC \u062F\u0631 \u062A\u0648\u0633\u0639\u0647 \u0627\u067E\u0644\u06CC\u06A9\u0634\u0646\u200C\u0647\u0627\u06CC ' +
+        '<strong>.NET</strong> ' +
+        '\u0648 \u0645\u0628\u0627\u0646\u06CC \u062A\u0648\u0633\u0639\u0647 \u0631\u0627\u0628\u0637 \u06A9\u0627\u0631\u0628\u0631\u06CC ' +
+        '<strong>(UI)</strong> ' +
+        '\u0647\u0645\u0631\u0627\u0647 \u0628\u0627 \u0633\u0627\u0628\u0642\u0647 \u0627\u062B\u0628\u0627\u062A\u200C\u0634\u062F\u0647 \u062F\u0631 \u062A\u062F\u0631\u06CC\u0633 ' +
+        '<strong>C#</strong> ' +
+        '\u0628\u0647 \u0628\u06CC\u0634 \u0627\u0632 <strong>60 \u0641\u0631\u0627\u06AF\u06CC\u0631</strong>.';
+
+    p2.innerHTML =
+        '\u062F\u0631 \u062D\u0627\u0644 \u062D\u0627\u0636\u0631 \u0628\u0647 \u062F\u0646\u0628\u0627\u0644 \u0641\u0631\u0635\u062A \u06A9\u0627\u0631\u0622\u0645\u0648\u0632\u06CC\u200C\u0627\u06CC \u0647\u0633\u062A\u0645 \u06A9\u0647 \u0628\u0627 \u067E\u06CC\u0634\u06CC\u0646\u0647 \u062A\u062D\u0635\u06CC\u0644\u06CC\u200C\u0627\u0645 \u0647\u0645\u0631\u0627\u0633\u062A\u0627 \u0628\u0627\u0634\u062F ' +
+        '\u0648 \u0627\u0645\u06A9\u0627\u0646 \u0647\u0645\u06A9\u0627\u0631\u06CC \u0628\u0627 \u06CC\u06A9 ' +
+        '<strong>\u062A\u06CC\u0645 \u062D\u0631\u0641\u0647\u200C\u0627\u06CC</strong>\u060C ' +
+        '\u0645\u0634\u0627\u0631\u06A9\u062A \u062F\u0631 \u067E\u0631\u0648\u0698\u0647\u200C\u0647\u0627\u06CC \u0648\u0627\u0642\u0639\u06CC\u060C ' +
+        '\u0648 \u0627\u0631\u062A\u0642\u0627\u06CC \u0645\u0633\u062A\u0645\u0631 \u062A\u062E\u0635\u0635 \u0641\u0646\u06CC\u200C\u0627\u0645 \u0631\u0627 \u0641\u0631\u0627\u0647\u0645 \u06A9\u0646\u062F.';
+
+    bio.appendChild(p1);
+    bio.appendChild(br);
+    bio.appendChild(p2);
+
+    document.getElementById('cta-label').textContent =
+        '\u0646\u0645\u0648\u0646\u0647 \u06A9\u0627\u0631';
+})();
+</script>
+
+</body>
+</html>

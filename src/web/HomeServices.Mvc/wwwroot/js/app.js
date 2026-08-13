@@ -85,10 +85,10 @@
     const DURATION = 4500;
 
     const ICONS = {
-      success: '✓',
-      error:   '✕',
-      warning: '⚠',
-      info:    'ℹ',
+      success: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" style="width:18px;height:18px;display:block;"><path d="M22 11.08V12a10 10 0 11-5.93-9.14"/><polyline points="22 4 12 14.01 9 11.01"/></svg>',
+      error:   '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" style="width:18px;height:18px;display:block;"><circle cx="12" cy="12" r="10"/><line x1="15" y1="9" x2="9" y2="15"/><line x1="9" y1="9" x2="15" y2="15"/></svg>',
+      warning: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" style="width:18px;height:18px;display:block;"><path d="M10.29 3.86L1.82 18a2 2 0 001.71 3h16.94a2 2 0 001.71-3L13.71 3.86a2 2 0 00-3.42 0z"/><line x1="12" y1="9" x2="12" y2="13"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg>',
+      info:    '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" style="width:18px;height:18px;display:block;"><circle cx="12" cy="12" r="10"/><line x1="12" y1="16" x2="12" y2="12"/><line x1="12" y1="8" x2="12.01" y2="8"/></svg>',
     };
 
     function getContainer() {
@@ -122,7 +122,9 @@
           ${titleHtml}
           <div class="toast__message">${message}</div>
         </div>
-        <button class="toast__close" aria-label="بستن">✕</button>
+        <button class="toast__close" aria-label="بستن">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="width:14px;height:14px;display:block;"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
+        </button>
         ${progressHtml}
       `;
 
@@ -258,7 +260,9 @@
           <div class="modal modal--sm" role="dialog" aria-modal="true" aria-labelledby="${id}-title">
             <div class="modal__header">
               <div class="modal__title" id="${id}-title">${title}</div>
-              <button class="modal__close js-modal-close" aria-label="بستن">✕</button>
+              <button class="modal__close js-modal-close" aria-label="بستن">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="width:14px;height:14px;display:block;"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
+            </button>
             </div>
             <div class="modal__body">${message}</div>
             <div class="modal__footer">
@@ -328,15 +332,59 @@
         }
       });
 
-      // Dropdown hover (desktop) + click (mobile)
+      // Dropdown — positioned with JS to never overflow viewport
       $$('.hs-dropdown').forEach(dd => {
         const toggle = dd.querySelector('[data-dd-toggle]');
-        if (toggle) {
-          on(toggle, 'click', (e) => {
-            e.stopPropagation();
-            dd.classList.toggle('open');
-          });
+        const menu   = dd.querySelector('.hs-dropdown__menu');
+        if (!toggle || !menu) return;
+
+        function positionMenu() {
+          const btnR  = toggle.getBoundingClientRect();
+          const menuW = 240;
+          const vpW   = window.innerWidth;
+          const vpH   = window.innerHeight;
+
+          // Vertical: below button, but flip above if not enough room
+          const spaceBelow = vpH - btnR.bottom - 8;
+          const spaceAbove = btnR.top - 8;
+          let top;
+          if (spaceBelow >= 200 || spaceBelow >= spaceAbove) {
+            top = btnR.bottom + 8;
+          } else {
+            // open upward — we'll set max-height dynamically
+            top = Math.max(8, btnR.top - Math.min(360, spaceAbove) - 8);
+            menu.style.maxHeight = Math.min(360, spaceAbove) + 'px';
+          }
+
+          // Horizontal (RTL page): align right edge of menu to right edge of button
+          // then clamp so left edge is at least 8px from left
+          let right = vpW - btnR.right;
+          if (right < 8) right = 8;
+          if (btnR.right - menuW < 8) right = vpW - menuW - 8;
+
+          menu.style.top   = top + 'px';
+          menu.style.right = right + 'px';
+          menu.style.left  = 'auto';
+          menu.style.width = menuW + 'px';
         }
+
+        on(toggle, 'click', (e) => {
+          e.stopPropagation();
+          const isOpen = dd.classList.toggle('open');
+          toggle.setAttribute('aria-expanded', isOpen);
+          if (isOpen) {
+            // close all other dropdowns first
+            $$('.hs-dropdown.open').forEach(other => {
+              if (other !== dd) other.classList.remove('open');
+            });
+            positionMenu();
+          }
+        });
+
+        // Reposition on resize
+        on(window, 'resize', debounce(() => {
+          if (dd.classList.contains('open')) positionMenu();
+        }, 100));
       });
 
       on(document, 'click', () => {
@@ -567,7 +615,7 @@
         on(btn, 'click', () => {
           const open = target.classList.toggle('filter-panel--open');
           btn.setAttribute('aria-expanded', open);
-          btn.textContent = open ? 'بستن فیلترها ✕' : 'فیلترها ⚙';
+          btn.textContent = open ? 'بستن فیلترها' : 'فیلترها';
         });
       });
 
@@ -808,7 +856,7 @@
 
     on(window, 'pageshow', () => LoadingBar.done());
 
-    console.info('🚀 HomeServices Premium UI — Phase 3 Active');
+    console.info('HomeServices Premium UI — Phase 3 Active');
   }
 
   if (document.readyState === 'loading') {
