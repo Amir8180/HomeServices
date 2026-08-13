@@ -134,13 +134,22 @@
     padding: var(--space-2) 0;
     mask-image: linear-gradient(to left, transparent, black 60px, black calc(100% - 60px), transparent);
     -webkit-mask-image: linear-gradient(to left, transparent, black 60px, black calc(100% - 60px), transparent);
+    cursor: grab;
+    user-select: none;
+    -webkit-user-select: none;
+}
+.marquee-track.dragging {
+    cursor: grabbing;
 }
 .marquee-track__inner {
     display: flex; gap: var(--space-3);
     animation: marquee-scroll 30s linear infinite;
     width: max-content;
+    will-change: transform;
+    /* duplicate items fill the loop — no hover-pause, drag JS handles it */
 }
-.marquee-track:hover .marquee-track__inner {
+.marquee-track.dragging .marquee-track__inner,
+.marquee-track.drag-active .marquee-track__inner {
     animation-play-state: paused;
 }
 @@keyframes marquee-scroll {
@@ -295,8 +304,8 @@
                         }
                         @if (quickCats.Any())
                         {
-                            <div class="marquee-track">
-                                <div class="marquee-track__inner">
+                            <div class="marquee-track" id="cat-marquee">
+                                <div class="marquee-track__inner" id="cat-marquee-inner">
                                     @for (int dup = 0; dup < 2; dup++)
                                     {
                                         foreach (var cat in quickCats)
@@ -539,3 +548,138 @@
         </div>
     </div>
 </section>
+
+@section Scripts {
+<script>
+(function () {
+    var track  = document.getElementById('cat-marquee');
+    var inner  = document.getElementById('cat-marquee-inner');
+    if (!track || !inner) return;
+
+    /* ── seamless infinite loop ────────────────────────────
+       The HTML already duplicates items (dup 0 and dup 1).
+       When the animation reaches -50% it snaps back to 0
+       which is invisible because both halves are identical.
+       We just ensure the animation runs without pausing.
+    ────────────────────────────────────────────────────── */
+
+    /* ── drag to scroll ────────────────────────────────── */
+    var isDragging   = false;
+    var startX       = 0;
+    var dragOffset   = 0;          // px offset accumulated during drag
+    var animOffset   = 0;          // where the animation was when drag started
+    var animPaused   = false;
+    var raf          = null;
+    var lastVelX     = 0;
+    var lastX        = 0;
+    var momentumId   = null;
+
+    // Get current translateX from the animated element
+    function getCurrentX() {
+        var style = window.getComputedStyle(inner);
+        var matrix = new (window.DOMMatrix || window.WebKitCSSMatrix)(style.transform);
+        return matrix.m41;  // translateX value in px
+    }
+
+    // Pause CSS animation and freeze at current position
+    function pauseAtCurrent() {
+        if (animPaused) return;
+        var curX = getCurrentX();
+        inner.style.animationPlayState = 'paused';
+        inner.style.transform = 'translateX(' + curX + 'px)';
+        inner.style.animation = 'none';
+        animPaused = true;
+        animOffset = curX;
+    }
+
+    // Resume CSS animation from current drag position
+    function resumeAnimation() {
+        if (!animPaused) return;
+        inner.style.animation  = '';
+        inner.style.transform  = '';
+        inner.style.animationPlayState = 'running';
+        animPaused  = false;
+        animOffset  = 0;
+        dragOffset  = 0;
+    }
+
+    // Apply dragOffset to the inner element (no animation while dragging)
+    function applyDrag() {
+        var totalW   = inner.scrollWidth / 2;   // one set width (items duplicated)
+        var newX     = animOffset + dragOffset;
+
+        // Wrap: keep within [-totalW, 0]
+        newX = ((newX % totalW) + totalW) % totalW;
+        if (newX > 0) newX -= totalW;
+
+        inner.style.transform = 'translateX(' + newX + 'px)';
+        animOffset = newX;
+    }
+
+    // Momentum / inertia after drag ends
+    function applyMomentum(vel) {
+        cancelAnimationFrame(momentumId);
+        var velocity = vel;
+        function step() {
+            if (Math.abs(velocity) < 0.3) {
+                resumeAnimation();
+                return;
+            }
+            velocity *= 0.93;         // friction
+            dragOffset = velocity;
+            applyDrag();
+            dragOffset = 0;
+            momentumId = requestAnimationFrame(step);
+        }
+        momentumId = requestAnimationFrame(step);
+    }
+
+    /* ── pointer events (mouse + touch) ──────────────── */
+    function onDragStart(e) {
+        cancelAnimationFrame(momentumId);
+        pauseAtCurrent();
+        isDragging  = true;
+        startX      = (e.touches ? e.touches[0].clientX : e.clientX);
+        lastX       = startX;
+        lastVelX    = 0;
+        dragOffset  = 0;
+        track.classList.add('dragging');
+        e.preventDefault();
+    }
+
+    function onDragMove(e) {
+        if (!isDragging) return;
+        var clientX = e.touches ? e.touches[0].clientX : e.clientX;
+        lastVelX    = clientX - lastX;
+        lastX       = clientX;
+        dragOffset  = clientX - startX;
+        applyDrag();
+        dragOffset  = 0;
+        startX      = clientX;
+        e.preventDefault();
+    }
+
+    function onDragEnd() {
+        if (!isDragging) return;
+        isDragging = false;
+        track.classList.remove('dragging');
+        applyMomentum(lastVelX);
+    }
+
+    // Mouse
+    track.addEventListener('mousedown',  onDragStart, { passive: false });
+    window.addEventListener('mousemove', onDragMove,  { passive: false });
+    window.addEventListener('mouseup',   onDragEnd);
+
+    // Touch
+    track.addEventListener('touchstart', onDragStart, { passive: false });
+    window.addEventListener('touchmove', onDragMove,  { passive: false });
+    window.addEventListener('touchend',  onDragEnd);
+
+    // Prevent clicks after drag
+    track.addEventListener('click', function (e) {
+        if (Math.abs(lastVelX) > 2) e.preventDefault();
+    });
+}());
+</script>
+}
