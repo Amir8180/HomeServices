@@ -20,8 +20,12 @@ public class UsersController : ControllerBase
         _userService = userService;
     }
 
-    /// <summary>Get a user by id. Used by other services to resolve user info.</summary>
+    /// <summary>
+    /// Get a user by id. Used by other services (server-to-server, no JWT attached)
+    /// to resolve display info — returns the minimal public UserDto only.
+    /// </summary>
     [HttpGet("{id:guid}")]
+    [AllowAnonymous]
     [ProducesResponseType(typeof(HomeServices.Shared.Dtos.UserDto), StatusCodes.Status200OK)]
     [ProducesResponseType(StatusCodes.Status404NotFound)]
     public async Task<ActionResult<HomeServices.Shared.Dtos.UserDto>> GetById(Guid id, CancellationToken cancellationToken)
@@ -30,8 +34,9 @@ public class UsersController : ControllerBase
         return user == null ? NotFound() : Ok(user);
     }
 
-    /// <summary>Get a user by email.</summary>
+    /// <summary>Get a user by email (public lookup, minimal UserDto).</summary>
     [HttpGet("by-email/{email}")]
+    [AllowAnonymous]
     [ProducesResponseType(typeof(HomeServices.Shared.Dtos.UserDto), StatusCodes.Status200OK)]
     [ProducesResponseType(StatusCodes.Status404NotFound)]
     public async Task<ActionResult<HomeServices.Shared.Dtos.UserDto>> GetByEmail(string email, CancellationToken cancellationToken)

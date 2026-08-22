@@ -36,6 +36,11 @@ public class ReviewsController : Controller
             TempData["Error"] = "فقط سفارش‌های تکمیل‌شده قابل ارزیابی هستند.";
             return RedirectToAction("Details", "Orders", new { id = orderId });
         }
+        if (await _reviews.GetByOrderIdAsync(orderId, HttpContext.RequestAborted) != null)
+        {
+            TempData["Info"] = "نظر شما برای این سفارش قبلاً ثبت شده است.";
+            return RedirectToAction("Details", "Orders", new { id = orderId });
+        }
 
         var vm = new CreateReviewViewModel { OrderId = orderId };
         return View(vm);
@@ -55,6 +60,11 @@ public class ReviewsController : Controller
         if (order.Status != Domain.Enums.OrderStatus.Completed)
         {
             TempData["Error"] = "فقط سفارش‌های تکمیل‌شده قابل ارزیابی هستند.";
+            return RedirectToAction("Details", "Orders", new { id = vm.OrderId });
+        }
+        if (await _reviews.GetByOrderIdAsync(vm.OrderId, HttpContext.RequestAborted) != null)
+        {
+            TempData["Info"] = "نظر شما برای این سفارش قبلاً ثبت شده است.";
             return RedirectToAction("Details", "Orders", new { id = vm.OrderId });
         }
 

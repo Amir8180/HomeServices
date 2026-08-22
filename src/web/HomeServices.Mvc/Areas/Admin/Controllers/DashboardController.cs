@@ -17,6 +17,7 @@ public class DashboardController : AdminControllerBase
     private readonly IReviewService _reviews;
     private readonly ICategoryService _categories;
     private readonly IServiceService _services;
+    private readonly IExpertPayoutService _payouts;
 
     public DashboardController(
         IServiceRequestService requests,
@@ -24,7 +25,8 @@ public class DashboardController : AdminControllerBase
         IExpertProfileService experts,
         IReviewService reviews,
         ICategoryService categories,
-        IServiceService services)
+        IServiceService services,
+        IExpertPayoutService payouts)
     {
         _requests = requests;
         _orders = orders;
@@ -32,6 +34,7 @@ public class DashboardController : AdminControllerBase
         _reviews = reviews;
         _categories = categories;
         _services = services;
+        _payouts = payouts;
     }
 
     public async Task<IActionResult> Index(CancellationToken cancellationToken)
@@ -64,9 +67,9 @@ public class DashboardController : AdminControllerBase
         ViewBag.ServicesCount = services.TotalCount;
         ViewBag.CategoriesCount = categories.Count;
 
-        // Revenue from completed orders.
-        var completedList = completedOrders.Items;
-        ViewBag.TotalRevenue = completedList.Sum(o => o.TotalAmount);
+        // Site revenue = 10% commission from all expert payouts.
+        var siteRevenue = await _payouts.GetSiteRevenueSummaryAsync("daily", cancellationToken);
+        ViewBag.TotalRevenue = siteRevenue.TotalRevenue;
 
         return View();
     }

@@ -39,7 +39,13 @@ public static class DbInitializer
     // ---------------------------------------------------------------- Site settings
     private static async Task SeedSiteSettingsAsync(AppDbContext context, ILogger? logger)
     {
-        if (await context.SiteSettings.AnyAsync()) return;
+        if (await context.SiteSettings.AnyAsync())
+        {
+            // Even on an already-seeded database, make sure the card-to-card
+            // payment settings exist so the payment page always has data.
+            await EnsurePaymentSettingsAsync(context, logger);
+            return;
+        }
 
         logger?.LogInformation("Seeding site settings...");
         var settings = new List<SiteSetting>
@@ -63,6 +69,33 @@ public static class DbInitializer
         };
 
         await context.SiteSettings.AddRangeAsync(settings);
+        await context.SaveChangesAsync();
+
+        await EnsurePaymentSettingsAsync(context, logger);
+    }
+
+    // ---------------------------------------------------------------- Card-to-card payment settings
+    private static async Task EnsurePaymentSettingsAsync(AppDbContext context, ILogger? logger)
+    {
+        var required = new List<SiteSetting>
+        {
+            New(Application.Common.CardToCardPaymentInfo.CardNumberSettingKey, Application.Common.CardToCardPaymentInfo.DefaultCardNumber, "Payment", "شماره کارت پرداخت کارت به کارت", 50),
+            New(Application.Common.CardToCardPaymentInfo.CardHolderSettingKey, Application.Common.CardToCardPaymentInfo.DefaultCardHolder, "Payment", "نام و نام خانوادگی صاحب کارت", 51),
+            New(Application.Common.CardToCardPaymentInfo.TelegramSettingKey, Application.Common.CardToCardPaymentInfo.DefaultTelegramUsername, "Payment", "آیدی تلگرام ارسال رسید پشتیبانی", 52),
+            New(Application.Common.CardToCardPaymentInfo.CommissionRateSettingKey, Application.Common.CardToCardPaymentInfo.DefaultCommissionPercent.ToString("0.##"), "Payment", "درصد کمیسیون سایت از هر سفارش تکمیل‌شده", 53),
+        };
+
+        var missing = new List<SiteSetting>();
+        foreach (var setting in required)
+        {
+            var exists = await context.SiteSettings.AnyAsync(s => s.Key == setting.Key);
+            if (!exists) missing.Add(setting);
+        }
+
+        if (missing.Count == 0) return;
+
+        logger?.LogInformation("Seeding card-to-card payment settings...");
+        await context.SiteSettings.AddRangeAsync(missing);
         await context.SaveChangesAsync();
     }
 
@@ -272,7 +305,7 @@ public static class DbInitializer
         {
             Order = order,
             Amount = 180000,
-            PaymentMethod = PaymentMethod.Online,
+            PaymentMethod = PaymentMethod.CardToCard,
             Status = PaymentStatus.Succeeded,
             TransactionId = "TXN-SEED-0001",
             PaidAt = DateTime.UtcNow.AddDays(-6),

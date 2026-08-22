@@ -157,7 +157,7 @@
                         }
                         @if (filter.MinPrice.HasValue || filter.MaxPrice.HasValue)
                         {
-                            <span class="filter-chip">💰 @(filter.MinPrice?.ToString("N0") ?? "۰") — @(filter.MaxPrice?.ToString("N0") ?? "∞") ت</span>
+                            <span class="filter-chip">@(filter.MinPrice?.ToString("N0") ?? "۰") — @(filter.MaxPrice?.ToString("N0") ?? "∞") ت</span>
                         }
                     </div>
                 }

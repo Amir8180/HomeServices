@@ -1,0 +1,347 @@
+@using HomeServices.Mvc.Extensions
+@using HomeServices.Domain.Enums
+@using HomeServices.Shared.Common
+@using Microsoft.AspNetCore.Html
+@{
+    ViewData["Title"] = "داشبورد پشتیبانی";
+    var tab = ViewBag.Tab as string ?? "finance";
+    var payStatus = ViewBag.PaymentStatus as PaymentVerificationStatus?;
+    var completionStatus = ViewBag.CompletionStatus as CompletionReviewStatus?;
+    var ticketStatus = ViewBag.TicketStatus as SupportTicketStatus?;
+    var searchTerm = ViewBag.SearchTerm as string;
+    var payments = ViewBag.Payments as PagedResult<PaymentVerificationReportDto>;
+    var completions = ViewBag.Completions as PagedResult<WorkCompletionReportDto>;
+    var tickets = ViewBag.Tickets as PagedResult<SupportTicketDto>;
+    var ticketCounts = ViewBag.TicketCounts as Dictionary<SupportTicketStatus, int> ?? new Dictionary<SupportTicketStatus, int>();
+    var customerNames = ViewBag.CustomerNames as Dictionary<Guid, string> ?? new Dictionary<Guid, string>();
+    var userNames = ViewBag.UserNames as Dictionary<Guid, string> ?? new Dictionary<Guid, string>();
+    var page = ViewBag.Page as int? ?? 1;
+    var totalCount = ViewBag.TotalCount as int? ?? 0;
+    var pageSize = ViewBag.PageSize as int? ?? 20;
+    var totalPages = (int)Math.Ceiling(totalCount / (double)pageSize);
+
+    Func<string, HtmlString> Svg = (paths) => new HtmlString(
+        $"<svg viewBox=\"0 0 24 24\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"1.75\" stroke-linecap=\"round\" stroke-linejoin=\"round\" aria-hidden=\"true\" focusable=\"false\" style=\"width:1em;height:1em;display:inline-block;vertical-align:-0.15em;flex-shrink:0;\">{paths}</svg>"
+    );
+    var icDollar  = "<line x1=\"12\" y1=\"1\" x2=\"12\" y2=\"23\"/><path d=\"M17 5H9.5a3.5 3.5 0 100 7h5a3.5 3.5 0 110 7H6\"/>";
+    var icClipboard = "<path d=\"M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2\"/><rect x=\"9\" y=\"3\" width=\"6\" height=\"4\" rx=\"1\"/><path d=\"M9 12h6M9 16h4\"/>";
+    var icTicket = "<path d=\"M3 9a2 2 0 012-2h.93a2 2 0 001.664-.89l.812-1.22A2 2 0 0110.07 4h3.86a2 2 0 011.664.89l.812 1.22A2 2 0 0018.07 7H19a2 2 0 012 2v9a2 2 0 01-2 2H5a2 2 0 01-2-2V9z\"/><line x1=\"3\" y1=\"13\" x2=\"21\" y2=\"13\"/>";
+    var icCheck   = "<polyline points=\"20 6 9 17 4 12\"/>";
+    var icX       = "<line x1=\"18\" y1=\"6\" x2=\"6\" y2=\"18\"/><line x1=\"6\" y1=\"6\" x2=\"18\" y2=\"18\"/>";
+    var icClock   = "<circle cx=\"12\" cy=\"12\" r=\"10\"/><polyline points=\"12 6 12 12 16 14\"/>";
+    var icVideo   = "<polygon points=\"23 7 16 12 23 17 23 7\"/><rect x=\"1\" y=\"5\" width=\"15\" height=\"14\" rx=\"2\" ry=\"2\"/>";
+    var icWrench  = "<path d=\"M14.7 6.3a1 1 0 000 1.4l1.6 1.6a1 1 0 001.4 0l3.77-3.77a6 6 0 01-7.94 7.94l-6.91 6.91a2.12 2.12 0 01-3-3l6.91-6.91a6 6 0 017.94-7.94l-3.76 3.76z\"/>";
+    var icUser    = "<path d=\"M20 21v-2a4 4 0 00-4-4H8a4 4 0 00-4 4v2\"/><circle cx=\"12\" cy=\"7\" r=\"4\"/>";
+    var icMsg     = "<path d=\"M21 15a2 2 0 01-2 2H7l-4 4V5a2 2 0 012-2h14a2 2 0 012 2z\"/>";
+}
+<style>
+.support-tabs { display:flex; gap:8px; margin-bottom:20px; border-bottom:2px solid #e5e7eb; }
+.support-tab { padding:10px 22px; font-weight:600; font-size:14px; color:#6b7280; border-bottom:2px solid transparent; margin-bottom:-2px; text-decoration:none; display:flex; align-items:center; gap:8px; }
+.support-tab.active { color:#b45309; border-bottom-color:#b45309; }
+.support-tab:hover { color:#b45309; }
+.filter-bar { display:flex; flex-wrap:wrap; gap:10px; align-items:center; margin-bottom:18px; padding:14px; background:#f9fafb; border-radius:12px; }
+.filter-bar .form-select { max-width:180px; font-size:13px; }
+.report-card { background:white; border:1px solid #e5e7eb; border-radius:14px; padding:18px; margin-bottom:14px; }
+.report-header { display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:10px; margin-bottom:12px; }
+.report-status { padding:3px 12px; border-radius:20px; font-size:12px; font-weight:600; }
+.report-status.pending { background:#FEF3C7; color:#92400E; }
+.report-status.verified { background:#D1FAE5; color:#065F46; }
+.report-status.rejected { background:#FEE2E2; color:#991B1B; }
+.attachment-thumb { width:56px; height:56px; object-fit:cover; border-radius:8px; border:1px solid #e5e7eb; }
+.video-badge { display:inline-flex; align-items:center; gap:4px; padding:4px 10px; background:#EFF6FF; color:#1D4ED8; border-radius:6px; font-size:11px; font-weight:600; }
+.side-note { background:#f9fafb; padding:10px 12px; border-radius:8px; font-size:13px; margin-bottom:8px; line-height:1.7; }
+.confirm-flag { color:#059669; font-weight:600; display:inline-flex; align-items:center; gap:4px; }
+.muted-flag { color:#9ca3af; }
+.actions-form { display:inline-flex; gap:8px; align-items:flex-start; }
+.pager { display:flex; gap:8px; justify-content:center; margin-top:18px; }
+</style>
+
+<div class="support-tabs">
+    <a asp-action="Index" asp-route-tab="finance" class="support-tab @(tab == "finance" ? "active" : "")">@Html.Raw(Svg(icDollar)) امور مالی (تأیید پرداخت‌ها)</a>
+    <a asp-action="Index" asp-route-tab="process" class="support-tab @(tab == "process" ? "active" : "")">@Html.Raw(Svg(icClipboard)) نظارت بر فرآیندها (اتمام کار)</a>
+    <a asp-action="Index" asp-route-tab="tickets" class="support-tab @(tab == "tickets" ? "active" : "")">@Html.Raw(Svg(icTicket)) درخواست‌های پشتیبانی</a>
+</div>
+
+@if (tab == "finance")
+{
+    <div class="filter-bar">
+        <span style="font-weight:600; font-size:13px;">وضعیت:</span>
+        <select class="form-select" onchange="location.href='?tab=finance&payStatus='+this.value">
+            <option value="">همه</option>
+            <option value="@((int)PaymentVerificationStatus.PendingReview)" selected="@(payStatus == PaymentVerificationStatus.PendingReview)">بررسی نشده</option>
+            <option value="@((int)PaymentVerificationStatus.Verified)" selected="@(payStatus == PaymentVerificationStatus.Verified)">پرداخت شده</option>
+            <option value="@((int)PaymentVerificationStatus.Rejected)" selected="@(payStatus == PaymentVerificationStatus.Rejected)">عدم پرداخت</option>
+        </select>
+        <form method="get" style="display:flex; gap:8px;">
+            <input type="hidden" name="tab" value="finance" />
+            <input type="text" name="search" value="@searchTerm" class="form-control" placeholder="شماره سفارش..." style="max-width:200px; font-size:13px;" />
+            <button type="submit" class="btn btn-sm btn-outline-secondary">جستجو</button>
+        </form>
+    </div>
+
+    @if (payments == null || payments.Items.Count == 0)
+    {
+        <div class="text-center py-5" style="color:#6b7280;">
+            <div style="font-size:1.8rem; color:#9ca3af;">@Html.Raw(Svg(icClipboard))</div>
+            <p class="mt-2">گزارشی برای نمایش وجود ندارد.</p>
+        </div>
+    }
+    else
+    {
+        @foreach (var r in payments.Items)
+        {
+            var statusClass = r.Status == PaymentVerificationStatus.PendingReview ? "pending" : r.Status == PaymentVerificationStatus.Verified ? "verified" : "rejected";
+            var customerName = customerNames.TryGetValue(r.CustomerId, out var cn) ? cn : "—";
+            <div class="report-card">
+                <div class="report-header">
+                    <div>
+                        <strong>سفارش @r.OrderNumber</strong>
+                        <span class="report-status @statusClass">@r.Status.ToDisplay()</span>
+                    </div>
+                    <small style="color:#6b7280;">@Html.Raw(Svg(icClock)) @r.CreatedAt.ToPersianDateTime()</small>
+                </div>
+                <div style="display:grid; grid-template-columns:repeat(auto-fit,minmax(140px,1fr)); gap:10px; font-size:13px; margin-bottom:12px;">
+                    <div><span style="color:#6b7280;">مبلغ اعلامی:</span><br><strong>@r.Amount.ToString("N0") تومان</strong></div>
+                    <div><span style="color:#6b7280;">واریزکننده:</span><br>@r.SenderFullName</div>
+                    <div><span style="color:#6b7280;">مشتری:</span><br>@customerName</div>
+                    @if (!string.IsNullOrEmpty(r.BankRefNumber))
+                    {
+                        <div><span style="color:#6b7280;">شماره پیگیری:</span><br><span dir="ltr">@r.BankRefNumber</span></div>
+                    }
+                </div>
+                @if (!string.IsNullOrEmpty(r.CustomerNote))
+                {
+                    <div class="side-note"><span style="color:#6b7280;">یادداشت مشتری:</span> @r.CustomerNote</div>
+                }
+                @if (r.Status == PaymentVerificationStatus.PendingReview)
+                {
+                    <div style="display:flex; flex-wrap:wrap; gap:10px; align-items:flex-start;">
+                        <form asp-action="VerifyPayment" method="post" class="actions-form">
+                            @Html.AntiForgeryToken()
+                            <input type="hidden" name="id" value="@r.Id" />
+                            <textarea name="note" rows="1" placeholder="توضیحات (اختیاری)" style="width:170px; font-size:12px;" class="form-control"></textarea>
+                            <button type="submit" class="btn btn-sm btn-success" onclick="return confirm('پرداخت تأیید شود؟ سفارش به وضعیت پرداخت‌شده تغییر می‌کند و کارشناس کار را آغاز خواهد کرد.')">@Html.Raw(Svg(icCheck)) تأیید پرداخت</button>
+                        </form>
+                        <form asp-action="RejectPayment" method="post" class="actions-form">
+                            @Html.AntiForgeryToken()
+                            <input type="hidden" name="id" value="@r.Id" />
+                            <textarea name="note" rows="1" placeholder="دلیل عدم تأیید (الزامی)" required style="width:170px; font-size:12px;" class="form-control"></textarea>
+                            <button type="submit" class="btn btn-sm btn-danger">@Html.Raw(Svg(icX)) رد پرداخت</button>
+                        </form>
+                    </div>
+                }
+                else if (!string.IsNullOrEmpty(r.SupportNote))
+                {
+                    <div class="side-note" style="background:@(r.Status == PaymentVerificationStatus.Verified ? "#D1FAE5" : "#FEE2E2");">
+                        <strong>@(r.Status == PaymentVerificationStatus.Verified ? "تأیید" : "رد") توسط پشتیبانی:</strong> @r.SupportNote
+                        @if (r.ReviewedAt.HasValue)
+                        {
+                            <span style="color:#6b7280;">— @r.ReviewedAt.Value.ToPersianDateTime()</span>
+                        }
+                    </div>
+                }
+            </div>
+        }
+    }
+}
+else if (tab == "tickets")
+{
+    int CountOf(SupportTicketStatus s) => ticketCounts.TryGetValue(s, out var c) ? c : 0;
+
+    <div class="filter-bar">
+        <span style="font-weight:600; font-size:13px;">وضعیت:</span>
+        <select class="form-select" onchange="location.href='?tab=tickets&ticketStatus='+this.value">
+            <option value="">همه (@ticketCounts.Values.Sum())</option>
+            <option value="@((int)SupportTicketStatus.Open)" selected="@(ticketStatus == SupportTicketStatus.Open)">باز (@CountOf(SupportTicketStatus.Open))</option>
+            <option value="@((int)SupportTicketStatus.InProgress)" selected="@(ticketStatus == SupportTicketStatus.InProgress)">در حال بررسی (@CountOf(SupportTicketStatus.InProgress))</option>
+            <option value="@((int)SupportTicketStatus.Resolved)" selected="@(ticketStatus == SupportTicketStatus.Resolved)">حل شده (@CountOf(SupportTicketStatus.Resolved))</option>
+            <option value="@((int)SupportTicketStatus.Closed)" selected="@(ticketStatus == SupportTicketStatus.Closed)">بسته شده (@CountOf(SupportTicketStatus.Closed))</option>
+        </select>
+        <form method="get" style="display:flex; gap:8px;">
+            <input type="hidden" name="tab" value="tickets" />
+            <input type="text" name="search" value="@searchTerm" class="form-control" placeholder="شماره تیکت / موضوع / سفارش..." style="max-width:220px; font-size:13px;" />
+            <button type="submit" class="btn btn-sm btn-outline-secondary">جستجو</button>
+        </form>
+    </div>
+
+    @if (tickets == null || tickets.Items.Count == 0)
+    {
+        <div class="text-center py-5" style="color:#6b7280;">
+            <div style="font-size:1.8rem; color:#9ca3af;">@Html.Raw(Svg(icTicket))</div>
+            <p class="mt-2">تیکتی برای نمایش وجود ندارد.</p>
+        </div>
+    }
+    else
+    {
+        @foreach (var t in tickets.Items)
+        {
+            var submitter = userNames.TryGetValue(t.UserId, out var un) ? un : "—";
+            <div class="report-card">
+                <div class="report-header">
+                    <div>
+                        <strong>@t.TicketNumber — @t.Subject</strong>
+                        <span class="report-status @(t.Status == SupportTicketStatus.Open ? "pending" : t.Status == SupportTicketStatus.InProgress ? "verified" : "rejected")">@t.Status.ToDisplay()</span>
+                        <span class="report-status @(t.Priority == SupportTicketPriority.Urgent || t.Priority == SupportTicketPriority.High ? "rejected" : "pending")">اولویت: @t.Priority.ToDisplay()</span>
+                    </div>
+                    <small style="color:#6b7280;">@Html.Raw(Svg(icClock)) @t.LastActivityAt.ToPersianDateTime()</small>
+                </div>
+                <div style="display:grid; grid-template-columns:repeat(auto-fit,minmax(150px,1fr)); gap:10px; font-size:13px; margin-bottom:10px;">
+                    <div><span style="color:#6b7280;">ثبت‌کننده:</span><br>@submitter</div>
+                    <div><span style="color:#6b7280;">دسته‌بندی:</span><br>@t.Category.ToDisplay()</div>
+                    <div><span style="color:#6b7280;">سفارش:</span><br>@(t.OrderNumber ?? "—")</div>
+                    <div><span style="color:#6b7280;">پیام‌ها:</span><br>@t.MessageCount پیام</div>
+                </div>
+                <div class="side-note">@(t.Description.Length > 220 ? t.Description.Substring(0, 220) + "…" : t.Description)</div>
+                <div style="margin-top:10px;">
+                    <a asp-action="TicketDetails" asp-route-id="@t.Id" class="btn btn-sm btn-primary">@Html.Raw(Svg(icMsg)) مشاهده و پاسخ</a>
+                </div>
+            </div>
+        }
+    }
+}
+else
+{
+    <div class="filter-bar">
+        <span style="font-weight:600; font-size:13px;">وضعیت:</span>
+        <select class="form-select" onchange="location.href='?tab=process&completionStatus='+this.value">
+            <option value="">همه</option>
+            <option value="@((int)CompletionReviewStatus.PendingReview)" selected="@(completionStatus == CompletionReviewStatus.PendingReview)">بررسی نشده</option>
+            <option value="@((int)CompletionReviewStatus.Approved)" selected="@(completionStatus == CompletionReviewStatus.Approved)">تأیید شده</option>
+            <option value="@((int)CompletionReviewStatus.Rejected)" selected="@(completionStatus == CompletionReviewStatus.Rejected)">عدم تأیید</option>
+        </select>
+        <form method="get" style="display:flex; gap:8px;">
+            <input type="hidden" name="tab" value="process" />
+            <input type="text" name="search" value="@searchTerm" class="form-control" placeholder="شماره سفارش..." style="max-width:200px; font-size:13px;" />
+            <button type="submit" class="btn btn-sm btn-outline-secondary">جستجو</button>
+        </form>
+    </div>
+
+    @if (completions == null || completions.Items.Count == 0)
+    {
+        <div class="text-center py-5" style="color:#6b7280;">
+            <div style="font-size:1.8rem; color:#9ca3af;">@Html.Raw(Svg(icClipboard))</div>
+            <p class="mt-2">گزارشی برای نمایش وجود ندارد.</p>
+        </div>
+    }
+    else
+    {
+        @foreach (var r in completions.Items)
+        {
+            var statusClass = r.Status == CompletionReviewStatus.PendingReview ? "pending" : r.Status == CompletionReviewStatus.Approved ? "verified" : "rejected";
+            <div class="report-card">
+                <div class="report-header">
+                    <div>
+                        <strong>سفارش @r.OrderNumber</strong>
+                        <span class="report-status @statusClass">@r.Status.ToDisplay()</span>
+                    </div>
+                    <small style="color:#6b7280;">@Html.Raw(Svg(icClock)) @r.CreatedAt.ToPersianDateTime()</small>
+                </div>
+
+                <div style="display:grid; grid-template-columns:repeat(auto-fit,minmax(130px,1fr)); gap:10px; font-size:13px; margin-bottom:12px;">
+                    <div>
+                        <span style="color:#6b7280;">اعلام کارشناس:</span><br>
+                        @if (r.ExpertConfirmed)
+                        {
+                            <span class="confirm-flag">@Html.Raw(Svg(icCheck)) اتمام کار را تأیید کرده است</span>
+                        }
+                        else
+                        {
+                            <span class="muted-flag">هنوز اعلامی نکرده است</span>
+                        }
+                        @if (r.ExpertConfirmedAt.HasValue)
+                        {
+                            <small style="color:#6b7280;">(@r.ExpertConfirmedAt.Value.ToPersianDate())</small>
+                        }
+                    </div>
+                    <div>
+                        <span style="color:#6b7280;">اعلام مشتری:</span><br>
+                        @if (r.CustomerConfirmed)
+                        {
+                            <span class="confirm-flag">@Html.Raw(Svg(icCheck)) اتمام کار را تأیید کرده است</span>
+                        }
+                        else
+                        {
+                            <span class="muted-flag">هنوز اعلامی نکرده است</span>
+                        }
+                        @if (r.CustomerConfirmedAt.HasValue)
+                        {
+                            <small style="color:#6b7280;">(@r.CustomerConfirmedAt.Value.ToPersianDate())</small>
+                        }
+                    </div>
+                    <div><span style="color:#6b7280;">مبلغ سفارش:</span><br><strong>@r.OrderAmount.ToString("N0") تومان</strong></div>
+                    <div><span style="color:#6b7280;">دستمزد کارشناس (۹۰٪):</span><br><strong style="color:#059669;">@((r.OrderAmount * 0.9m).ToString("N0")) تومان</strong></div>
+                </div>
+
+                @if (!string.IsNullOrEmpty(r.ExpertNote))
+                {
+                    <div class="side-note"><strong>@Html.Raw(Svg(icWrench)) توضیحات کارشناس:</strong> @r.ExpertNote</div>
+                }
+                @if (!string.IsNullOrEmpty(r.CustomerNote))
+                {
+                    <div class="side-note"><strong>@Html.Raw(Svg(icUser)) توضیحات مشتری:</strong> @r.CustomerNote</div>
+                }
+
+                @if (r.Attachments.Count > 0)
+                {
+                    <div style="margin-bottom:12px;">
+                        <span style="font-size:12px; color:#6b7280; font-weight:600;">مستندات (@r.Attachments.Count فایل):</span><br>
+                        @foreach (var att in r.Attachments)
+                        {
+                            <a href="@att.FileUrl" target="_blank" title="بارگذاری‌شده توسط: @att.Uploader.ToDisplay()">
+                                @if (att.MediaType == MediaType.Video)
+                                {
+                                    <span class="video-badge" style="margin:4px 2px;">@Html.Raw(Svg(icVideo)) ویدیو</span>
+                                }
+                                else
+                                {
+                                    <img src="@(att.ThumbnailUrl ?? att.FileUrl)" class="attachment-thumb" style="margin:4px 2px;" alt="مستند کار" />
+                                }
+                            </a>
+                        }
+                    </div>
+                }
+
+                @if (r.Status == CompletionReviewStatus.PendingReview)
+                {
+                    <div style="display:flex; flex-wrap:wrap; gap:10px; align-items:flex-start;">
+                        <form asp-action="ApproveCompletion" method="post" class="actions-form">
+                            @Html.AntiForgeryToken()
+                            <input type="hidden" name="id" value="@r.Id" />
+                            <textarea name="note" rows="1" placeholder="توضیحات تصمیم (برای طرفین نمایش داده می‌شود)" style="width:190px; font-size:12px;" class="form-control"></textarea>
+                            <button type="submit" class="btn btn-sm btn-success" onclick="return confirm('اتمام کار تأیید شود؟ سفارش تکمیل و دستمزد ۹۰ درصد به کارشناس تسویه خواهد شد.')">@Html.Raw(Svg(icCheck)) تأیید اتمام</button>
+                        </form>
+                        <form asp-action="RejectCompletion" method="post" class="actions-form">
+                            @Html.AntiForgeryToken()
+                            <input type="hidden" name="id" value="@r.Id" />
+                            <textarea name="note" rows="1" placeholder="دلیل عدم تأیید (الزامی — برای طرفین نمایش داده می‌شود)" required style="width:190px; font-size:12px;" class="form-control"></textarea>
+                            <button type="submit" class="btn btn-sm btn-danger">@Html.Raw(Svg(icX)) عدم تأیید</button>
+                        </form>
+                    </div>
+                }
+                else if (!string.IsNullOrEmpty(r.SupportNote))
+                {
+                    <div class="side-note" style="background:@(r.Status == CompletionReviewStatus.Approved ? "#D1FAE5" : "#FEE2E2");">
+                        <strong>@Html.Raw(Svg(icMsg)) تصمیم پشتیبانی (@r.Status.ToDisplay()):</strong> @r.SupportNote
+                        @if (r.ReviewedAt.HasValue)
+                        {
+                            <span style="color:#6b7280;">— @r.ReviewedAt.Value.ToPersianDateTime()</span>
+                        }
+                    </div>
+                }
+            </div>
+        }
+    }
+}
+
+@if (totalPages > 1)
+{
+    <div class="pager">
+        @for (var i = 1; i <= totalPages && i <= 10; i++)
+        {
+            <a asp-action="Index" asp-route-tab="@tab"
+               asp-route-payStatus="@payStatus" asp-route-completionStatus="@completionStatus" asp-route-ticketStatus="@ticketStatus"
+               asp-route-search="@searchTerm" asp-route-page="@i"
+               class="btn btn-sm @(i == page ? "btn-primary" : "btn-outline-secondary")">@i</a>
+        }
+    </div>
+}

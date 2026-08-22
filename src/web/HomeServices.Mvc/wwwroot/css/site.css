@@ -556,7 +556,8 @@ a:focus-visible {
 
 .btn-outline-brand::before,
 .btn-outline-primary::before {
-    background: var(--color-primary-100);
+    /* شفاف — پُرشدنِ کدرِ قبلی (primary-100) روی برچسب دکمه می‌نشست و متن را در هاور نامرئی می‌کرد */
+    background: transparent;
 }
 
 .btn-outline-brand:hover,
@@ -1478,9 +1479,17 @@ textarea.form-control {
 }
 
 .badge-error,
-.badge-danger {
+.badge-danger,
+.badge-danger-soft {
     background: var(--color-error-light);
     color: var(--color-error);
+}
+
+/* خنثی — برای وضعیت‌های بسته/کم‌اهمیت */
+.badge-muted,
+.badge-muted-soft {
+    background: var(--gray-100, #f3f4f6);
+    color: var(--color-text-secondary, #6b7280);
 }
 
 /* ==========================================================================

@@ -1,99 +1,212 @@
 @using HomeServices.Domain.Enums
+@using HomeServices.Application.Dtos
 @model IReadOnlyList<OrderDto>
 @{
-    ViewData["Title"] = "سفارش‌های من";
-    var active = Model.Where(o => o.Status == OrderStatus.Paid || o.Status == OrderStatus.Scheduled || o.Status == OrderStatus.InProgress).ToList();
+    ViewData["Title"] = "سفارشات من";
+    var filter = (ViewBag.StatusFilter as string ?? "").ToLowerInvariant();
+    var proposals = ViewBag.Proposals as IReadOnlyList<ProposalDto> ?? Array.Empty<ProposalDto>();
+
+    var active = Model.Where(o => o.Status == OrderStatus.PendingPayment
+                               || o.Status == OrderStatus.WaitingPaymentVerification
+                               || o.Status == OrderStatus.Paid
+                               || o.Status == OrderStatus.Scheduled
+                               || o.Status == OrderStatus.InProgress
+                               || o.Status == OrderStatus.CompletionReview).ToList();
     var done = Model.Where(o => o.Status == OrderStatus.Completed).ToList();
+    var acceptedProposals = proposals.Where(p => p.Status == ProposalStatus.Accepted).ToList();
+    var pendingProposals = proposals.Where(p => p.Status == ProposalStatus.Pending).ToList();
+
+    // نمایش بخش‌ها بر اساس فیلتر؛ حالت پیش‌فرض (همه) سفارش‌ها را نشان می‌دهد
+    var showActive = filter is "" or "active";
+    var showDone = filter is "" or "completed";
+    var showAccepted = filter == "accepted";
+    var showPending = filter == "pending";
 }
 
 <div class="container py-4">
-    <div class="mb-4">
-        <h1 class="fw-800 mb-0">سفارش‌های من</h1>
-        <p class="text-muted mb-0">@Model.Count سفارش</p>
+    <div class="mb-4 d-flex justify-content-between align-items-center flex-wrap gap-2">
+        <div>
+            <h1 class="fw-800 mb-0">سفارشات من</h1>
+            <p class="text-muted mb-0">@(filter == "" ? Model.Count + " سفارش و " + proposals.Count + " پیشنهاد" : "نمایش فیلترشده")</p>
+        </div>
+        <a asp-action="OpenRequests" class="btn btn-brand">+ ارسال پیشنهاد جدید</a>
     </div>
 
-    <div class="dashboard-card mb-4">
-        <h5 class="fw-800 mb-3">سفارش‌های فعال (@active.Count)</h5>
-        @if (!active.Any())
-        {
-            <p class="text-muted small mb-0">سفارش فعالی ندارید.</p>
-        }
-        else
-        {
-            <div class="table-responsive">
-                <table class="table align-middle mb-0">
-                    <thead>
-                        <tr>
-                            <th>شماره سفارش</th>
-                            <th>درخواست</th>
-                            <th>مبلغ</th>
-                            <th>تاریخ شروع</th>
-                            <th>وضعیت</th>
-                            <th></th>
-                        </tr>
-                    </thead>
-                    <tbody>
-                        @foreach (var o in active)
-                        {
+    @* فیلترهای وضعیت — سفارش‌ها و پیشنهادها در یک صفحه *@
+    <div class="d-flex gap-2 flex-wrap mb-4">
+        <a asp-action="MyJobs" class="btn btn-sm @(filter == "" ? "btn-brand" : "btn-outline-brand")">همه</a>
+        <a asp-action="MyJobs" asp-route-status="Active" class="btn btn-sm @(filter == "active" ? "btn-brand" : "btn-outline-brand")">سفارشات فعال (@active.Count)</a>
+        <a asp-action="MyJobs" asp-route-status="Completed" class="btn btn-sm @(filter == "completed" ? "btn-brand" : "btn-outline-brand")">تکمیل‌شده (@done.Count)</a>
+        <a asp-action="MyJobs" asp-route-status="Accepted" class="btn btn-sm @(filter == "accepted" ? "btn-brand" : "btn-outline-brand")">پذیرفته‌شده (@acceptedProposals.Count)</a>
+        <a asp-action="MyJobs" asp-route-status="Pending" class="btn btn-sm @(filter == "pending" ? "btn-brand" : "btn-outline-brand")">پیشنهاد در انتظار (@pendingProposals.Count)</a>
+    </div>
+
+    @if (showActive)
+    {
+        <div class="dashboard-card mb-4">
+            <h5 class="fw-800 mb-3">سفارش‌های فعال (@active.Count)</h5>
+            @if (!active.Any())
+            {
+                <p class="text-muted small mb-0">سفارش فعالی ندارید.</p>
+            }
+            else
+            {
+                <div class="table-responsive">
+                    <table class="table align-middle mb-0">
+                        <thead>
                             <tr>
-                                <td class="fw-700">@o.OrderNumber</td>
-                                <td>@o.RequestTitle</td>
-                                <td class="text-secondary-brand fw-700">@o.TotalAmount.ToString("N0")</td>
-                                <td class="small text-muted">@(o.ScheduledDate?.ToPersianDate() ?? "—")</td>
-                                <td><span class="badge-soft @o.Status.StatusClass()">@o.Status.ToDisplay()</span></td>
-                                <td>
-                                    <div class="d-flex gap-1 flex-wrap justify-content-end">
-                                        <a asp-controller="Orders" asp-action="Details" asp-route-id="@o.Id" class="btn btn-sm btn-outline-brand">جزئیات</a>
-                                        @if (o.Status == OrderStatus.Paid)
-                                        {
-                                            <form asp-action="UpdateOrderStatus" asp-route-id="@o.Id" asp-route-status="@OrderStatus.Scheduled" method="post"
-                                                  onsubmit="return confirm('زمان‌بندی پیشنهادی را تأیید می‌کنید؟');">
-                                                <button type="submit" class="btn btn-sm btn-outline-brand">تأیید زمان‌بندی</button>
-                                            </form>
-                                        }
-                                        else if (o.Status == OrderStatus.Scheduled)
-                                        {
-                                            <form asp-action="UpdateOrderStatus" asp-route-id="@o.Id" asp-route-status="@OrderStatus.InProgress" method="post">
-                                                <button type="submit" class="btn btn-sm btn-brand">شروع کار</button>
-                                            </form>
-                                        }
-                                        else if (o.Status == OrderStatus.InProgress)
-                                        {
-                                            <form asp-action="UpdateOrderStatus" asp-route-id="@o.Id" asp-route-status="@OrderStatus.Completed" method="post"
-                                                  onsubmit="return confirm('کار را تکمیل شده علامت بزنید؟');">
-                                                <button type="submit" class="btn btn-sm btn-success">تکمیل کار</button>
-                                            </form>
-                                        }
-                                    </div>
-                                </td>
+                                <th>شماره سفارش</th>
+                                <th>درخواست</th>
+                                <th>مبلغ</th>
+                                <th>تاریخ شروع</th>
+                                <th>وضعیت</th>
+                                <th></th>
                             </tr>
-                        }
-                    </tbody>
-                </table>
-            </div>
-        }
-    </div>
+                        </thead>
+                        <tbody>
+                            @foreach (var o in active)
+                            {
+                                <tr>
+                                    <td class="fw-700">@o.OrderNumber</td>
+                                    <td>@o.RequestTitle</td>
+                                    <td class="text-secondary-brand fw-700">@o.TotalAmount.ToString("N0")</td>
+                                    <td class="small text-muted">@(o.ScheduledDate?.ToPersianDate() ?? "—")</td>
+                                    <td><span class="badge-soft @o.Status.StatusClass()">@o.Status.ToDisplay()</span></td>
+                                    <td>
+                                        <div class="d-flex gap-1 flex-wrap justify-content-end">
+                                            <a asp-controller="Orders" asp-action="Details" asp-route-id="@o.Id" class="btn btn-sm btn-outline-brand">جزئیات</a>
+                                            @if (o.Status == OrderStatus.PendingPayment)
+                                            {
+                                                <span class="badge bg-secondary">در انتظار پرداخت مشتری</span>
+                                            }
+                                            else if (o.Status == OrderStatus.WaitingPaymentVerification)
+                                            {
+                                                <span class="badge bg-info text-dark">در انتظار تأیید پرداخت (پشتیبانی)</span>
+                                            }
+                                            else if (o.Status == OrderStatus.Paid)
+                                            {
+                                                <form asp-action="UpdateOrderStatus" asp-route-id="@o.Id" asp-route-status="@OrderStatus.Scheduled" method="post"
+                                                      onsubmit="return confirm('زمان‌بندی پیشنهادی را تأیید می‌کنید؟');">
+                                                    <button type="submit" class="btn btn-sm btn-outline-brand">تأیید زمان‌بندی</button>
+                                                </form>
+                                                <a asp-action="MarkComplete" asp-controller="Expert" asp-route-id="@o.Id" class="btn btn-sm btn-success">
+                                                    اعلام اتمام کار
+                                                </a>
+                                            }
+                                            else if (o.Status == OrderStatus.Scheduled)
+                                            {
+                                                <form asp-action="UpdateOrderStatus" asp-route-id="@o.Id" asp-route-status="@OrderStatus.InProgress" method="post">
+                                                    <button type="submit" class="btn btn-sm btn-brand">شروع کار</button>
+                                                </form>
+                                                <a asp-action="MarkComplete" asp-controller="Expert" asp-route-id="@o.Id" class="btn btn-sm btn-success">
+                                                    اعلام اتمام کار
+                                                </a>
+                                            }
+                                            else if (o.Status == OrderStatus.InProgress)
+                                            {
+                                                <a asp-action="MarkComplete" asp-controller="Expert" asp-route-id="@o.Id" class="btn btn-sm btn-success">
+                                                    اعلام اتمام کار
+                                                </a>
+                                            }
+                                            else if (o.Status == OrderStatus.CompletionReview)
+                                            {
+                                                <span class="badge bg-warning text-dark">در بررسی پشتیبانی</span>
+                                            }
+                                        </div>
+                                    </td>
+                                </tr>
+                            }
+                        </tbody>
+                    </table>
+                </div>
+            }
+        </div>
+    }
 
-    <div class="dashboard-card">
-        <h5 class="fw-800 mb-3">کارهای تکمیل‌شده (@done.Count)</h5>
-        @if (!done.Any())
-        {
-            <p class="text-muted small mb-0">هنوز کاری را تکمیل نکرده‌اید.</p>
-        }
-        else
-        {
-            <div class="vstack gap-2">
-                @foreach (var o in done)
-                {
-                    <div class="d-flex justify-content-between align-items-center border-bottom pb-2">
-                        <div>
-                            <a asp-controller="Orders" asp-action="Details" asp-route-id="@o.Id" class="fw-700">@o.RequestTitle</a>
-                            <div class="small text-muted">@o.OrderNumber · @o.TotalAmount.ToString("N0") تومان</div>
+    @if (showDone)
+    {
+        <div class="dashboard-card mb-4">
+            <h5 class="fw-800 mb-3">کارهای تکمیل‌شده (@done.Count)</h5>
+            @if (!done.Any())
+            {
+                <p class="text-muted small mb-0">هنوز کاری را تکمیل نکرده‌اید.</p>
+            }
+            else
+            {
+                <div class="vstack gap-2">
+                    @foreach (var o in done)
+                    {
+                        <div class="d-flex justify-content-between align-items-center border-bottom pb-2">
+                            <div>
+                                <a asp-controller="Orders" asp-action="Details" asp-route-id="@o.Id" class="fw-700">@o.RequestTitle</a>
+                                <div class="small text-muted">@o.OrderNumber · @o.TotalAmount.ToString("N0") تومان</div>
+                            </div>
+                            <span class="badge-soft badge-success-soft">@o.Status.ToDisplay()</span>
                         </div>
-                        <span class="badge-soft badge-success-soft">@o.Status.ToDisplay()</span>
-                    </div>
-                }
-            </div>
-        }
-    </div>
+                    }
+                </div>
+            }
+        </div>
+    }
+
+    @if (showAccepted)
+    {
+        <div class="dashboard-card mb-4">
+            <h5 class="fw-800 mb-3">پیشنهادهای پذیرفته‌شده (@acceptedProposals.Count)</h5>
+            @if (!acceptedProposals.Any())
+            {
+                <p class="text-muted small mb-0">هنوز پیشنهادی از شما پذیرفته نشده است.</p>
+            }
+            else
+            {
+                <div class="vstack gap-2">
+                    @foreach (var p in acceptedProposals)
+                    {
+                        <div class="d-flex justify-content-between align-items-center border-bottom pb-2 flex-wrap gap-2">
+                            <div>
+                                <a asp-controller="ServiceRequests" asp-action="Details" asp-route-id="@p.RequestId" class="fw-700">@p.RequestTitle</a>
+                                <div class="small text-muted">@IconSvg.Money @p.Price.ToString("N0") تومان · @IconSvg.Clock @p.CreatedAt.ToPersianDate()</div>
+                            </div>
+                            <div class="d-flex gap-1">
+                                <span class="badge-soft badge-success-soft">پذیرفته شده</span>
+                                <a asp-action="MyJobs" asp-route-status="Active" class="btn btn-sm btn-outline-brand">سفارش‌های فعال</a>
+                            </div>
+                        </div>
+                    }
+                </div>
+            }
+        </div>
+    }
+
+    @if (showPending)
+    {
+        <div class="dashboard-card">
+            <h5 class="fw-800 mb-3">پیشنهادهای در انتظار پاسخ (@pendingProposals.Count)</h5>
+            @if (!pendingProposals.Any())
+            {
+                <p class="text-muted small mb-0">پیشنهاد در انتظاری ندارید.</p>
+            }
+            else
+            {
+                <div class="vstack gap-2">
+                    @foreach (var p in pendingProposals)
+                    {
+                        <div class="d-flex justify-content-between align-items-center border-bottom pb-2 flex-wrap gap-2">
+                            <div>
+                                <a asp-controller="ServiceRequests" asp-action="Details" asp-route-id="@p.RequestId" class="fw-700">@p.RequestTitle</a>
+                                <div class="small text-muted">@IconSvg.Money @p.Price.ToString("N0") تومان · @IconSvg.Clock @p.CreatedAt.ToPersianDate()</div>
+                            </div>
+                            <div class="d-flex gap-1">
+                                <span class="badge-soft badge-warning-soft">در انتظار</span>
+                                <form asp-action="WithdrawProposal" asp-route-id="@p.Id" method="post"
+                                      onsubmit="return confirm('این پیشنهاد برگشت داده شود؟');">
+                                    <button type="submit" class="btn btn-sm btn-outline-brand">برگشت پیشنهاد</button>
+                                </form>
+                            </div>
+                        </div>
+                    }
+                </div>
+            }
+        </div>
+    }
 </div>

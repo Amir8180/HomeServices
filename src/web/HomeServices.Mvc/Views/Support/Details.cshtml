@@ -1,0 +1,144 @@
+@using HomeServices.Domain.Enums
+@using HomeServices.Application.Dtos
+@model SupportTicketDto
+@using HomeServices.Mvc.Extensions
+@{
+    ViewData["Title"] = $"تیکت {Model.TicketNumber}";
+    Func<string, Microsoft.AspNetCore.Html.HtmlString> Svg = (paths) => new Microsoft.AspNetCore.Html.HtmlString(
+        $"<svg viewBox=\"0 0 24 24\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"1.75\" stroke-linecap=\"round\" stroke-linejoin=\"round\" aria-hidden=\"true\" focusable=\"false\" style=\"width:1em;height:1em;display:inline-block;vertical-align:-0.15em;flex-shrink:0;\">{paths}</svg>"
+    );
+    var icTicket = "<path d=\"M3 9a2 2 0 012-2h.93a2 2 0 001.664-.89l.812-1.22A2 2 0 0110.07 4h3.86a2 2 0 011.664.89l.812 1.22A2 2 0 0018.07 7H19a2 2 0 012 2v9a2 2 0 01-2 2H5a2 2 0 01-2-2V9z\"/><line x1=\"3\" y1=\"13\" x2=\"21\" y2=\"13\"/>";
+    var icUser   = "<path d=\"M20 21v-2a4 4 0 00-4-4H8a4 4 0 00-4 4v2\"/><circle cx=\"12\" cy=\"7\" r=\"4\"/>";
+    var icHeadset = "<path d=\"M3 18v-6a9 9 0 0118 0v6\"/><path d=\"M21 19a2 2 0 01-2 2h-1a2 2 0 01-2-2v-3a2 2 0 012-2h3zM3 19a2 2 0 002 2h1a2 2 0 002-2v-3a2 2 0 00-2-2H3z\"/>";
+    var icPaperclip = "<path d=\"M21.44 11.05l-9.19 9.19a6 6 0 01-8.49-8.49l9.19-9.19a4 4 0 015.66 5.66l-9.2 9.19a2 2 0 01-2.83-2.83l8.49-8.48\"/>";
+    var icLock  = "<rect x=\"3\" y=\"11\" width=\"18\" height=\"11\" rx=\"2\" ry=\"2\"/><path d=\"M7 11V7a5 5 0 0110 0v4\"/>";
+}
+
+<div class="container py-4" style="max-width:860px;">
+    <nav class="small text-muted mb-3">
+        <a asp-action="MyTickets" class="text-decoration-none">تیکت‌های پشتیبانی</a> /
+        <span>@Model.TicketNumber</span>
+    </nav>
+
+    @* سربرگ تیکت *@
+    <div class="dashboard-card mb-4">
+        <div class="d-flex justify-content-between align-items-start flex-wrap gap-2 mb-2">
+            <h1 class="fw-800 mb-0 fs-4">@Model.Subject</h1>
+            <span class="badge-soft @Model.Status.TicketStatusClass()">@Model.Status.ToDisplay()</span>
+        </div>
+        <div class="d-flex gap-3 flex-wrap small text-muted">
+            <span class="fw-700">@Model.TicketNumber</span>
+            <span>@Model.Category.ToDisplay()</span>
+            <span class="badge-soft @Model.Priority.PriorityClass()">اولویت: @Model.Priority.ToDisplay()</span>
+            @if (!string.IsNullOrEmpty(Model.OrderNumber))
+            {
+                <a asp-controller="Orders" asp-action="Details" asp-route-id="@Model.OrderId" class="text-decoration-none">سفارش @Model.OrderNumber</a>
+            }
+            <span>ثبت: @Model.CreatedAt.ToPersianDateTime()</span>
+            <span>آخرین فعالیت: @Model.LastActivityAt.ToPersianDateTime()</span>
+        </div>
+    </div>
+
+    @* شرح اولیه + پیوست‌های اولیه *@
+    <div class="dashboard-card mb-3">
+        <div class="d-flex gap-3">
+            <div class="flex-shrink-0 d-flex align-items-center justify-content-center rounded-circle"
+                 style="width:42px;height:42px;background:var(--primary-100);color:var(--primary-700);">@Html.Raw(Svg(icUser))</div>
+            <div class="flex-grow-1">
+                <div class="small text-muted mb-1">شما — @Model.CreatedAt.ToPersianDateTime()</div>
+                <div style="white-space:pre-wrap;line-height:1.9;">@Model.Description</div>
+                @if (Model.Attachments.Where(a => a.MessageId == null).Any())
+                {
+                    <div class="d-flex flex-wrap gap-2 mt-3">
+                        @foreach (var att in Model.Attachments.Where(a => a.MessageId == null))
+                        {
+                            <a href="@att.FileUrl" target="_blank" class="text-decoration-none small">
+                                @if (att.MediaType == MediaType.Image)
+                                {
+                                    <img src="@(att.ThumbnailUrl ?? att.FileUrl)" style="width:64px;height:64px;object-fit:cover;border-radius:8px;border:1px solid var(--color-border-subtle);" alt="پیوست" />
+                                }
+                                else
+                                {
+                                    <span class="badge-soft badge-brand">@Html.Raw(Svg(icPaperclip)) @(att.MediaType == MediaType.Video ? "ویدیو" : "سند")</span>
+                                }
+                            </a>
+                        }
+                    </div>
+                }
+            </div>
+        </div>
+    </div>
+
+    @* پیام‌های گفت‌وگو *@
+    @foreach (var m in Model.Messages)
+    {
+        var mine = !m.IsFromAdmin;
+        <div class="dashboard-card mb-3 @(mine ? "" : "border-end")"
+             style="@(mine ? "" : "border-right:4px solid var(--primary-400);")">
+            <div class="d-flex gap-3">
+                <div class="flex-shrink-0 d-flex align-items-center justify-content-center rounded-circle"
+                     style="width:42px;height:42px;background:@(mine ? "var(--primary-100)" : "var(--success-light)");color:@(mine ? "var(--primary-700)" : "var(--color-success)");">
+                    @Html.Raw(Svg(mine ? icUser : icHeadset))
+                </div>
+                <div class="flex-grow-1">
+                    <div class="small text-muted mb-1">
+                        @(mine ? "شما" : "پشتیبانی") — @m.CreatedAt.ToPersianDateTime()
+                    </div>
+                    <div style="white-space:pre-wrap;line-height:1.9;">@m.Body</div>
+                    @{ var msgAtts = Model.Attachments.Where(a => a.MessageId == m.Id).ToList(); }
+                    @if (msgAtts.Any())
+                    {
+                        <div class="d-flex flex-wrap gap-2 mt-3">
+                            @foreach (var att in msgAtts)
+                            {
+                                <a href="@att.FileUrl" target="_blank" class="text-decoration-none small">
+                                    @if (att.MediaType == MediaType.Image)
+                                    {
+                                        <img src="@(att.ThumbnailUrl ?? att.FileUrl)" style="width:64px;height:64px;object-fit:cover;border-radius:8px;border:1px solid var(--color-border-subtle);" alt="پیوست" />
+                                    }
+                                    else
+                                    {
+                                        <span class="badge-soft badge-brand">@Html.Raw(Svg(icPaperclip)) @(att.MediaType == MediaType.Video ? "ویدیو" : "سند")</span>
+                                    }
+                                </a>
+                            }
+                        </div>
+                    }
+                </div>
+            </div>
+        </div>
+    }
+
+    @* پاسخ / بستن *@
+    @if (Model.Status != SupportTicketStatus.Closed)
+    {
+        <div class="dashboard-card">
+            <h5 class="fw-800 mb-3">پاسخ شما</h5>
+            <form asp-action="Reply" method="post" enctype="multipart/form-data">
+                @Html.AntiForgeryToken()
+                <input type="hidden" name="TicketId" value="@Model.Id" />
+                <textarea name="Body" class="form-control mb-3" rows="4" required placeholder="پیام خود را برای پشتیبانی بنویسید…"></textarea>
+                <div class="d-flex flex-wrap gap-2 justify-content-between align-items-center">
+                    <div>
+                        <label class="small text-muted d-block mb-1">پیوست (اختیاری — عکس/ویدیو)</label>
+                        <input type="file" name="Files" multiple accept="image/*,video/*,.pdf,.zip" class="form-control" />
+                    </div>
+                    <div class="d-flex gap-2">
+                        <form asp-action="Close" asp-route-id="@Model.Id" method="post"
+                              onsubmit="return confirm('این تیکت بسته شود؟');" style="display:inline;">
+                            @Html.AntiForgeryToken()
+                            <button type="submit" class="btn btn-outline-brand">@Html.Raw(Svg(icLock)) بستن تیکت</button>
+                        </form>
+                        <button type="submit" class="btn btn-brand px-4">ارسال پیام</button>
+                    </div>
+                </div>
+            </form>
+        </div>
+    }
+    else
+    {
+        <div class="alert alert-secondary small d-flex align-items-center gap-2">
+            @Html.Raw(Svg(icLock)) این تیکت بسته شده است. در صورت نیاز، تیکت جدیدی ثبت کنید.
+        </div>
+    }
+</div>

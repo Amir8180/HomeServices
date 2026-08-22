@@ -1,0 +1,85 @@
+@using HomeServices.Domain.Enums
+@using HomeServices.Application.Dtos
+@model HomeServices.Mvc.Controllers.CreateTicketViewModel
+@using HomeServices.Mvc.Extensions
+@{
+    ViewData["Title"] = "ثبت تیکت پشتیبانی";
+    var orders = ViewBag.Orders as IReadOnlyList<OrderDto> ?? Array.Empty<OrderDto>();
+    Func<string, Microsoft.AspNetCore.Html.HtmlString> Svg = (paths) => new Microsoft.AspNetCore.Html.HtmlString(
+        $"<svg viewBox=\"0 0 24 24\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"1.75\" stroke-linecap=\"round\" stroke-linejoin=\"round\" aria-hidden=\"true\" focusable=\"false\" style=\"width:1em;height:1em;display:inline-block;vertical-align:-0.15em;flex-shrink:0;\">{paths}</svg>"
+    );
+    var icTicket = "<path d=\"M3 9a2 2 0 012-2h.93a2 2 0 001.664-.89l.812-1.22A2 2 0 0110.07 4h3.86a2 2 0 011.664.89l.812 1.22A2 2 0 0018.07 7H19a2 2 0 012 2v9a2 2 0 01-2 2H5a2 2 0 01-2-2V9z\"/><line x1=\"3\" y1=\"13\" x2=\"21\" y2=\"13\"/>";
+    var icInfo = "<circle cx=\"12\" cy=\"12\" r=\"10\"/><line x1=\"12\" y1=\"16\" x2=\"12\" y2=\"12\"/><line x1=\"12\" y1=\"8\" x2=\"12.01\" y2=\"8\"/>";
+}
+
+<div class="container py-4" style="max-width:760px;">
+    <div class="mb-4">
+        <h1 class="fw-800 mb-0">@Html.Raw(Svg(icTicket)) ثبت تیکت پشتیبانی</h1>
+        <p class="text-muted mb-0">درخواست خود را با جزئیات ثبت کنید تا کارشناسان پشتیبانی در سریع‌ترین زمان بررسی کنند.</p>
+    </div>
+
+    <div class="dashboard-card">
+        <form asp-action="Create" method="post" enctype="multipart/form-data">
+            @Html.AntiForgeryToken()
+            <div asp-validation-summary="ModelOnly" class="text-danger mb-3"></div>
+
+            <div class="mb-3">
+                <label asp-for="Subject" class="form-label fw-700"></label>
+                <input asp-for="Subject" class="form-control" placeholder="مثلاً: تأخیر در شروع کار سفارش" />
+                <span asp-validation-for="Subject" class="text-danger small"></span>
+            </div>
+
+            <div class="row g-3 mb-3">
+                <div class="col-md-6">
+                    <label asp-for="Category" class="form-label fw-700"></label>
+                    <select asp-for="Category" class="form-select" asp-items="Html.GetEnumSelectList<SupportTicketCategory>()"></select>
+                    <span asp-validation-for="Category" class="text-danger small"></span>
+                </div>
+                <div class="col-md-6">
+                    <label asp-for="Priority" class="form-label fw-700"></label>
+                    <select asp-for="Priority" class="form-select" asp-items="Html.GetEnumSelectList<SupportTicketPriority>()"></select>
+                    <span asp-validation-for="Priority" class="text-danger small"></span>
+                </div>
+            </div>
+
+            <div class="mb-3">
+                <label asp-for="OrderId" class="form-label fw-700">سفارش مرتبط (اختیاری)</label>
+                <select asp-for="OrderId" class="form-select">
+                    <option value="">— بدون سفارش مشخص —</option>
+                    @foreach (var o in orders)
+                    {
+                        <option value="@o.Id" selected="@(Model.OrderId == o.Id)">@o.OrderNumber — @o.RequestTitle (@o.Status.ToDisplay())</option>
+                    }
+                </select>
+                <div class="form-text small">اگر مشکل مربوط به سفارش مشخصی است، آن را انتخاب کنید تا بررسی سریع‌تر انجام شود.</div>
+            </div>
+
+            <div class="mb-3">
+                <label asp-for="Description" class="form-label fw-700"></label>
+                <textarea asp-for="Description" class="form-control" rows="6"
+                          placeholder="شرح کامل درخواست: چه اتفاقی افتاده، چه انتظاری دارید و در صورت امکان زمان و شماره تراکنش/سفارش را ذکر کنید."></textarea>
+                <span asp-validation-for="Description" class="text-danger small"></span>
+            </div>
+
+            <div class="mb-4">
+                <label asp-for="Files" class="form-label fw-700"></label>
+                <input asp-for="Files" type="file" multiple accept="image/*,video/*,.pdf,.zip,.doc,.docx" class="form-control" />
+                <div class="form-text small">حداکثر ۵ فایل؛ هر فایل تا ۱۰ مگابایت (عکس، ویدیو یا سند).</div>
+                <span asp-validation-for="Files" class="text-danger small"></span>
+            </div>
+
+            <div class="d-flex gap-2 justify-content-end">
+                <a asp-action="MyTickets" class="btn btn-outline-brand">انصراف</a>
+                <button type="submit" class="btn btn-brand px-4">ثبت تیکت</button>
+            </div>
+        </form>
+    </div>
+
+    <div class="alert alert-light border mt-4 small" style="line-height:1.9;">
+        @Html.Raw(Svg(icInfo)) پس از ثبت تیکت، شماره پیگیری (مثل TK-100001) دریافت می‌کنید و تمام گفت‌وگو و نتیجه بررسی در همین صفحه قابل پیگیری است. تیکت‌های فوری با اولویت بالا در صف بررسی پشتیبانی جلو می‌افتند.
+    </div>
+</div>
+
+@section Scripts {
+    <partial name="_ValidationScriptsPartial" />
+}

@@ -20,6 +20,17 @@ public interface IFileService
         Guid? uploadedBy,
         CancellationToken cancellationToken = default);
 
+    /// <summary>Saves an uploaded image or video (no thumbnail for videos). Returns the media record.</summary>
+    Task<MediaDto> SaveMediaAsync(
+        Stream stream,
+        string fileName,
+        string contentType,
+        long fileSize,
+        MediaType mediaType,
+        MediaEntityType? entityType,
+        Guid? uploadedBy,
+        CancellationToken cancellationToken = default);
+
     /// <summary>Soft-deletes a media record (file kept on disk for reference).</summary>
     Task<bool> DeleteAsync(int mediaId, CancellationToken cancellationToken = default);
 

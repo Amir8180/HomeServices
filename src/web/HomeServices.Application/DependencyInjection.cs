@@ -27,6 +27,11 @@ public static class DependencyInjection
         services.AddScoped<IReviewService, ReviewService>();
         services.AddScoped<IExpertProfileService, ExpertProfileService>();
         services.AddScoped<ISiteSettingService, SiteSettingService>();
+        services.AddScoped<IPlatformStatsService, PlatformStatsService>();
+        services.AddScoped<IPaymentVerificationService, PaymentVerificationService>();
+        services.AddScoped<IWorkCompletionService, WorkCompletionService>();
+        services.AddScoped<IExpertPayoutService, ExpertPayoutService>();
+        services.AddScoped<ISupportTicketService, SupportTicketService>();
 
         return services;
     }

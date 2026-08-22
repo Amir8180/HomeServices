@@ -36,7 +36,7 @@
 
                 <hr />
 
-                <h6 class="fw-800 mb-2">📋 توضیحات</h6>
+                <h6 class="fw-800 mb-2">توضیحات</h6>
                 <p>@Model.Description</p>
 
                 <div class="row g-3 mt-1">
@@ -58,7 +58,7 @@
                     {
                         <div class="col-md-6">
                             <small class="text-muted d-block">موقعیت</small>
-                            <span>📍 @Model.City @Model.Address</span>
+                            <span>@Model.City @Model.Address</span>
                         </div>
                     }
                     @if (Model.PreferredDate.HasValue)
@@ -72,7 +72,7 @@
                     {
                         <div class="col-md-6">
                             <small class="text-muted d-block">بودجه</small>
-                            <span>💰 از @((Model.BudgetMin ?? 0).ToString("N0")) تا @((Model.BudgetMax ?? 0).ToString("N0")) تومان</span>
+                            <span>از @((Model.BudgetMin ?? 0).ToString("N0")) تا @((Model.BudgetMax ?? 0).ToString("N0")) تومان</span>
                         </div>
                     }
                     <div class="col-md-6">
@@ -106,7 +106,7 @@
 
                 @if (Model.AcceptedProposalId.HasValue)
                 {
-                    <div class="alert alert-success small mt-2 mb-0">✅ این درخواست دارای پیشنهاد انتخاب‌شده است.</div>
+                    <div class="alert alert-success small mt-2 mb-0">این درخواست دارای پیشنهاد انتخاب‌شده است.</div>
                 }
             </div>
 

@@ -1,0 +1,179 @@
+@model OrderDto
+@{
+    ViewData["Title"] = $"پرداخت سفارش {Model.OrderNumber}";
+
+    var cardNumber  = (string)ViewBag.CardNumber;
+    var cardHolder  = (string)ViewBag.CardHolder;
+    var telegramUrl = (string)ViewBag.TelegramUrl;
+    var instruction = (string)ViewBag.ReceiptInstruction;
+
+    // Inline SVG helper (same pattern as other views)
+    Func<string, Microsoft.AspNetCore.Html.HtmlString> Svg = (paths) => new Microsoft.AspNetCore.Html.HtmlString(
+        $"<svg viewBox=\"0 0 24 24\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"1.75\" stroke-linecap=\"round\" stroke-linejoin=\"round\" aria-hidden=\"true\" focusable=\"false\" style=\"width:1em;height:1em;display:inline-block;vertical-align:-0.15em;flex-shrink:0;\">{paths}</svg>"
+    );
+    var icCreditCard = "<rect x=\"1\" y=\"4\" width=\"22\" height=\"16\" rx=\"2\" ry=\"2\"/><line x1=\"1\" y1=\"10\" x2=\"23\" y2=\"10\"/>";
+    var icUser        = "<path d=\"M20 21v-2a4 4 0 00-4-4H8a4 4 0 00-4 4v2\"/><circle cx=\"12\" cy=\"7\" r=\"4\"/>";
+    var icCopy       = "<rect x=\"9\" y=\"9\" width=\"13\" height=\"13\" rx=\"2\" ry=\"2\"/><path d=\"M5 15H4a2 2 0 01-2-2V4a2 2 0 012-2h9a2 2 0 012 2v1\"/>";
+    var icSend       = "<line x1=\"22\" y1=\"2\" x2=\"11\" y2=\"13\"/><polygon points=\"22 2 15 22 11 13 2 9 22 2\"/>";
+    var icCheckCircle= "<path d=\"M22 11.08V12a10 10 0 11-5.93-9.14\"/><polyline points=\"22 4 12 14.01 9 11.01\"/>";
+    var icInfo       = "<circle cx=\"12\" cy=\"12\" r=\"10\"/><line x1=\"12\" y1=\"16\" x2=\"12\" y2=\"12\"/><line x1=\"12\" y1=\"8\" x2=\"12.01\" y2=\"8\"/>";
+}
+@section Styles {
+<style>
+.pay-page { padding:var(--space-8) 0 var(--space-20); max-width:640px; margin-inline:auto; }
+.pay-card { background:white; border:1px solid var(--color-border-subtle); border-radius:var(--radius-2xl); padding:var(--space-8); }
+.pay-amount { background:linear-gradient(135deg,var(--primary-700) 0%,var(--accent-600) 100%); color:white; border-radius:var(--radius-2xl); padding:var(--space-6); text-align:center; margin-bottom:var(--space-6); }
+.pay-amount__value { font-size:clamp(1.75rem,4vw,2.5rem); font-weight:var(--font-black); line-height:1.1; }
+.pay-amount__label { opacity:.85; font-size:var(--text-sm); margin-bottom:var(--space-2); }
+.pay-step { display:flex; gap:var(--space-4); margin-bottom:var(--space-6); }
+.pay-step__num { width:34px; height:34px; border-radius:50%; background:var(--gray-50); color:var(--primary-700); font-weight:var(--font-bold); display:flex; align-items:center; justify-content:center; flex-shrink:0; font-size:var(--text-sm); border:1px solid var(--color-border-subtle); }
+.pay-step__title { font-weight:var(--font-bold); margin-bottom:var(--space-1); }
+.pay-step__text { font-size:var(--text-sm); color:var(--color-text-secondary); line-height:1.8; }
+.card-box { background:var(--gray-50); border:1px dashed var(--primary-400); border-radius:var(--radius-xl); padding:var(--space-5); margin:var(--space-3) 0 var(--space-5); }
+.card-box__label { font-size:var(--text-xs); font-weight:var(--font-semibold); color:var(--color-text-tertiary); margin-bottom:var(--space-2); display:flex; align-items:center; gap:var(--space-2); }
+.card-box__value { font-size:var(--text-lg); font-weight:var(--font-bold); color:var(--gray-900); display:flex; align-items:center; justify-content:space-between; gap:var(--space-3); flex-wrap:wrap; }
+.card-number { letter-spacing:.12em; font-family:monospace; font-size:1.15rem; direction:ltr; }
+.copy-btn { background:white; border:1px solid var(--color-border-subtle); border-radius:var(--radius-md); padding:var(--space-1) var(--space-3); font-size:var(--text-xs); font-weight:var(--font-semibold); cursor:pointer; color:var(--primary-700); display:inline-flex; align-items:center; gap:var(--space-1); font-family:inherit; }
+.copy-btn:hover { background:var(--gray-50); }
+.pay-note { display:flex; gap:var(--space-3); background:rgba(251,191,36,.08); border:1px solid var(--warning-400); border-radius:var(--radius-xl); padding:var(--space-4); margin:var(--space-5) 0; font-size:var(--text-sm); line-height:1.8; }
+.pay-note svg { color:var(--warning-500); flex-shrink:0; margin-top:2px; }
+</style>
+}
+
+<div class="pay-page">
+    <div class="hs-container">
+
+        <nav style="font-size:var(--text-sm);color:var(--color-text-tertiary);margin-bottom:var(--space-6);">
+            <a asp-controller="Orders" asp-action="Details" asp-route-id="@Model.Id" style="color:inherit;text-decoration:none;">سفارش @Model.OrderNumber</a> /
+            <span>پرداخت</span>
+        </nav>
+
+        <div class="pay-card" data-reveal="up">
+            @* Amount *@
+            <div class="pay-amount">
+                <div class="pay-amount__label">مبلغ قابل پرداخت برای سفارش @Model.OrderNumber</div>
+                <div class="pay-amount__value">@Model.TotalAmount.ToString("N0") تومان</div>
+            </div>
+
+            <div style="font-size:var(--text-lg);font-weight:var(--font-black);margin-bottom:var(--space-5);">پرداخت کارت به کارت</div>
+            <p style="font-size:var(--text-sm);color:var(--color-text-secondary);line-height:1.8;margin-bottom:var(--space-6);">
+                این سفارش از طریق پرداخت کارت به کارت (بدون درگاه بانکی) تسویه می‌شود. لطفاً مراحل زیر را به ترتیب انجام دهید:
+            </p>
+
+            @* Step 1: transfer *@
+            <div class="pay-step">
+                <div class="pay-step__num">۱</div>
+                <div style="flex:1;">
+                    <div class="pay-step__title">@Html.Raw(Svg(icCreditCard)) مبلغ @Model.TotalAmount.ToString("N0") تومان را به کارت زیر واریز نمایید</div>
+                    <div class="card-box">
+                        <div class="card-box__label">شماره کارت</div>
+                        <div class="card-box__value">
+                            <span class="card-number" id="cardNumber">@cardNumber</span>
+                            <button type="button" class="copy-btn" onclick="copyCard()">@Html.Raw(Svg(icCopy)) کپی شماره کارت</button>
+                        </div>
+                        <div class="card-box__label" style="margin-top:var(--space-4);">@Html.Raw(Svg(icUser)) نام و نام خانوادگی صاحب کارت</div>
+                        <div class="card-box__value" style="font-size:var(--text-base);">@cardHolder</div>
+                    </div>
+                </div>
+            </div>
+
+            @* Step 2: send receipt in Telegram *@
+            <div class="pay-step">
+                <div class="pay-step__num">۲</div>
+                <div style="flex:1;">
+                    <div class="pay-step__title">@Html.Raw(Svg(icSend)) رسید پرداخت را ارسال نمایید</div>
+                    <div class="pay-step__text">@instruction</div>
+                    <a href="@telegramUrl" target="_blank" rel="noopener noreferrer" class="btn btn-primary btn-block" style="margin-top:var(--space-4);">
+                        @Html.Raw(Svg(icSend)) ارسال رسید در تلگرام (پشتیبانی)
+                    </a>
+            <div style="text-align:center;font-size:var(--text-xs);color:var(--color-text-tertiary);margin-top:var(--space-2);">
+                با کلیک روی دکمهٔ بالا به گفت‌وگوی خصوصی پشتیبانی در تلگرام منتقل می‌شوید.
+            </div>
+        </div>
+    </div>
+
+            @* Step 3: submit payment report to support dashboard *@
+            <div class="pay-step" style="margin-top:var(--space-8);border-top:1px dashed var(--color-border-subtle);padding-top:var(--space-6);">
+                <div class="pay-step__num">۳</div>
+                <div style="flex:1;">
+                    <div class="pay-step__title" style="color:var(--primary-700);">ثبت اطلاعات تراکنش در سامانه</div>
+                    <div class="pay-step__text">پس از واریز، اطلاعات تراکنش خود را در فرم زیر ثبت کنید تا در داشبورد پشتیبانی قابل بررسی باشد و وضعیت سفارش به‌روز شود.</div>
+
+                    @if (ViewBag.PendingReport != null)
+                    {
+                        <div class="pay-note" style="background:rgba(34,197,94,.08);border-color:var(--success-400);">
+                            <svg viewBox="0 0 24 24" fill="none" stroke="var(--success-500)" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" style="width:1.1em;flex-shrink:0;margin-top:2px;"><path d="M22 11.08V12a10 10 0 11-5.93-9.14"/><polyline points="22 4 12 14.01 9 11.01"/></svg>
+                            <div>گزارش پرداخت شما قبلاً ثبت شده و در انتظار تأیید پشتیبانی است.</div>
+                        </div>
+                    }
+                    else
+                    {
+                        <form asp-controller="Orders" asp-action="SubmitPayment" method="post" style="margin-top:var(--space-4);">
+                            @Html.AntiForgeryToken()
+                            <input type="hidden" name="OrderId" value="@Model.Id" />
+                            <div style="display:grid;grid-template-columns:1fr 1fr;gap:var(--space-3);margin-bottom:var(--space-3);">
+                                <div>
+                                    <label style="font-size:var(--text-xs);font-weight:var(--font-semibold);color:var(--color-text-tertiary);display:block;margin-bottom:var(--space-1);">نام واریزکننده</label>
+                                    <input type="text" name="SenderFullName" class="form-control" placeholder="همان نامی که روی کارت شماست" value="@ViewBag.CustomerName" required />
+                                </div>
+                                <div>
+                                    <label style="font-size:var(--text-xs);font-weight:var(--font-semibold);color:var(--color-text-tertiary);display:block;margin-bottom:var(--space-1);">مبلغ (تومان)</label>
+                                    <input type="number" name="Amount" class="form-control" value="@Model.TotalAmount" min="1000" required />
+                                </div>
+                            </div>
+                            <div style="margin-bottom:var(--space-3);">
+                                <label style="font-size:var(--text-xs);font-weight:var(--font-semibold);color:var(--color-text-tertiary);display:block;margin-bottom:var(--space-1);">شماره پیگیری / شماره مرجع</label>
+                                <input type="text" name="BankRefNumber" class="form-control" placeholder="(اختیاری) شماره پیگیری بانک" />
+                            </div>
+                            <div style="margin-bottom:var(--space-4);">
+                                <label style="font-size:var(--text-xs);font-weight:var(--font-semibold);color:var(--color-text-tertiary);display:block;margin-bottom:var(--space-1);">توضیحات</label>
+                                <textarea name="CustomerNote" class="form-control" rows="2" placeholder="(اختیاری)"></textarea>
+                            </div>
+                            <button type="submit" class="btn btn-primary btn-block">
+                                ثبت اطلاعات پرداخت
+                            </button>
+                        </form>
+                    }
+                </div>
+            </div>
+
+        </div>
+
+            @* Verification note *@
+            <div class="pay-note">
+                @Html.Raw(Svg(icInfo))
+                <div>
+                    پس از ارسال رسید، پرداخت شما توسط پشتیبانی بررسی و وضعیت سفارش به «پرداخت‌شده» تغییر می‌کند.
+                    تا قبل از تأیید، وضعیت سفارش شما «در انتظار پرداخت» باقی می‌ماند.
+                </div>
+            </div>
+
+            <div style="display:flex;align-items:center;gap:var(--space-2);color:var(--success-600);font-size:var(--text-sm);font-weight:var(--font-semibold);">
+                @Html.Raw(Svg(icCheckCircle))
+                پرداخت شما پس از تأیید، به‌صورت خودکار در سیستم ثبت می‌شود.
+            </div>
+
+            <div style="height:1px;background:var(--color-border-subtle);margin:var(--space-6) 0;"></div>
+            <a asp-controller="Orders" asp-action="Details" asp-route-id="@Model.Id" class="btn btn-secondary btn-block">بازگشت به صفحه سفارش</a>
+        </div>
+    </div>
+</div>
+
+@section Scripts {
+<script>
+    function copyCard() {
+        var text = document.getElementById('cardNumber').innerText.trim();
+        function done() {
+            var btn = event && event.target ? event.target.closest('button') : null;
+            if (btn) { btn.innerHTML = '✓ کپی شد'; setTimeout(function () { btn.innerHTML = 'کپی شماره کارت'; }, 2000); }
+        }
+        if (navigator.clipboard && navigator.clipboard.writeText) {
+            navigator.clipboard.writeText(text).then(done);
+        } else {
+            var ta = document.createElement('textarea');
+            ta.value = text; document.body.appendChild(ta); ta.select();
+            document.execCommand('copy'); document.body.removeChild(ta); done();
+        }
+    }
+</script>
+}

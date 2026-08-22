@@ -17,77 +17,138 @@ public class AccountController : Controller
 {
     private readonly IIdentityApiClient _identity;
     private readonly IExpertProfileService _experts;
+    private readonly IPlatformStatsService _stats;
     private readonly ILogger<AccountController> _logger;
 
     public AccountController(
         IIdentityApiClient identity,
         IExpertProfileService experts,
+        IPlatformStatsService stats,
         ILogger<AccountController> logger)
     {
         _identity = identity;
         _experts = experts;
+        _stats = stats;
         _logger = logger;
     }
 
     // -------------------- Login --------------------
     [HttpGet]
-    public IActionResult Login(string? returnUrl = null)
+    public async Task<IActionResult> Login(string? returnUrl = null)
     {
         if (User.Identity?.IsAuthenticated ?? false) return RedirectToDashboard();
-        return View(new LoginViewModel { ReturnUrl = returnUrl });
+        var model = new LoginViewModel { ReturnUrl = returnUrl };
+        RefreshCaptcha(model);
+        await LoadVisualStatsAsync();
+        return View(model);
     }
 
     [HttpPost]
     [ValidateAntiForgeryToken]
     public async Task<IActionResult> Login(LoginViewModel model)
     {
-        if (!ModelState.IsValid) return View(model);
+        if (!MathCaptcha.Verify(model.CaptchaA, model.CaptchaB, model.CaptchaHash, model.CaptchaAnswer))
+            ModelState.AddModelError(nameof(model.CaptchaAnswer), "پاسخ کپچا صحیح نیست.");
 
-        var result = await _identity.LoginAsync(model.Email, model.Password, HttpContext.RequestAborted);
-        if (!result.Succeeded || result.Data?.User == null)
+        if (!ModelState.IsValid) { RefreshCaptcha(model); return View(model); }
+
+        SharedEnums.UserType userType;
+        try
         {
-            ModelState.AddModelError(string.Empty, result.Message ?? "ایمیل یا رمز عبور اشتباه است.");
+            var result = await _identity.LoginAsync(model.Email, model.Password, HttpContext.RequestAborted);
+            if (!result.Succeeded || result.Data?.User == null)
+            {
+                // پیغام سرویس Identity انگلیسی است؛ همیشه معادل فارسی نمایش می‌دهیم
+                ModelState.AddModelError(string.Empty, "ایمیل یا رمز عبور اشتباه است.");
+                RefreshCaptcha(model);
+                return View(model);
+            }
+
+            userType = result.Data.User.UserType;
+            await SignInAsync(result.Data.AccessToken, result.Data.User!, model.RememberMe);
+        }
+        catch (HttpRequestException ex)
+        {
+            _logger.LogError(ex, "Identity service unreachable during login for {Email}.", model.Email);
+            ModelState.AddModelError(string.Empty, "سرویس احراز هویت در دسترس نیست. لطفاً چند لحظه بعد دوباره تلاش کنید.");
+            RefreshCaptcha(model);
+            return View(model);
+        }
+        catch (TaskCanceledException ex)
+        {
+            _logger.LogError(ex, "Identity service timed out during login for {Email}.", model.Email);
+            ModelState.AddModelError(string.Empty, "پاسخی از سرویس احراز هویت دریافت نشد. دوباره تلاش کنید.");
+            RefreshCaptcha(model);
             return View(model);
         }
 
-        await SignInAsync(result.Data.AccessToken, result.Data.User!, model.RememberMe);
         _logger.LogInformation("User {Email} logged in.", model.Email);
 
+        // ریدایرکت بر اساس نقشِ همان لحظه (User قدیمی هنوز نقش جدید را ندارد)
         if (!string.IsNullOrEmpty(model.ReturnUrl) && Url.IsLocalUrl(model.ReturnUrl))
             return Redirect(model.ReturnUrl);
 
-        return RedirectToDashboard();
+        return RedirectToDashboard(userType);
     }
 
     // -------------------- Register --------------------
     [HttpGet]
-    public IActionResult Register(string? returnUrl = null)
+    public async Task<IActionResult> Register(string? returnUrl = null)
     {
         if (User.Identity?.IsAuthenticated ?? false) return RedirectToDashboard();
-        return View(new RegisterViewModel { ReturnUrl = returnUrl });
+        var model = new RegisterViewModel { ReturnUrl = returnUrl };
+        RefreshCaptcha(model);
+        await LoadVisualStatsAsync();
+        return View(model);
     }
 
     [HttpPost]
     [ValidateAntiForgeryToken]
     public async Task<IActionResult> Register(RegisterViewModel model)
     {
-        if (!ModelState.IsValid) return View(model);
+        if (!MathCaptcha.Verify(model.CaptchaA, model.CaptchaB, model.CaptchaHash, model.CaptchaAnswer))
+            ModelState.AddModelError(nameof(model.CaptchaAnswer), "پاسخ کپچا صحیح نیست.");
 
-        var result = await _identity.RegisterAsync(
-            model.FullName, model.Email, model.PhoneNumber, model.Password,
-            model.UserType, HttpContext.RequestAborted);
+        if (!ModelState.IsValid) { RefreshCaptcha(model); return View(model); }
 
-        if (!result.Succeeded || result.Data?.User == null)
+        SharedDtos.UserDto user;
+        string accessToken;
+        try
         {
-            var errors = result.Errors.Any()
-                ? result.Errors
-                : new List<string> { result.Message ?? "ثبت‌نام ناموفق بود." };
-            foreach (var err in errors)
-                ModelState.AddModelError(string.Empty, err);
+            var result = await _identity.RegisterAsync(
+                model.FullName, model.Email, model.PhoneNumber, model.Password,
+                model.UserType, HttpContext.RequestAborted);
+
+            if (!result.Succeeded || result.Data?.User == null)
+            {
+                var errors = result.Errors.Any()
+                    ? result.Errors
+                    : new List<string> { result.Message ?? "ثبت‌نام ناموفق بود." };
+                foreach (var err in errors)
+                    ModelState.AddModelError(string.Empty, err);
+                RefreshCaptcha(model);
+                return View(model);
+            }
+
+            user = result.Data.User!;
+            accessToken = result.Data.AccessToken;
+        }
+        catch (HttpRequestException ex)
+        {
+            _logger.LogError(ex, "Identity service unreachable during register for {Email}.", model.Email);
+            ModelState.AddModelError(string.Empty, "سرویس احراز هویت در دسترس نیست. لطفاً چند لحظه بعد دوباره تلاش کنید.");
+            RefreshCaptcha(model);
+            return View(model);
+        }
+        catch (TaskCanceledException ex)
+        {
+            _logger.LogError(ex, "Identity service timed out during register for {Email}.", model.Email);
+            ModelState.AddModelError(string.Empty, "پاسخی از سرویس احراز هویت دریافت نشد. دوباره تلاش کنید.");
+            RefreshCaptcha(model);
             return View(model);
         }
 
-        await SignInAsync(result.Data.AccessToken, result.Data.User!, false);
+        await SignInAsync(accessToken, user, false);
         _logger.LogInformation("User {Email} registered as {Type}.", model.Email, model.UserType);
 
         // Auto-provision an expert profile for experts so they can start quoting immediately.
@@ -98,7 +159,7 @@ public class AccountController : Controller
             {
                 await _experts.CreateAsync(new CreateExpertProfileDto
                 {
-                    UserId = Guid.Parse(result.Data.User!.Id),
+                    UserId = Guid.Parse(user.Id),
                     BusinessName = model.FullName,
                     CategoryIds = new List<int>(),
                 }, HttpContext.RequestAborted);
@@ -113,7 +174,7 @@ public class AccountController : Controller
         if (!string.IsNullOrEmpty(model.ReturnUrl) && Url.IsLocalUrl(model.ReturnUrl))
             return Redirect(model.ReturnUrl);
 
-        return RedirectToDashboard();
+        return RedirectToDashboard(user.UserType);
     }
 
     // -------------------- Profile --------------------
@@ -240,6 +301,35 @@ public class AccountController : Controller
         if (User.IsInRole("Customer")) return RedirectToAction("Dashboard", "Customer");
         return RedirectToAction("Index", "Home");
     }
+
+    // بلافاصله پس از ورود/ثبت‌نام، principal فعلی هنوز نقش تازه را ندارد؛
+    // ریدایرکت بر اساس UserType پاس‌داده‌شده از سرویس Identity انجام می‌شود
+    private IActionResult RedirectToDashboard(SharedEnums.UserType userType) => userType switch
+    {
+        SharedEnums.UserType.Admin   => RedirectToAction("Index", "Dashboard", new { area = "Admin" }),
+        SharedEnums.UserType.Expert  => RedirectToAction("Dashboard", "Expert"),
+        _                            => RedirectToAction("Dashboard", "Customer"),
+    };
+
+    // در هر نمایش مجدد فرم، مسئله کپچای جدید تولید می‌شود تا پاسخ قبلی قابل استفاده‌ی مجدد نباشد
+    private static void RefreshCaptcha(LoginViewModel m)
+    {
+        var (a, b, h) = MathCaptcha.Generate();
+        m.CaptchaA = a; m.CaptchaB = b; m.CaptchaHash = h; m.CaptchaAnswer = "";
+    }
+
+    private static void RefreshCaptcha(RegisterViewModel m)
+    {
+        var (a, b, h) = MathCaptcha.Generate();
+        m.CaptchaA = a; m.CaptchaB = b; m.CaptchaHash = h; m.CaptchaAnswer = "";
+    }
+
+    // آمار واقعی برای پنل تصویری صفحات ورود/ثبت‌نام (بدون عدد جعلی)
+    private async Task LoadVisualStatsAsync()
+    {
+        var stats = await _stats.GetAsync(HttpContext.RequestAborted);
+        ViewBag.VerifiedExperts = stats.VerifiedExperts;
+    }
 }
 
 // -------------------- View Models --------------------
@@ -252,6 +342,14 @@ public class LoginViewModel
     [DataType(DataType.Password)]
     public string Password { get; set; } = "";
     public bool RememberMe { get; set; }
+
+    // کپچای ریاضی
+    [Required(ErrorMessage = "پاسخ کپچا الزامی است.")]
+    public string CaptchaAnswer { get; set; } = "";
+    public int? CaptchaA { get; set; }
+    public int? CaptchaB { get; set; }
+    public string? CaptchaHash { get; set; }
+
     public string? ReturnUrl { get; set; }
 }
 
@@ -275,6 +373,14 @@ public class RegisterViewModel
     [DataType(DataType.Password)]
     public string ConfirmPassword { get; set; } = "";
     public SharedEnums.UserType UserType { get; set; } = SharedEnums.UserType.Customer;
+
+    // کپچای ریاضی
+    [Required(ErrorMessage = "پاسخ کپچا الزامی است.")]
+    public string CaptchaAnswer { get; set; } = "";
+    public int? CaptchaA { get; set; }
+    public int? CaptchaB { get; set; }
+    public string? CaptchaHash { get; set; }
+
     public string? ReturnUrl { get; set; }
 }
 

@@ -1,9 +1,10 @@
 @model ExpertProfileDto
 @using HomeServices.Application.Dtos
+@using HomeServices.Mvc.Extensions
 @{
     ViewData["Title"] = Model.BusinessName;
     var reviews   = ViewBag.Reviews   as IReadOnlyList<ReviewDto>  ?? Array.Empty<ReviewDto>();
-    var portfolio = ViewBag.Portfolio  as IReadOnlyList<dynamic>   ?? Array.Empty<dynamic>();
+    var portfolio = Model.PortfolioImages;
     int total     = reviews.Count;
     int pct(int n) => total > 0 ? (int)Math.Round(reviews.Count(r=>r.Rating==n)*100.0/total) : 0;
 }
@@ -42,7 +43,20 @@
 .profile-stat__lbl { font-size:var(--text-xs); color:var(--color-text-tertiary); }
 /* Section cards */
 .detail-card { background:white; border:1px solid var(--color-border-subtle); border-radius:var(--radius-2xl); padding:var(--space-7); margin-bottom:var(--space-5); }
-.detail-card__title { font-size:var(--text-xl); font-weight:var(--font-bold); margin-bottom:var(--space-5); }
+.detail-card__title { font-size:var(--text-xl); font-weight:var(--font-bold); margin-bottom:var(--space-5); display:flex; align-items:center; gap:var(--space-2); }
+.detail-card__title svg { color:var(--primary-600); }
+/* گالری نمونه‌کارها */
+.portfolio-gallery { display:grid; grid-template-columns:repeat(auto-fill,minmax(160px,1fr)); gap:var(--space-4); }
+.portfolio-gallery__item { margin:0; }
+.portfolio-gallery__item img {
+    width:100%; aspect-ratio:4/3; object-fit:cover; border-radius:var(--radius-xl);
+    border:1.5px solid var(--color-border-subtle); cursor:zoom-in; transition:all .25s var(--ease-spring);
+}
+.portfolio-gallery__item img:hover { transform:translateY(-3px); box-shadow:var(--shadow-lg); border-color:var(--primary-300); }
+.portfolio-gallery__item figcaption {
+    margin-top:var(--space-2); font-size:var(--text-xs); color:var(--color-text-secondary);
+    font-weight:var(--font-semibold); text-align:center;
+}
 /* Skills */
 .skill-tag { display:inline-flex; align-items:center; gap:var(--space-2); padding:var(--space-2-5) var(--space-4); background:var(--primary-50); border:1.5px solid var(--primary-200); border-radius:var(--radius-full); font-size:var(--text-sm); font-weight:var(--font-semibold); color:var(--primary-700); }
 /* Rating bar */
@@ -123,7 +137,7 @@
                 @if (!string.IsNullOrEmpty(Model.Bio))
                 {
                     <div class="detail-card" data-reveal="up">
-                        <div class="detail-card__title">👤 درباره کارشناس</div>
+                        <div class="detail-card__title">درباره کارشناس</div>
                         <p style="font-size:var(--text-base);color:var(--color-text-secondary);line-height:var(--leading-relaxed);margin:0;">@Model.Bio</p>
                     </div>
                 }
@@ -144,9 +158,9 @@
                 @if (!string.IsNullOrEmpty(Model.ServiceArea))
                 {
                     <div class="detail-card" data-reveal="up">
-                        <div class="detail-card__title">🗺️ محدوده خدمات‌رسانی</div>
+                        <div class="detail-card__title">@IconSvg.Pin محدوده خدمات‌رسانی</div>
                         <div style="display:flex;align-items:center;gap:var(--space-3);background:var(--gray-50);padding:var(--space-4);border-radius:var(--radius-xl);">
-                            <span style="font-size:1.5rem;">📍</span>
+                            <span style="color:var(--primary-600);display:inline-flex;">@IconSvg.Pin</span>
                             <div>
                                 <div style="font-weight:var(--font-semibold);">@Model.ServiceArea</div>
                                 <div style="font-size:var(--text-xs);color:var(--color-text-tertiary);">مناطق پوشش‌دهی</div>
@@ -155,9 +169,33 @@
                     </div>
                 }
 
+                @* گالری نمونه‌کارها — برای همه کاربران قابل مشاهده *@
+                @if (portfolio.Any())
+                {
+                    <div class="detail-card" data-reveal="up">
+                        <div class="detail-card__title">@IconSvg.Briefcase نمونه‌کارها
+                            <span class="badge badge--primary" style="margin-right:var(--space-2);">@portfolio.Count</span>
+                        </div>
+                        <div class="portfolio-gallery">
+                            @foreach (var img in portfolio)
+                            {
+                                <figure class="portfolio-gallery__item">
+                                    <img src="@(string.IsNullOrEmpty(img.ThumbnailUrl) ? img.ImageUrl : img.ThumbnailUrl)"
+                                         alt="@(img.Title ?? "نمونه‌کار")" loading="lazy"
+                                         onclick="window.open('@img.ImageUrl','_blank')" />
+                                    @if (!string.IsNullOrEmpty(img.Title))
+                                    {
+                                        <figcaption>@img.Title</figcaption>
+                                    }
+                                </figure>
+                            }
+                        </div>
+                    </div>
+                }
+
                 @* Reviews *@
                 <div class="detail-card" data-reveal="up">
-                    <div class="detail-card__title">⭐ نظرات و امتیازات
+                    <div class="detail-card__title">@IconSvg.Star نظرات و امتیازات
                         <span class="badge badge--primary" style="margin-right:var(--space-2);">@Model.ReviewCount</span>
                     </div>
                     @if (reviews.Any())
@@ -210,7 +248,7 @@
                     else
                     {
                         <div class="empty-state" style="padding:var(--space-12) var(--space-8);">
-                            <div class="empty-state__icon">💬</div>
+                            <div class="empty-state__icon">@IconSvg.Message</div>
                             <div class="empty-state__title">هنوز نظری ثبت نشده</div>
                         </div>
                     }
@@ -225,13 +263,13 @@
                     <a asp-controller="ServiceRequests" asp-action="Create"
                        class="btn btn-xl btn-block hover-lift"
                        style="background:white;color:var(--primary-700);font-weight:var(--font-bold);">
-                        📝 ثبت درخواست رایگان
+                        @IconSvg.FileText ثبت درخواست رایگان
                     </a>
                     <div style="text-align:center;font-size:var(--text-xs);opacity:.75;margin-top:var(--space-3);">بدون هیچ هزینه‌ای</div>
                 </div>
 
                 <div class="qs-card" data-reveal="left">
-                    <div style="font-size:var(--text-sm);font-weight:var(--font-bold);margin-bottom:var(--space-4);">📊 آمار عملکرد</div>
+                    <div style="font-size:var(--text-sm);font-weight:var(--font-bold);margin-bottom:var(--space-4);">@IconSvg.TrendingUp آمار عملکرد</div>
                     <div class="qs-row"><span class="qs-label">میزان رضایت</span><span class="qs-value">@((Model.RatingAverage*20).ToString("0"))٪</span></div>
                     <div class="qs-row"><span class="qs-label">پروژه تکمیل‌شده</span><span class="qs-value">@Model.JobsCompleted</span></div>
                     @if (Model.ResponseTimeMinutes.HasValue)

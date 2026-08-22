@@ -90,3 +90,24 @@ public class UpsertSiteSettingDtoValidator : AbstractValidator<UpsertSiteSetting
         RuleFor(x => x.Value).MaximumLength(2000).When(x => x.Value != null);
     }
 }
+
+public class CreatePaymentVerificationReportDtoValidator : AbstractValidator<CreatePaymentVerificationReportDto>
+{
+    public CreatePaymentVerificationReportDtoValidator()
+    {
+        RuleFor(x => x.OrderId).GreaterThan(0).WithMessage("سفارش معتبر نیست.");
+        RuleFor(x => x.Amount).GreaterThan(0).WithMessage("مبلغ پرداخت‌شده باید بزرگتر از صفر باشد.");
+        RuleFor(x => x.SenderFullName).NotEmpty().MaximumLength(200).WithMessage("نام واریزکننده الزامی است.");
+        RuleFor(x => x.BankRefNumber).MaximumLength(100).When(x => x.BankRefNumber != null);
+        RuleFor(x => x.CustomerNote).MaximumLength(2000).When(x => x.CustomerNote != null);
+    }
+}
+
+public class CreateWorkCompletionDeclarationDtoValidator : AbstractValidator<CreateWorkCompletionDeclarationDto>
+{
+    public CreateWorkCompletionDeclarationDtoValidator()
+    {
+        RuleFor(x => x.OrderId).GreaterThan(0).WithMessage("سفارش معتبر نیست.");
+        RuleFor(x => x.Note).MaximumLength(4000).When(x => x.Note != null);
+    }
+}

@@ -1,14 +1,26 @@
 @model IReadOnlyList<ProposalDto>
 @using HomeServices.Application.Dtos
+@using Microsoft.AspNetCore.Html
 @{
     ViewData["Title"] = "مقایسه پیشنهادها";
+
     var request   = ViewBag.Request as ServiceRequestDto;
     var experts   = ViewBag.Experts as IDictionary<Guid, ExpertProfileDto?> ?? new Dictionary<Guid, ExpertProfileDto?>();
     var canChoose = request != null && !request.AcceptedProposalId.HasValue;
 
-    var bestPrice  = Model.Any() ? Model.Min(p => p.Price) : 0m;
-    var bestRating = experts.Values.Where(e=>e!=null).Any() ? experts.Values.Where(e=>e!=null).Max(e=>e!.RatingAverage) : 0;
+    var minP = Model.Any() ? Model.Min(p => p.Price) : 0m;
+    var maxP = Model.Any() ? Model.Max(p => p.Price) : 0m;
+    var avgP = Model.Any() ? (int)Model.Average(p => p.Price) : 0;
+    var bestRating = experts.Values.Where(e => e != null).Any()
+                   ? experts.Values.Where(e => e != null).Max(e => e!.RatingAverage) : 0;
+    var spread = (double)(maxP - minP);
 
+    // رتبه بر اساس قیمت (ارزان‌ترین = رتبه ۱)
+    var rankByPrice = Model.OrderBy(p => p.Price)
+        .Select((p, i) => new { p.Id, Rank = i + 1 })
+        .ToDictionary(x => x.Id, x => x.Rank);
+
+    // انتخاب هوشمند: تعادل قیمت و امتیاز
     ProposalDto? recommended = null;
     if (Model.Any())
     {
@@ -18,300 +30,531 @@
                 return (double)p.Price * 0.4 + (e != null ? (5 - e.RatingAverage) * 100000 : 500000) * 0.6;
             }).FirstOrDefault();
     }
+
+    // ── آیکون‌های SVG (سبک Feather — مشابه بقیه پروژه) ──
+    Func<string, HtmlString> Ico = paths => new HtmlString(
+        $"<svg viewBox=\"0 0 24 24\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"1.75\" stroke-linecap=\"round\" stroke-linejoin=\"round\" aria-hidden=\"true\" focusable=\"false\" style=\"width:1em;height:1em;display:inline-block;vertical-align:-0.15em;flex-shrink:0;\">{paths}</svg>");
+    Func<bool, HtmlString> Star = on => new HtmlString(
+        $"<svg viewBox=\"0 0 24 24\" fill=\"{(on ? "currentColor" : "none")}\" stroke=\"currentColor\" stroke-width=\"1.75\" stroke-linejoin=\"round\" aria-hidden=\"true\" focusable=\"false\" style=\"width:.8em;height:.8em;display:inline-block;flex-shrink:0;\"><polygon points=\"12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2\"/></svg>");
+    string IcBack   = "<line x1='19' y1='12' x2='5' y2='12'/><polyline points='12 19 5 12 12 5'/>";
+    string IcLayers = "<polygon points='12 2 2 7 12 12 22 7 12 2'/><polyline points='2 17 12 22 22 17'/><polyline points='2 12 12 17 22 12'/>";
+    string IcDown   = "<polyline points='23 18 13.5 8.5 8.5 13.5 1 6'/><polyline points='17 18 23 18 23 12'/>";
+    string IcUp     = "<polyline points='23 6 13.5 15.5 8.5 10.5 1 18'/><polyline points='17 6 23 6 23 12'/>";
+    string IcChart  = "<line x1='18' y1='20' x2='18' y2='10'/><line x1='12' y1='20' x2='12' y2='4'/><line x1='6' y1='20' x2='6' y2='14'/>";
+    string IcAward  = "<circle cx='12' cy='8' r='7'/><polyline points='8.21 13.89 7 23 12 20 17 23 15.79 13.88'/>";
+    string IcClock  = "<circle cx='12' cy='12' r='10'/><polyline points='12 6 12 12 16 14'/>";
+    string IcCal    = "<rect x='3' y='4' width='18' height='18' rx='2' ry='2'/><line x1='16' y1='2' x2='16' y2='6'/><line x1='8' y1='2' x2='8' y2='6'/><line x1='3' y1='10' x2='21' y2='10'/>";
+    string IcZap    = "<polygon points='13 2 3 14 12 14 11 22 21 10 12 10 13 2'/>";
+    string IcCheck  = "<polyline points='20 6 9 17 4 12'/>";
+    string IcPin    = "<path d='M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0 1 18 0z'/><circle cx='12' cy='10' r='3'/>";
+    string IcCase   = "<rect x='2' y='7' width='20' height='14' rx='2' ry='2'/><path d='M16 21V5a2 2 0 0 0-2-2h-4a2 2 0 0 0-2 2v16'/>";
+    string IcMsg    = "<path d='M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z'/>";
+    string IcChev   = "<polyline points='6 9 12 15 18 9'/>";
+    string IcUser   = "<path d='M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2'/><circle cx='12' cy='7' r='4'/>";
+    string IcInbox  = "<polyline points='22 12 16 12 14 15 10 15 8 12 2 12'/><path d='M5.45 5.11 2 12v6a2 2 0 0 0 2 2h16a2 2 0 0 0 2-2v-6l-3.45-6.89A2 2 0 0 0 16.76 4H7.24a2 2 0 0 0-1.79 1.11z'/>";
+    string IcShield = "<path d='M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z'/><polyline points='9 11.5 11 13.5 15 9.5'/>";
+    string IcSpark  = "<path d='M12 3v1m0 16v1M4.22 4.22l.7.7m12.16 12.16l.7.7M3 12h1m16 0h1M4.22 19.78l.7-.7M18.36 5.64l.7-.7'/><circle cx='12' cy='12' r='4'/>";
 }
 @section Styles {
 <style>
-.compare-page { padding:var(--space-10) 0 var(--space-20); }
-.compare-hero { background:linear-gradient(135deg,var(--primary-50) 0%,white 60%,var(--accent-50) 100%); padding:var(--space-10) 0; border-bottom:1px solid var(--color-border-subtle); margin-bottom:var(--space-8); }
-/* Stats ribbon */
-.stats-ribbon { display:grid; grid-template-columns:repeat(auto-fit,minmax(120px,1fr)); gap:var(--space-4); background:white; border:1px solid var(--color-border-subtle); border-radius:var(--radius-2xl); padding:var(--space-6); margin-bottom:var(--space-6); }
-.ribbon-stat { text-align:center; }
-.ribbon-stat__val { font-size:var(--text-2xl); font-weight:var(--font-extrabold); color:var(--primary-700); line-height:1; margin-bottom:var(--space-1); }
-.ribbon-stat__lbl { font-size:var(--text-xs); color:var(--color-text-tertiary); }
-/* Recommendation card */
-.recommend-card {
-    background:linear-gradient(135deg,var(--primary-50) 0%,var(--accent-50) 100%);
-    border:2px solid var(--warning-300); border-radius:var(--radius-2xl);
-    padding:var(--space-7); margin-bottom:var(--space-6); position:relative; overflow:hidden;
+/* ═══════════════ میدان انتخاب — معماری جدید ═══════════════ */
+.arena-wrap { padding: 104px 0 var(--space-16); min-height: 100vh; background:
+    radial-gradient(900px 400px at 100% -5%, var(--primary-50) 0%, transparent 60%),
+    radial-gradient(700px 350px at -10% 20%, var(--accent-50) 0%, transparent 55%);
 }
-.recommend-card::before { content:''; position:absolute; top:-10px; right:-10px; width:80px; height:80px; background:rgba(234,179,8,.1); border-radius:50%; pointer-events:none; }
-.winner-tag { display:inline-flex; align-items:center; gap:var(--space-2); padding:var(--space-1-5) var(--space-4); background:linear-gradient(135deg,var(--warning-500),var(--primary-600)); color:white; border-radius:var(--radius-full); font-size:var(--text-xs); font-weight:var(--font-bold); margin-bottom:var(--space-4); }
-/* Proposal card */
-.proposal-card { background:white; border:1.5px solid var(--color-border-subtle); border-radius:var(--radius-2xl); padding:var(--space-6); height:100%; display:flex; flex-direction:column; transition:all .25s; }
-.proposal-card:hover { box-shadow:var(--shadow-lg); border-color:var(--primary-200); transform:translateY(-4px); }
-.proposal-card.accepted { border-color:var(--success-400); background:var(--success-50); }
-/* View toggle */
-.view-toggle-pill { display:inline-flex; background:var(--gray-100); border-radius:var(--radius-full); padding:3px; }
-.view-toggle-btn { padding:var(--space-1-5) var(--space-4); border-radius:var(--radius-full); border:none; background:none; font-size:var(--text-sm); font-weight:var(--font-semibold); color:var(--color-text-secondary); cursor:pointer; transition:all .2s; }
-.view-toggle-btn.active { background:white; color:var(--primary-700); box-shadow:var(--shadow-sm); }
-/* Table best value cell */
-.best-cell { background:var(--success-500); color:white; padding:var(--space-1) var(--space-2); border-radius:var(--radius-md); font-weight:var(--font-bold); font-size:var(--text-xs); }
+.arena { display: grid; grid-template-columns: 300px minmax(0, 1fr); gap: var(--space-6); align-items: start; }
+
+/* ── پنل کناری تیره (راست) ── */
+.arena__panel {
+    position: sticky; top: 90px;
+    background: linear-gradient(165deg, var(--primary-900) 0%, var(--primary-800) 70%, #5a4836 100%);
+    color: #fff; border-radius: var(--radius-2xl); padding: var(--space-6);
+    overflow: hidden;
+}
+.arena__panel::before {
+    content: ''; position: absolute; inset-inline-start: -40px; top: -60px;
+    width: 160px; height: 160px; border-radius: 50%;
+    background: radial-gradient(circle, rgba(184,148,86,.28) 0%, transparent 70%); pointer-events: none;
+}
+.apanel__back {
+    display: inline-flex; align-items: center; gap: var(--space-2);
+    color: rgba(255,255,255,.65); font-size: var(--text-xs); font-weight: var(--font-semibold);
+    text-decoration: none; margin-bottom: var(--space-4); transition: color .2s;
+}
+.apanel__back:hover { color: var(--primary-300); }
+.apanel__title { font-size: var(--text-xl); font-weight: var(--font-black); letter-spacing: -.02em; margin: 0 0 var(--space-1); }
+.apanel__req   { font-size: var(--text-xs); color: rgba(255,255,255,.6); margin: 0 0 var(--space-4); line-height: 1.7; }
+.apanel__state {
+    display: inline-flex; align-items: center; gap: 6px; font-size: 11px; font-weight: var(--font-bold);
+    padding: 5px 12px; border-radius: var(--radius-full); margin-bottom: var(--space-4);
+}
+.apanel__state--open     { background: rgba(234,179,8,.16); color: var(--warning-100); }
+.apanel__state--closed   { background: rgba(34,197,94,.16); color: var(--success-100); }
+.apanel__divider { height: 1px; background: rgba(255,255,255,.1); margin: var(--space-2) 0; }
+.astat { display: flex; align-items: center; gap: var(--space-3); padding: var(--space-3) 0; }
+.astat__ic {
+    width: 38px; height: 38px; border-radius: var(--radius-lg); flex-shrink: 0;
+    background: rgba(184,148,86,.16); color: var(--primary-300);
+    display: flex; align-items: center; justify-content: center; font-size: 1rem;
+}
+.astat__val { font-size: 1.05rem; font-weight: var(--font-extrabold); line-height: 1.3; color: #fff; }
+.astat__lbl { font-size: 10.5px; color: rgba(255,255,255,.55); }
+
+/* ── ناحیه اصلی ── */
+.arena__main { min-width: 0; }
+
+/* انتخاب هوشمند */
+.pick {
+    display: flex; align-items: center; gap: var(--space-4); flex-wrap: wrap;
+    background: linear-gradient(120deg, var(--primary-800) 0%, var(--primary-600) 100%);
+    color: #fff; border-radius: var(--radius-2xl); padding: var(--space-4) var(--space-5);
+    position: relative; overflow: hidden; margin-bottom: var(--space-5);
+}
+.pick::after {
+    content: ''; position: absolute; inset-inline-end: -35px; top: -35px;
+    width: 130px; height: 130px; border-radius: 50%; background: rgba(252,86,71,.14); pointer-events: none;
+}
+.pick__tag {
+    display: inline-flex; align-items: center; gap: 6px; font-size: 11px; font-weight: var(--font-bold);
+    background: rgba(252,86,71,.9); padding: 4px 12px; border-radius: var(--radius-full);
+}
+.pick__body { display: flex; align-items: center; gap: var(--space-3); flex: 1; min-width: 200px; position: relative; z-index: 1; flex-wrap: wrap; }
+.pick__name { font-weight: var(--font-extrabold); font-size: var(--text-base); }
+.pick__meta { font-size: 11px; color: rgba(255,255,255,.65); }
+.pick__price { font-size: var(--text-2xl); font-weight: var(--font-black); color: var(--primary-200); line-height: 1; }
+.pick__price small { font-size: 10px; font-weight: var(--font-semibold); color: rgba(255,255,255,.55); }
+.pick .btn { position: relative; z-index: 1; }
+
+/* نوار مرتب‌سازی */
+.sortbar { display: flex; align-items: center; gap: var(--space-2); flex-wrap: wrap; margin-bottom: var(--space-4); }
+.sortbar__lbl { font-size: var(--text-xs); color: var(--color-text-tertiary); display: inline-flex; align-items: center; gap: 5px; }
+.sort-chip {
+    display: inline-flex; align-items: center; gap: 6px; cursor: pointer;
+    padding: 6px 14px; border-radius: var(--radius-full); border: 1px solid var(--color-border-subtle);
+    background: #fff; color: var(--color-text-secondary); font-size: var(--text-xs); font-weight: var(--font-bold);
+    transition: all .2s;
+}
+.sort-chip:hover { border-color: var(--primary-300); color: var(--primary-700); }
+.sort-chip.is-active { background: var(--primary-700); border-color: var(--primary-700); color: #fff; }
+.sortbar__count { margin-inline-start: auto; font-size: var(--text-xs); color: var(--color-text-tertiary); }
+
+/* ── ردیف‌های لیدربورد ── */
+.board { display: flex; flex-direction: column; gap: var(--space-4); }
+.prow {
+    display: grid; grid-template-columns: 54px minmax(0, 1fr) 230px; gap: var(--space-4);
+    background: #fff; border: 1.5px solid var(--color-border-subtle);
+    border-radius: var(--radius-2xl); padding: var(--space-5);
+    position: relative; transition: transform .25s var(--ease-spring), box-shadow .25s, border-color .25s;
+    animation: rowIn .5s var(--ease-out) both;
+}
+.prow:nth-child(1) { animation-delay: .02s; } .prow:nth-child(2) { animation-delay: .08s; }
+.prow:nth-child(3) { animation-delay: .14s; } .prow:nth-child(4) { animation-delay: .2s; }
+.prow:nth-child(5) { animation-delay: .26s; } .prow:nth-child(n+6) { animation-delay: .32s; }
+@@keyframes rowIn { from { opacity: 0; transform: translateY(14px); } to { opacity: 1; transform: none; } }
+.prow:hover { transform: translateY(-3px); box-shadow: var(--shadow-lg); border-color: var(--primary-200); }
+.prow.is-best::before {
+    content: ''; position: absolute; inset-block: 14px; inset-inline-start: -1.5px; width: 4px;
+    background: var(--gradient-primary); border-radius: 999px 0 0 999px;
+}
+.prow.is-accepted { background: var(--success-50); border-color: var(--success-500); }
+
+/* شماره رتبه */
+.prow__rank {
+    display: flex; flex-direction: column; align-items: center; gap: 6px; padding-top: 2px;
+}
+.rank-num {
+    font-size: 1.9rem; font-weight: var(--font-black); line-height: 1;
+    color: var(--gray-200); font-variant-numeric: tabular-nums;
+}
+.prow.is-best .rank-num { color: var(--primary-500); }
+.rank-lbl { font-size: 9.5px; color: var(--color-text-tertiary); font-weight: var(--font-bold); }
+
+/* بدنه ردیف */
+.prow__main { min-width: 0; }
+.prow__head { display: flex; align-items: flex-start; gap: var(--space-3); flex-wrap: wrap; margin-bottom: var(--space-3); }
+.pavatar {
+    width: 48px; height: 48px; border-radius: var(--radius-lg); flex-shrink: 0;
+    background: var(--gradient-primary); color: #fff;
+    display: flex; align-items: center; justify-content: center;
+    font-size: 1.15rem; font-weight: var(--font-extrabold);
+}
+.prow.is-accepted .pavatar { background: linear-gradient(135deg, var(--success-500), var(--success-700)); }
+.pname { display: flex; align-items: center; gap: 6px; font-weight: var(--font-extrabold); color: var(--gray-900); text-decoration: none; font-size: var(--text-base); }
+.pname:hover { color: var(--primary-700); }
+.pname .verified { color: var(--primary-500); display: inline-flex; }
+.pstars { display: inline-flex; align-items: center; gap: 1.5px; color: var(--warning-500); }
+.pstars .off { color: var(--gray-200); }
+.pstars b { font-size: 11px; color: var(--color-text-secondary); margin-inline-start: 4px; font-weight: var(--font-bold); }
+.pmeta { display: flex; align-items: center; gap: var(--space-3); flex-wrap: wrap; font-size: 11px; color: var(--color-text-tertiary); }
+.pmeta span { display: inline-flex; align-items: center; gap: 4px; }
+.pmeta svg { color: var(--primary-500); }
+
+/* نشان‌ها */
+.ptag {
+    display: inline-flex; align-items: center; gap: 4px; font-size: 10px; font-weight: var(--font-bold);
+    padding: 3px 10px; border-radius: var(--radius-full);
+}
+.ptag--best     { background: var(--primary-100); color: var(--primary-700); }
+.ptag--top      { background: var(--warning-100); color: var(--warning-700); }
+.ptag--chosen   { background: var(--success-100); color: var(--success-700); }
+.ptag--rejected { background: var(--error-100); color: var(--error-600); }
+
+/* چیپ‌های مشخصات */
+.pchips { display: flex; gap: var(--space-2); flex-wrap: wrap; margin-bottom: var(--space-3); }
+.pchip {
+    display: inline-flex; align-items: center; gap: 6px;
+    padding: 4px 11px; border-radius: var(--radius-full);
+    background: var(--gray-50); border: 1px solid var(--color-border-subtle);
+    font-size: 11px; color: var(--color-text-secondary); font-weight: var(--font-semibold);
+}
+.pchip svg { color: var(--primary-600); }
+
+/* نوار بازه قیمت */
+.prange { margin-bottom: var(--space-2); }
+.prange__head { display: flex; justify-content: space-between; font-size: 9.5px; color: var(--color-text-tertiary); margin-bottom: 5px; }
+.prange__track { position: relative; height: 6px; border-radius: 999px; background: var(--gray-100); }
+.prange__fill { position: absolute; inset-block: 0; inset-inline-start: 0; border-radius: 999px; background: var(--gradient-primary); opacity: .3; }
+.prange__dot {
+    position: absolute; top: 50%; width: 14px; height: 14px; border-radius: 50%;
+    background: var(--accent-500); border: 3px solid #fff; box-shadow: 0 1px 5px rgba(0,0,0,.25);
+    transform: translate(50%, -50%);
+}
+
+/* پیام بازشدنی */
+.pmsg summary {
+    list-style: none; cursor: pointer; display: inline-flex; align-items: center; gap: 6px;
+    font-size: 11.5px; font-weight: var(--font-bold); color: var(--primary-700); user-select: none;
+}
+.pmsg summary::-webkit-details-marker { display: none; }
+.pmsg summary svg:first-child { color: var(--primary-500); }
+.pmsg .chev { transition: transform .25s; color: var(--color-text-tertiary); }
+.pmsg[open] .chev { transform: rotate(180deg); }
+.pmsg__body {
+    margin-top: var(--space-2); padding: var(--space-3); font-size: var(--text-xs); line-height: 1.8;
+    background: var(--primary-50); border-inline-start: 3px solid var(--primary-300);
+    border-radius: 0 var(--radius-md) var(--radius-md) 0; color: var(--color-text-secondary);
+}
+
+/* ستون قیمت و اقدام */
+.prow__side {
+    display: flex; flex-direction: column; align-items: stretch; justify-content: center; gap: var(--space-2);
+    border-inline-start: 1px dashed var(--color-border-subtle); padding-inline-start: var(--space-4);
+}
+.pprice { text-align: center; }
+.pprice__val { font-size: var(--text-2xl); font-weight: var(--font-black); color: var(--primary-700); line-height: 1.1; font-variant-numeric: tabular-nums; }
+.pprice__val.is-best { color: var(--success-600); }
+.pprice__unit { font-size: 10px; color: var(--color-text-tertiary); font-weight: var(--font-semibold); }
+.prow.is-accepted .pprice__val { color: var(--success-700); }
+
+/* حالت خالی */
+.empty-arena {
+    border: 2px dashed var(--color-border-strong); border-radius: var(--radius-2xl);
+    padding: var(--space-12) var(--space-6); text-align: center; background: rgba(255,255,255,.6);
+}
+.empty-arena__ic {
+    width: 72px; height: 72px; margin: 0 auto var(--space-4); border-radius: var(--radius-2xl);
+    background: var(--primary-100); color: var(--primary-600);
+    display: flex; align-items: center; justify-content: center; font-size: 2rem;
+}
+.empty-arena__title { font-size: var(--text-lg); font-weight: var(--font-extrabold); margin-bottom: var(--space-2); }
+.empty-arena__desc { font-size: var(--text-sm); color: var(--color-text-secondary); margin-bottom: var(--space-5); }
+
+/* واکنش‌گرا */
+@@media (max-width: 1024px) {
+    .arena { grid-template-columns: 1fr; }
+    .arena__panel { position: static; }
+    .astats-grid { display: grid; grid-template-columns: 1fr 1fr; }
+}
+@@media (max-width: 768px) {
+    .arena-wrap { padding-top: 92px; }
+    .prow { grid-template-columns: minmax(0,1fr); }
+    .prow__rank { flex-direction: row; justify-content: flex-end; align-items: center; order: -1; }
+    .prow__side { border-inline-start: none; padding-inline-start: 0; border-top: 1px dashed var(--color-border-subtle); padding-top: var(--space-3); }
+    .astats-grid { grid-template-columns: 1fr; }
+    .pick__price { font-size: var(--text-xl); }
+}
 </style>
 }
 
-<div class="compare-hero">
+<div class="arena-wrap">
     <div class="hs-container">
-        <nav style="font-size:var(--text-sm);color:var(--color-text-tertiary);margin-bottom:var(--space-4);">
-            <a asp-controller="Home" asp-action="Index" style="color:inherit;text-decoration:none;">خانه</a> /
-            <a asp-controller="ServiceRequests" asp-action="Details" asp-route-id="@request?.Id" style="color:inherit;text-decoration:none;">@request?.Title</a> /
-            <span>مقایسه پیشنهادها</span>
-        </nav>
-        <div style="display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:var(--space-4);">
-            <div data-reveal="up">
-                <h1 style="font-size:clamp(1.75rem,3vw,2.5rem);font-weight:var(--font-black);letter-spacing:-.03em;margin-bottom:var(--space-2);">مقایسه پیشنهادها</h1>
-                <p style="color:var(--color-text-secondary);font-size:var(--text-base);margin:0;">@request?.Title</p>
-            </div>
-            @if (!canChoose)
-            {
-                <span class="badge badge--success" style="font-size:var(--text-sm);padding:var(--space-2) var(--space-4);">پیشنهاد انتخاب شده است</span>
-            }
-            else if (Model.Any())
-            {
-                <div class="view-toggle-pill" data-reveal="up">
-                    <button class="view-toggle-btn active" id="btnCards" onclick="switchView('cards')">▦ کارت‌ها</button>
-                    <button class="view-toggle-btn"        id="btnTable" onclick="switchView('table')">☰ جدول</button>
-                </div>
-            }
-        </div>
-    </div>
-</div>
+        <div class="arena">
 
-<div class="compare-page">
-    <div class="hs-container">
-        @if (!Model.Any())
-        {
-            <div class="empty-state">
-                <div class="empty-state__icon">⏳</div>
-                <div class="empty-state__title">هنوز پیشنهادی دریافت نشده</div>
-                <p class="empty-state__desc">به محض ارسال پیشنهاد توسط کارشناسان اینجا نمایش داده می‌شود.</p>
-                <a asp-controller="ServiceRequests" asp-action="Details" asp-route-id="@request?.Id" class="btn btn-primary">بازگشت به درخواست</a>
-            </div>
-        }
-        else
-        {
-            @* Stats ribbon *@
-            <div class="stats-ribbon" data-stagger>
-                <div class="ribbon-stat" data-reveal="up">
-                    <div class="ribbon-stat__val" data-counter="@Model.Count">@Model.Count</div>
-                    <div class="ribbon-stat__lbl">پیشنهاد دریافتی</div>
-                </div>
-                <div class="ribbon-stat" data-reveal="up">
-                    <div class="ribbon-stat__val">@bestPrice.ToString("N0")</div>
-                    <div class="ribbon-stat__lbl">کمترین قیمت (ت)</div>
-                </div>
-                <div class="ribbon-stat" data-reveal="up">
-                    <div class="ribbon-stat__val">@Model.Max(p=>p.Price).ToString("N0")</div>
-                    <div class="ribbon-stat__lbl">بیشترین قیمت (ت)</div>
-                </div>
-                <div class="ribbon-stat" data-reveal="up">
-                    <div class="ribbon-stat__val">@((int)Model.Average(p=>p.Price)).ToString("N0")</div>
-                    <div class="ribbon-stat__lbl">میانگین قیمت (ت)</div>
-                </div>
-            </div>
+            @* ═══════════ پنل کناری تیره ═══════════ *@
+            <aside class="arena__panel">
+                <a class="apanel__back" asp-controller="ServiceRequests" asp-action="Details" asp-route-id="@request?.Id">
+                    @Ico(IcBack) بازگشت به درخواست
+                </a>
+                <h1 class="apanel__title">میدان انتخاب</h1>
+                <p class="apanel__req">@request?.Title</p>
 
-            @* Recommendation *@
-            @if (recommended != null && canChoose)
-            {
-                var re = experts.ContainsKey(recommended.ExpertId) ? experts[recommended.ExpertId] : null;
-                <div class="recommend-card" data-reveal="up">
-                    <div class="winner-tag">
-                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="width:14px;height:14px;"><polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"/></svg>
-                        پیشنهاد برتر هوشمند
-                    </div>
-                    <div style="display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:var(--space-5);">
-                        <div style="display:flex;align-items:center;gap:var(--space-4);">
-                            <div style="width:64px;height:64px;border-radius:50%;background:var(--gradient-primary);color:white;display:flex;align-items:center;justify-content:center;font-size:1.75rem;font-weight:var(--font-bold);flex-shrink:0;">
-                                @(recommended.ExpertBusinessName?.FirstOrDefault() ?? 'P')
-                            </div>
+                <span class="apanel__state apanel__state--@(canChoose ? "open" : "closed")">
+                    @Ico(canChoose ? IcSpark : IcCheck)
+                    @(canChoose ? "در انتظار انتخاب شما" : "این درخواست نهایی شده است")
+                </span>
+
+                <div class="apanel__divider"></div>
+
+                @if (Model.Any())
+                {
+                    <div class="astats-grid">
+                        <div class="astat">
+                            <span class="astat__ic">@Ico(IcLayers)</span>
                             <div>
-                                <div style="font-size:var(--text-lg);font-weight:var(--font-bold);margin-bottom:var(--space-1);">@(recommended.ExpertBusinessName ?? "کارشناس")</div>
-                                @if (re != null)
-                                {
-                                    <div style="display:flex;gap:2px;margin-bottom:var(--space-1);">
-                                        @for (int i=1;i<=5;i++) { <span style="color:@(i<=Math.Round(re.RatingAverage)?"var(--warning-500)":"var(--gray-300)");">★</span> }
-                                        <span style="font-size:var(--text-sm);font-weight:var(--font-semibold);margin-right:var(--space-1);">@re.RatingAverage.ToString("0.0")</span>
-                                    </div>
-                                    <div style="font-size:var(--text-xs);color:var(--color-text-secondary);">@re.JobsCompleted کار · @re.City</div>
-                                }
+                                <div class="astat__val" data-counter="@Model.Count">@Model.Count</div>
+                                <div class="astat__lbl">پیشنهاد دریافتی</div>
                             </div>
                         </div>
-                        <div style="text-align:left;">
-                            <div style="font-size:var(--text-3xl);font-weight:var(--font-black);color:var(--primary-700);line-height:1;">@recommended.Price.ToString("N0")</div>
-                            <div style="font-size:var(--text-xs);color:var(--color-text-tertiary);margin-bottom:var(--space-3);">تومان</div>
-                            <form asp-action="Accept" asp-route-proposalId="@recommended.Id" asp-route-requestId="@recommended.RequestId" method="post"
-                                  data-confirm="این پیشنهاد را انتخاب می‌کنید؟" data-confirm-ok="انتخاب">
-                                <button type="submit" class="btn btn-primary btn-lg">انتخاب این پیشنهاد</button>
-                            </form>
+                        <div class="astat">
+                            <span class="astat__ic">@Ico(IcDown)</span>
+                            <div>
+                                <div class="astat__val">@minP.ToString("N0")</div>
+                                <div class="astat__lbl">کمترین قیمت (تومان)</div>
+                            </div>
+                        </div>
+                        <div class="astat">
+                            <span class="astat__ic">@Ico(IcChart)</span>
+                            <div>
+                                <div class="astat__val">@avgP.ToString("N0")</div>
+                                <div class="astat__lbl">میانگین قیمت (تومان)</div>
+                            </div>
+                        </div>
+                        <div class="astat">
+                            <span class="astat__ic">@Ico(IcUp)</span>
+                            <div>
+                                <div class="astat__val">@maxP.ToString("N0")</div>
+                                <div class="astat__lbl">بیشترین قیمت (تومان)</div>
+                            </div>
                         </div>
                     </div>
-                    @if (!string.IsNullOrEmpty(recommended.Message))
+                }
+                else
+                {
+                    <div class="astat">
+                        <span class="astat__ic">@Ico(IcInbox)</span>
+                        <div>
+                            <div class="astat__val">—</div>
+                            <div class="astat__lbl">هنوز پیشنهادی ثبت نشده</div>
+                        </div>
+                    </div>
+                }
+            </aside>
+
+            @* ═══════════ ناحیه اصلی ═══════════ *@
+            <main class="arena__main">
+
+                @if (!Model.Any())
+                {
+                    <div class="empty-arena">
+                        <div class="empty-arena__ic">@Ico(IcInbox)</div>
+                        <div class="empty-arena__title">صندوق پیشنهادها خالی است</div>
+                        <p class="empty-arena__desc">به محض اینکه کارشناسان برای درخواست شما پیشنهاد ثبت کنند، همین‌جا به نمایش درمی‌آیند.</p>
+                        <a asp-controller="ServiceRequests" asp-action="Details" asp-route-id="@request?.Id" class="btn btn-primary">
+                            @Ico(IcBack) بازگشت به درخواست
+                        </a>
+                    </div>
+                }
+                else
+                {
+                    @* ── بنر انتخاب هوشمند ── *@
+                    @if (recommended != null && canChoose)
                     {
-                        <div style="margin-top:var(--space-5);padding:var(--space-4);background:rgba(255,255,255,.7);border-radius:var(--radius-xl);">
-                            <div style="font-size:var(--text-xs);font-weight:var(--font-bold);margin-bottom:var(--space-1);">پیام کارشناس:</div>
-                            <p style="font-size:var(--text-sm);color:var(--color-text-secondary);margin:0;line-height:1.6;">@recommended.Message</p>
+                        var re   = experts.ContainsKey(recommended.ExpertId) ? experts[recommended.ExpertId] : null;
+                        <div class="pick">
+                            <div class="pick__body">
+                                <span class="pick__tag">@Ico(IcAward) انتخاب هوشمند سامانه</span>
+                                <div>
+                                    <div class="pick__name">@(recommended.ExpertBusinessName ?? "کارشناس")</div>
+                                    @if (re != null)
+                                    {
+                                        <div class="pick__meta">
+                                            <span class="pstars">
+                                                @for (int i = 1; i <= 5; i++)
+                                                {
+                                                    <span class="@(i <= Math.Round(re.RatingAverage) ? "" : "off")">@Star(i <= Math.Round(re.RatingAverage))</span>
+                                                }
+                                                <b>@re.RatingAverage.ToString("0.0")</b>
+                                            </span>
+                                        </div>
+                                    }
+                                </div>
+                                <div style="flex:1;"></div>
+                                <div class="pick__price">
+                                    @recommended.Price.ToString("N0")
+                                    <small>تومان</small>
+                                </div>
+                                <form asp-action="Accept" asp-route-proposalId="@recommended.Id" asp-route-requestId="@recommended.RequestId" method="post"
+                                      data-confirm="این پیشنهاد را انتخاب می‌کنید؟" data-confirm-ok="انتخاب">
+                                    <button type="submit" class="btn btn-accent">@Ico(IcCheck) انتخاب نهایی</button>
+                                </form>
+                            </div>
                         </div>
                     }
-                </div>
-            }
 
-            @* Cards View *@
-            <div id="viewCards" data-stagger>
-                <div class="row g-4 row-cols-1 row-cols-md-2 row-cols-xl-3">
-                    @foreach (var p in Model)
-                    {
-                        var ex       = experts.ContainsKey(p.ExpertId) ? experts[p.ExpertId] : null;
-                        var accepted = p.Status == ProposalStatus.Accepted;
-                        var isBestP  = p.Price == bestPrice;
-                        var isBestR  = ex != null && ex.RatingAverage == bestRating;
-                        <div class="col" data-reveal="up">
-                            <div class="proposal-card @(accepted?"accepted":"")">
-                                <div style="display:flex;flex-wrap:wrap;gap:var(--space-1);margin-bottom:var(--space-4);">
-                                    @if (accepted)   { <span class="badge badge--success">انتخاب شده</span> }
-                                    @if (p.Status == ProposalStatus.Rejected) { <span class="badge badge--error">رد شده</span> }
-                                    @if (isBestP)    { <span class="badge badge--success">بهترین قیمت</span> }
-                                    @if (isBestR)    { <span class="badge badge--warning">⭐ بالاترین امتیاز</span> }
+                    @* ── نوار مرتب‌سازی ── *@
+                    <div class="sortbar">
+                        <span class="sortbar__lbl">@Ico(IcSpark) ترتیب نمایش:</span>
+                        <button type="button" class="sort-chip is-active" data-sort="price"  data-dir="1">@Ico(IcDown) ارزان‌ترین</button>
+                        <button type="button" class="sort-chip" data-sort="price" data-dir="-1">@Ico(IcUp) گران‌ترین</button>
+                        <button type="button" class="sort-chip" data-sort="rating" data-dir="-1">@Ico(IcAward) بهترین امتیاز</button>
+                        <button type="button" class="sort-chip" data-sort="jobs" data-dir="-1">@Ico(IcCase) باسابقه‌ترین</button>
+                        <span class="sortbar__count">@Model.Count پیشنهاد</span>
+                    </div>
+
+                    @* ── لیدربورد ── *@
+                    <div class="board" id="arenaBoard">
+                        @foreach (var p in Model.OrderBy(x => x.Price))
+                        {
+                            var ex       = experts.ContainsKey(p.ExpertId) ? experts[p.ExpertId] : null;
+                            var accepted = p.Status == ProposalStatus.Accepted;
+                            var rejected = p.Status == ProposalStatus.Rejected;
+                            var isBestP  = Model.Count() > 1 && p.Price == minP && !accepted;
+                            var isBestR  = ex != null && ex.RatingAverage == bestRating && bestRating > 0;
+                            var rating   = ex?.RatingAverage ?? 0;
+                            var pos      = spread > 0 ? (double)(p.Price - minP) / spread * 100 : 50;
+                            var rank     = rankByPrice.ContainsKey(p.Id) ? rankByPrice[p.Id] : 0;
+
+                            <article class="prow @(isBestP ? "is-best" : "") @(accepted ? "is-accepted" : "")"
+                                     data-price="@((double)p.Price)" data-rating="@rating.ToString("0.0", System.Globalization.CultureInfo.InvariantCulture)" data-jobs="@(ex?.JobsCompleted ?? 0)">
+
+                                @* رتبه *@
+                                <div class="prow__rank">
+                                    <span class="rank-num">@rank</span>
+                                    <span class="rank-lbl">رتبه قیمت</span>
                                 </div>
-                                <div style="display:flex;align-items:center;gap:var(--space-3);margin-bottom:var(--space-4);">
-                                    <div style="width:52px;height:52px;border-radius:50%;background:var(--gradient-primary);color:white;display:flex;align-items:center;justify-content:center;font-size:1.25rem;font-weight:var(--font-bold);flex-shrink:0;">
-                                        @(p.ExpertBusinessName?.FirstOrDefault() ?? 'P')
+
+                                @* بدنه *@
+                                <div class="prow__main">
+                                    <div class="prow__head">
+                                        <div class="pavatar">@(p.ExpertBusinessName?.FirstOrDefault() ?? 'ک')</div>
+                                        <div style="min-width:0;">
+                                            <a class="pname" asp-controller="Experts" asp-action="Details" asp-route-id="@ex?.Id">
+                                                @(p.ExpertBusinessName ?? "کارشناس")
+                                                @if (ex?.IsVerified == true)
+                                                {
+                                                    <span class="verified" title="کارشناس تأییدشده">@Ico(IcShield)</span>
+                                                }
+                                            </a>
+                                            @if (ex != null)
+                                            {
+                                                <div class="pstars">
+                                                    @for (int i = 1; i <= 5; i++)
+                                                    {
+                                                        <span class="@(i <= Math.Round(ex.RatingAverage) ? "" : "off")">@Star(i <= Math.Round(ex.RatingAverage))</span>
+                                                    }
+                                                    <b>@ex.RatingAverage.ToString("0.0")</b>
+                                                </div>
+                                                <div class="pmeta">
+                                                    @if (!string.IsNullOrEmpty(ex.City))
+                                                    {
+                                                        <span>@Ico(IcPin) @ex.City</span>
+                                                    }
+                                                    <span>@Ico(IcCase) @ex.JobsCompleted کار موفق</span>
+                                                </div>
+                                            }
+                                        </div>
+                                        <div style="display:flex;gap:5px;flex-wrap:wrap;">
+                                            @if (accepted) { <span class="ptag ptag--chosen">@Ico(IcCheck) انتخاب شده</span> }
+                                            @if (rejected) { <span class="ptag ptag--rejected">رد شده</span> }
+                                            @if (isBestP)  { <span class="ptag ptag--best">@Ico(IcDown) بهترین قیمت</span> }
+                                            @if (isBestR && !accepted) { <span class="ptag ptag--top">@Ico(IcAward) بالاترین امتیاز</span> }
+                                        </div>
                                     </div>
-                                    <div>
-                                        <a asp-controller="Experts" asp-action="Details" asp-route-id="@ex?.Id" style="font-weight:var(--font-bold);text-decoration:none;color:var(--gray-900);display:block;">
-                                            @(p.ExpertBusinessName ?? "کارشناس")
-                                        </a>
-                                        @if (ex != null)
+
+                                    @* چیپ‌های مشخصات *@
+                                    <div class="pchips">
+                                        @if (p.EstimatedDurationHours.HasValue)
                                         {
-                                            <div style="display:flex;gap:1px;margin:2px 0;">
-                                                @for(int i=1;i<=5;i++){<span style="color:@(i<=Math.Round(ex.RatingAverage)?"var(--warning-500)":"var(--gray-200)");">★</span>}
-                                                <span style="font-size:var(--text-xs);font-weight:var(--font-semibold);margin-right:4px;">@ex.RatingAverage.ToString("0.0")</span>
-                                            </div>
-                                            <div style="font-size:var(--text-xs);color:var(--color-text-tertiary);">@ex.JobsCompleted کار · @ex.City</div>
+                                            <span class="pchip">@Ico(IcClock) @p.EstimatedDurationHours ساعت کار</span>
                                         }
+                                        @if (p.AvailableStartDate.HasValue)
+                                        {
+                                            <span class="pchip">@Ico(IcCal) شروع از @p.AvailableStartDate.Value.ToPersianDate()</span>
+                                        }
+                                        @if (ex?.ResponseTimeMinutes != null)
+                                        {
+                                            <span class="pchip">@Ico(IcZap) پاسخ در @ex.ResponseTimeMinutes دقیقه</span>
+                                        }
+                                        <span class="pchip">@Ico(IcUser) ارسال @p.CreatedAt.ToPersianDate()</span>
                                     </div>
+
+                                    @* نوار جایگاه قیمت *@
+                                    <div class="prange">
+                                        <div class="prange__head">
+                                            <span>ارزان‌ترین @minP.ToString("N0") ت</span>
+                                            <span>جایگاه این پیشنهاد در دامنه قیمت‌ها</span>
+                                            <span>گران‌ترین @maxP.ToString("N0") ت</span>
+                                        </div>
+                                        <div class="prange__track">
+                                            <div class="prange__fill" style="width:@(pos.ToString("0", System.Globalization.CultureInfo.InvariantCulture))%"></div>
+                                            <div class="prange__dot" style="inset-inline-start:@(pos.ToString("0", System.Globalization.CultureInfo.InvariantCulture))%"></div>
+                                        </div>
+                                    </div>
+
+                                    @* پیام کارشناس *@
+                                    @if (!string.IsNullOrEmpty(p.Message))
+                                    {
+                                        <details class="pmsg">
+                                            <summary>
+                                                @Ico(IcMsg) پیام کارشناس
+                                                <span class="chev">@Ico(IcChev)</span>
+                                            </summary>
+                                            <div class="pmsg__body">@p.Message</div>
+                                        </details>
+                                    }
                                 </div>
-                                <div style="display:flex;flex-direction:column;gap:var(--space-2);font-size:var(--text-sm);margin-bottom:var(--space-4);">
-                                    <div style="display:flex;justify-content:space-between;">
-                                        <span style="color:var(--color-text-secondary);">💰 قیمت</span>
-                                        <span style="font-weight:var(--font-bold);color:@(isBestP?"var(--success-600)":"var(--primary-700)");">@p.Price.ToString("N0") ت</span>
+
+                                @* قیمت و اقدام *@
+                                <div class="prow__side">
+                                    <div class="pprice">
+                                        <div class="pprice__val @(isBestP ? "is-best" : "")">@p.Price.ToString("N0")</div>
+                                        <div class="pprice__unit">تومان</div>
                                     </div>
-                                    @if (p.EstimatedDurationHours.HasValue)
-                                    {
-                                        <div style="display:flex;justify-content:space-between;">
-                                            <span style="color:var(--color-text-secondary);">⏱ مدت</span>
-                                            <span style="font-weight:var(--font-semibold);">@p.EstimatedDurationHours ساعت</span>
-                                        </div>
-                                    }
-                                    @if (p.AvailableStartDate.HasValue)
-                                    {
-                                        <div style="display:flex;justify-content:space-between;">
-                                            <span style="color:var(--color-text-secondary);">📅 شروع</span>
-                                            <span style="font-weight:var(--font-semibold);">@p.AvailableStartDate.Value.ToPersianDate()</span>
-                                        </div>
-                                    }
-                                    @if (ex?.ResponseTimeMinutes != null)
-                                    {
-                                        <div style="display:flex;justify-content:space-between;">
-                                            <span style="color:var(--color-text-secondary);">⚡ پاسخ</span>
-                                            <span style="font-weight:var(--font-semibold);">@ex.ResponseTimeMinutes دقیقه</span>
-                                        </div>
-                                    }
-                                </div>
-                                @if (!string.IsNullOrEmpty(p.Message))
-                                {
-                                    <div style="background:var(--gray-50);border-radius:var(--radius-lg);padding:var(--space-3);font-size:var(--text-xs);line-height:1.6;color:var(--color-text-secondary);margin-bottom:var(--space-4);">
-                                        <strong>پیام:</strong> @p.Message
-                                    </div>
-                                }
-                                <div style="margin-top:auto;">
                                     @if (canChoose && p.Status == ProposalStatus.Pending)
                                     {
                                         <form asp-action="Accept" asp-route-proposalId="@p.Id" asp-route-requestId="@p.RequestId" method="post"
-                                              data-confirm="این پیشنهاد را انتخاب می‌کنید؟ پس از انتخاب سفارش ایجاد می‌شود."
-                                              data-confirm-ok="انتخاب" style="margin-bottom:var(--space-2);">
-                                            <button type="submit" class="btn btn-primary btn-block">✓ انتخاب</button>
+                                              data-confirm="این پیشنهاد را انتخاب می‌کنید؟ پس از انتخاب، سفارش ایجاد می‌شود."
+                                              data-confirm-ok="انتخاب">
+                                            <button type="submit" class="btn btn-primary btn-block">@Ico(IcCheck) انتخاب</button>
                                         </form>
-                                        <a asp-controller="Experts" asp-action="Details" asp-route-id="@ex?.Id" class="btn btn-secondary btn-block">مشاهده پروفایل</a>
+                                        <a class="btn btn-secondary btn-block" asp-controller="Experts" asp-action="Details" asp-route-id="@ex?.Id" style="text-decoration:none;">
+                                            @Ico(IcUser) پروفایل
+                                        </a>
+                                    }
+                                    else if (accepted)
+                                    {
+                                        <span class="ptag ptag--chosen" style="justify-content:center;">@Ico(IcCheck) این پیشنهاد برگزیده شد</span>
                                     }
                                 </div>
-                            </div>
-                        </div>
-                    }
-                </div>
-            </div>
+                            </article>
+                        }
+                    </div>
+                }
+            </main>
 
-            @* Table View *@
-            <div id="viewTable" style="display:none;">
-                <div class="hs-table-wrap">
-                    <table class="hs-table">
-                        <thead>
-                            <tr>
-                                <th>کارشناس</th><th>امتیاز</th><th>قیمت</th>
-                                <th>مدت</th><th>شروع کار</th><th>پاسخ</th><th>تجربه</th><th>عملیات</th>
-                            </tr>
-                        </thead>
-                        <tbody>
-                            @foreach (var p in Model.OrderBy(p=>p.Price))
-                            {
-                                var ex      = experts.ContainsKey(p.ExpertId) ? experts[p.ExpertId] : null;
-                                var isBestP = p.Price == bestPrice;
-                                <tr>
-                                    <td>
-                                        <div style="display:flex;align-items:center;gap:var(--space-3);">
-                                            <div style="width:36px;height:36px;border-radius:50%;background:var(--gradient-primary);color:white;display:flex;align-items:center;justify-content:center;font-size:.875rem;font-weight:var(--font-bold);flex-shrink:0;">@(p.ExpertBusinessName?.FirstOrDefault()??(char)0)</div>
-                                            <div>
-                                                <a asp-controller="Experts" asp-action="Details" asp-route-id="@ex?.Id" style="font-weight:var(--font-semibold);text-decoration:none;color:var(--gray-900);">@(p.ExpertBusinessName??"کارشناس")</a>
-                                                @if (p.Status == ProposalStatus.Accepted) { <div><span class="badge badge--success" style="font-size:10px;">✓ انتخاب شده</span></div> }
-                                            </div>
-                                        </div>
-                                    </td>
-                                    <td>
-                                        @if (ex != null)
-                                        {
-                                            <div style="display:flex;gap:1px;">@for(int i=1;i<=5;i++){<span style="font-size:.85rem;color:@(i<=Math.Round(ex.RatingAverage)?"var(--warning-500)":"var(--gray-200)");">★</span>}</div>
-                                            <div style="font-size:var(--text-xs);font-weight:var(--font-semibold);">@ex.RatingAverage.ToString("0.0")</div>
-                                        }
-                                        else { <span style="color:var(--color-text-tertiary);">—</span> }
-                                    </td>
-                                    <td>
-                                        @if (isBestP) { <span class="best-cell">@p.Price.ToString("N0")</span> }
-                                        else { <span style="font-weight:var(--font-semibold);color:var(--primary-700);">@p.Price.ToString("N0")</span> }
-                                    </td>
-                                    <td>@(p.EstimatedDurationHours.HasValue?p.EstimatedDurationHours+" ساعت":"—")</td>
-                                    <td style="font-size:var(--text-xs);">@(p.AvailableStartDate.HasValue?p.AvailableStartDate.Value.ToPersianDate():"—")</td>
-                                    <td>@(ex?.ResponseTimeMinutes!=null?ex.ResponseTimeMinutes+" دقیقه":"—")</td>
-                                    <td>@(ex!=null?ex.JobsCompleted+" کار":"—")</td>
-                                    <td>
-                                        @if (canChoose && p.Status == ProposalStatus.Pending)
-                                        {
-                                            <form asp-action="Accept" asp-route-proposalId="@p.Id" asp-route-requestId="@p.RequestId" method="post"
-                                                  data-confirm="انتخاب این پیشنهاد؟" data-confirm-ok="انتخاب">
-                                                <button type="submit" class="btn btn-primary btn-sm">انتخاب</button>
-                                            </form>
-                                        }
-                                        else if (p.Status == ProposalStatus.Accepted)
-                                        {
-                                            <span style="color:var(--success-600);font-size:var(--text-xs);font-weight:var(--font-semibold);">✓ انتخاب شده</span>
-                                        }
-                                    </td>
-                                </tr>
-                            }
-                        </tbody>
-                    </table>
-                </div>
-            </div>
-        }
+        </div>
     </div>
 </div>
 
 @section Scripts {
 <script>
-function switchView(v){
-    document.getElementById('viewCards').style.display=v==='cards'?'':'none';
-    document.getElementById('viewTable').style.display=v==='table'?'':'none';
-    document.getElementById('btnCards').classList.toggle('active',v==='cards');
-    document.getElementById('btnTable').classList.toggle('active',v==='table');
-    localStorage.setItem('cmp-view',v);
-}
-(function(){var s=localStorage.getItem('cmp-view');if(s==='table')switchView('table');})();
+(function () {
+    var board = document.getElementById('arenaBoard');
+    if (!board) return;
+
+    var chips = document.querySelectorAll('.sort-chip[data-sort]');
+    chips.forEach(function (btn) {
+        btn.addEventListener('click', function () {
+            chips.forEach(function (b) { b.classList.remove('is-active'); });
+            btn.classList.add('is-active');
+            var key = btn.dataset.sort, dir = +btn.dataset.dir || 1;
+            var rows = Array.prototype.slice.call(board.children);
+            rows.sort(function (a, b) {
+                return ((parseFloat(a.dataset[key]) || 0) - (parseFloat(b.dataset[key]) || 0)) * dir;
+            });
+            rows.forEach(function (r) { board.appendChild(r); });
+        });
+    });
+})();
 </script>
 }

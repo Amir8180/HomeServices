@@ -1,0 +1,62 @@
+@model PagedResult<ExpertPayoutDto>
+@using HomeServices.Mvc.Extensions
+@{
+    ViewData["Title"] = "پرداخت‌های دریافتی";
+}
+@section Styles {
+<style>
+.payouts-page { padding:var(--space-6) 0 var(--space-20); }
+.payout-table { width:100%;border-collapse:collapse;font-size:var(--text-sm); }
+.payout-table th { background:var(--gray-50);padding:var(--space-3);text-align:right;font-weight:var(--font-semibold);color:var(--color-text-tertiary);border-bottom:2px solid var(--color-border-subtle); }
+.payout-table td { padding:var(--space-3);border-bottom:1px solid var(--color-border-subtle); }
+.payout-table tr:hover { background:var(--gray-50); }
+.payout-amount { font-weight:var(--font-bold);color:var(--success-600); }
+</style>
+}
+<div class="payouts-page">
+    <div class="hs-container">
+        <h2 style="font-size:var(--text-xl);font-weight:var(--font-black);margin-bottom:var(--space-6);">پرداخت‌های دریافتی</h2>
+
+        @if (Model.Items.Count == 0)
+        {
+            <div class="text-center py-5" style="color:var(--color-text-tertiary);">هنوز پرداختی ثبت نشده است.</div>
+        }
+        else
+        {
+            <div class="admin-card">
+                <div style="overflow-x:auto;">
+                    <table class="payout-table">
+                        <thead><tr>
+                            <th>شماره فاکتور</th><th>سفارش</th><th>خدمت</th><th>مبلغ کل</th><th>کمیسیون</th><th>مبلغ دریافتی</th><th>تاریخ</th><th>جزئیات</th>
+                        </tr></thead>
+                        <tbody>
+                            @foreach (var p in Model.Items)
+                            {
+                                <tr>
+                                    <td><strong>@p.PayoutNumber</strong></td>
+                                    <td>@p.OrderNumber</td>
+                                    <td>@p.ServiceTitle</td>
+                                    <td>@p.GrossAmount.ToString("N0") تومان</td>
+                                    <td style="color:var(--warning-600);">@p.CommissionAmount.ToString("N0") تومان (@(p.CommissionPercent)% )</td>
+                                    <td class="payout-amount">@p.NetAmount.ToString("N0") تومان</td>
+                                    <td>@(p.PaidAt?.ToPersianDate() ?? "—")</td>
+                                    <td><a asp-action="PayoutInvoice" asp-route-id="@p.Id" class="btn btn-sm btn-outline-primary">فاکتور</a></td>
+                                </tr>
+                            }
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+            @if (Model.TotalCount > Model.PageSize)
+            {
+                var totalPages = (int)Math.Ceiling(Model.TotalCount / (double)Model.PageSize);
+                <div style="display:flex;gap:8px;justify-content:center;margin-top:var(--space-5);">
+                    @for (var i = 1; i <= totalPages && i <= 10; i++)
+                    {
+                        <a asp-action="Payouts" asp-route-page="@i" class="btn btn-sm @(i == Model.PageNumber ? "btn-primary" : "btn-outline-secondary")">@i</a>
+                    }
+                </div>
+            }
+        }
+    </div>
+</div>

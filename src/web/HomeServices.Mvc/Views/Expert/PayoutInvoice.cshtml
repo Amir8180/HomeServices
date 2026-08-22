@@ -1,0 +1,54 @@
+@model ExpertPayoutDto
+@using HomeServices.Mvc.Extensions
+@{
+    ViewData["Title"] = $"فاکتور {Model.PayoutNumber}";
+    var expertName = ViewBag.ExpertName as string ?? "کارشناس";
+}
+@section Styles {
+<style>
+.invoice-page { padding:var(--space-8) 0 var(--space-20); max-width:700px; margin-inline:auto; }
+.invoice { background:white; border:2px solid var(--gray-200); border-radius:var(--radius-xl); overflow:hidden; }
+.invoice-header { background:linear-gradient(135deg,var(--primary-700),var(--accent-600)); color:white; padding:var(--space-6) var(--space-8); }
+.invoice-header h2 { margin:0;font-size:1.5rem; }
+.invoice-header .subtitle { opacity:.85;font-size:var(--text-sm); }
+.invoice-body { padding:var(--space-8); }
+.invoice-row { display:flex;justify-content:space-between;padding:var(--space-3) 0;border-bottom:1px dashed var(--gray-200);font-size:var(--text-sm); }
+.invoice-row:last-child { border-bottom:none; }
+.invoice-row .label { color:var(--color-text-tertiary); }
+.invoice-row .value { font-weight:var(--font-semibold); }
+.invoice-total { display:flex;justify-content:space-between;padding:var(--space-4) 0;margin-top:var(--space-4);font-size:var(--text-lg);font-weight:var(--font-black);border-top:2px solid var(--primary-700); }
+.invoice-total .amount { color:var(--success-600); }
+.invoice-footer { background:var(--gray-50);padding:var(--space-4) var(--space-8);font-size:var(--text-xs);color:var(--color-text-tertiary);text-align:center; }
+</style>
+}
+<div class="invoice-page">
+    <div class="hs-container">
+        <div class="invoice">
+            <div class="invoice-header">
+                <h2>فاکتور خدمات</h2>
+                <div class="subtitle">پلتفرم خدمات منزل — فاکتور دستمزد کارشناس</div>
+            </div>
+            <div class="invoice-body">
+                <div class="invoice-row"><span class="label">شماره فاکتور</span><span class="value">@Model.PayoutNumber</span></div>
+                <div class="invoice-row"><span class="label">کارشناس</span><span class="value">@expertName</span></div>
+                <div class="invoice-row"><span class="label">شماره سفارش</span><span class="value">@Model.OrderNumber</span></div>
+                <div class="invoice-row"><span class="label">خدمت ارائه‌شده</span><span class="value">@Model.ServiceTitle</span></div>
+                <div class="invoice-row"><span class="label">تاریخ پرداخت</span><span class="value">@(Model.PaidAt?.ToPersianDate() ?? "—")</span></div>
+
+                <div style="margin-top:var(--space-6);"></div>
+
+                <div class="invoice-row"><span class="label">مبلغ کل پرداخت مشتری</span><span class="value">@Model.GrossAmount.ToString("N0") تومان</span></div>
+                <div class="invoice-row"><span class="label">کمیسیون پلتفرم (@(Model.CommissionPercent)% )</span><span class="value" style="color:var(--warning-600);">- @Model.CommissionAmount.ToString("N0") تومان</span></div>
+                <div class="invoice-total"><span>مبلغ دریافتی شما</span><span class="amount">@Model.NetAmount.ToString("N0") تومان</span></div>
+            </div>
+            <div class="invoice-footer">
+                این فاکتور به صورت خودکار توسط سامانه خدمات منزل صادر شده است. | @DateTime.UtcNow.ToPersianDate()
+            </div>
+        </div>
+
+        <div style="text-align:center;margin-top:var(--space-5);">
+            <a asp-action="Payouts" class="btn btn-outline-primary">بازگشت به لیست پرداخت‌ها</a>
+            <button onclick="window.print()" class="btn btn-primary ms-2">چاپ فاکتور</button>
+        </div>
+    </div>
+</div>

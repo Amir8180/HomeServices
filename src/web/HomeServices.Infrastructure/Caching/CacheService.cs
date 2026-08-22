@@ -21,6 +21,9 @@ public class CacheService : ICacheService
     private readonly bool _useRedis;
     private readonly TimeSpan _defaultTtl = TimeSpan.FromMinutes(30);
 
+    // فهرست کلیدهای ذخیره‌شده در کش حافظه — برای پاک‌سازی پیشوندی مطمئن
+    private readonly System.Collections.Concurrent.ConcurrentDictionary<string, byte> _knownKeys = new();
+
     private static readonly JsonSerializerOptions JsonOptions = new()
     {
         PropertyNamingPolicy = null,
@@ -75,6 +78,7 @@ public class CacheService : ICacheService
             {
                 AbsoluteExpirationRelativeToNow = ttl,
             });
+            _knownKeys[key] = 0;
         }
     }
 
@@ -87,6 +91,7 @@ public class CacheService : ICacheService
         }
 
         _memory?.Remove(key);
+        _knownKeys.TryRemove(key, out _);
     }
 
     public async Task<T> GetOrCreateAsync<T>(string key, Func<Task<T>> factory, TimeSpan? absoluteExpiration = null, CancellationToken cancellationToken = default)
@@ -104,28 +109,22 @@ public class CacheService : ICacheService
     public Task RemoveByPrefixAsync(string prefix, CancellationToken cancellationToken = default)
     {
         // Note: prefix invalidation on Redis requires a tagged/versioned key scheme.
-        // The memory cache is exhausted here; distributed caches should be flushed via
-        // a version bump. Kept simple for the local/development default.
+        // The memory cache keeps its own key registry below; distributed caches should
+        // be flushed via a version bump. Kept simple for the local/development default.
         if (_useRedis)
         {
             _logger.LogDebug("RemoveByPrefix('{Prefix}') is a no-op for Redis; use versioned keys for bulk invalidation.", prefix);
             return Task.CompletedTask;
         }
 
-        if (_memory is MemoryCache concrete)
+        // ثبت کلیدها در فهرست خودمان (بدون بازتاب روی فیلد داخلی MemoryCache که
+        // در نسخه‌های مختلف فریم‌ورک تغییر می‌کند و بی‌صدا شکست می‌خورد و کش کهنه می‌ماند)
+        foreach (var key in _knownKeys.Keys)
         {
-            // Compact clears expired entries; best-effort prefix sweep.
-            var field = typeof(MemoryCache).GetField("_entries", System.Reflection.BindingFlags.NonPublic | System.Reflection.BindingFlags.Instance);
-            if (field?.GetValue(concrete) is IDictionary<dynamic, dynamic> entries)
+            if (key.StartsWith(prefix, StringComparison.OrdinalIgnoreCase))
             {
-                var keysToRemove = new List<string>();
-                foreach (var key in entries.Keys)
-                {
-                    if (key is string s && s.StartsWith(prefix, StringComparison.OrdinalIgnoreCase))
-                        keysToRemove.Add(s);
-                }
-                foreach (var k in keysToRemove)
-                    _memory.Remove(k);
+                _memory?.Remove(key);
+                _knownKeys.TryRemove(key, out _);
             }
         }
 

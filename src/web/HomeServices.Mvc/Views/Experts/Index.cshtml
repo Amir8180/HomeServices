@@ -101,8 +101,8 @@
                 @if (hasFilter)
                 {
                     <div class="filter-chips" style="margin-bottom:var(--space-5);">
-                        @if (!string.IsNullOrEmpty(filter.SearchTerm)) { <span class="filter-chip">🔍 @filter.SearchTerm</span> }
-                        @if (!string.IsNullOrEmpty(filter.City))       { <span class="filter-chip">📍 @filter.City</span> }
+                        @if (!string.IsNullOrEmpty(filter.SearchTerm)) { <span class="filter-chip">@IconSvg.Search @filter.SearchTerm</span> }
+                        @if (!string.IsNullOrEmpty(filter.City))       { <span class="filter-chip">@filter.City</span> }
                         @if (filter.CategoryId.HasValue) {
                             var cn = categories.FirstOrDefault(c=>c.Id==filter.CategoryId.Value)?.Name;
                             <span class="filter-chip">⚡ @cn</span>
@@ -142,7 +142,7 @@
                                         @if (expert.IsVerified) { <div class="expert-card__verified">✓ تأیید</div> }
                                     </div>
                                     <a asp-action="Details" asp-route-id="@expert.Id" class="expert-card__name">@expert.BusinessName</a>
-                                    <div class="expert-card__location">📍 @expert.City</div>
+                                    <div class="expert-card__location">@expert.City</div>
                                     <div class="expert-card__stars">
                                         @for (int i=1;i<=5;i++) { <span class="star @(i<=Math.Round(expert.RatingAverage)?"star--filled":"")">★</span> }
                                         <span class="expert-card__rating-text">@expert.RatingAverage.ToString("0.0")</span>
@@ -189,9 +189,9 @@
                                         @if (expert.JobsCompleted >= 50) { <span class="badge badge--warning">🏆 برتر</span> }
                                     </div>
                                     <div style="display:flex;flex-wrap:wrap;gap:var(--space-4);font-size:var(--text-xs);color:var(--color-text-secondary);margin-bottom:var(--space-2);">
-                                        <span>📍 @expert.City</span>
-                                        <span>✅ @expert.JobsCompleted پروژه</span>
-                                        @if (expert.ResponseTimeMinutes.HasValue) { <span>⏱ @expert.ResponseTimeMinutes دقیقه</span> }
+                                        <span>@expert.City</span>
+                                        <span>@expert.JobsCompleted پروژه</span>
+                                        @if (expert.ResponseTimeMinutes.HasValue) { <span>@expert.ResponseTimeMinutes دقیقه</span> }
                                         <span>
                                             @for (int i=1;i<=5;i++) { <span style="color:@(i<=Math.Round(expert.RatingAverage)?"var(--warning-500)":"var(--gray-300)")">★</span> }
                                             @expert.RatingAverage.ToString("0.0")

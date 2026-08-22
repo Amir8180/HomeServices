@@ -1,0 +1,142 @@
+@using HomeServices.Domain.Enums
+@using HomeServices.Application.Dtos
+@model SupportTicketDto
+@using HomeServices.Mvc.Extensions
+@{
+    ViewData["Title"] = $"تیکت {Model.TicketNumber}";
+    var submitterName = ViewBag.SubmitterName as string ?? "—";
+    var submitterEmail = ViewBag.SubmitterEmail as string ?? "—";
+    Func<string, Microsoft.AspNetCore.Html.HtmlString> Svg = (paths) => new Microsoft.AspNetCore.Html.HtmlString(
+        $"<svg viewBox=\"0 0 24 24\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"1.75\" stroke-linecap=\"round\" stroke-linejoin=\"round\" aria-hidden=\"true\" focusable=\"false\" style=\"width:1em;height:1em;display:inline-block;vertical-align:-0.15em;flex-shrink:0;\">{paths}</svg>"
+    );
+    var icUser   = "<path d=\"M20 21v-2a4 4 0 00-4-4H8a4 4 0 00-4 4v2\"/><circle cx=\"12\" cy=\"7\" r=\"4\"/>";
+    var icHeadset = "<path d=\"M3 18v-6a9 9 0 0118 0v6\"/><path d=\"M21 19a2 2 0 01-2 2h-1a2 2 0 01-2-2v-3a2 2 0 012-2h3zM3 19a2 2 0 002 2h1a2 2 0 002-2v-3a2 2 0 00-2-2H3z\"/>";
+    var icPaperclip = "<path d=\"M21.44 11.05l-9.19 9.19a6 6 0 01-8.49-8.49l9.19-9.19a4 4 0 015.66 5.66l-9.2 9.19a2 2 0 01-2.83-2.83l8.49-8.48\"/>";
+    var icBack  = "<line x1=\"19\" y1=\"12\" x2=\"5\" y2=\"12\"/><polyline points=\"12 19 5 12 12 5\"/>";
+}
+
+<div class="admin-card">
+    <div class="d-flex justify-content-between align-items-center flex-wrap gap-2 mb-3">
+        <div>
+            <a asp-action="Index" asp-route-tab="tickets" class="btn btn-sm btn-outline-secondary mb-2">@Html.Raw(Svg(icBack)) بازگشت به لیست تیکت‌ها</a>
+            <h5 class="fw-800 mb-1">@Model.TicketNumber — @Model.Subject</h5>
+            <div class="small text-muted d-flex gap-3 flex-wrap">
+                <span class="badge-soft @Model.Status.TicketStatusClass()">@Model.Status.ToDisplay()</span>
+                <span class="badge-soft @Model.Priority.PriorityClass()">اولویت: @Model.Priority.ToDisplay()</span>
+                <span>@Model.Category.ToDisplay()</span>
+                <span>ثبت‌کننده: <strong>@submitterName</strong> (@submitterEmail)</span>
+                @if (!string.IsNullOrEmpty(Model.OrderNumber))
+                {
+                    <a asp-area="" asp-controller="Orders" asp-action="Details" asp-route-id="@Model.OrderId" class="text-decoration-none">سفارش @Model.OrderNumber</a>
+                }
+                <span>ثبت: @Model.CreatedAt.ToPersianDateTime()</span>
+                <span>آخرین فعالیت: @Model.LastActivityAt.ToPersianDateTime()</span>
+            </div>
+        </div>
+
+        @* تغییر وضعیت *@
+        <form asp-action="TicketStatus" asp-route-id="@Model.Id" method="post" class="d-flex gap-2 align-items-center">
+            @Html.AntiForgeryToken()
+            <select name="status" class="form-select form-select-sm" style="min-width:150px;"
+                    onchange="this.form.submit()">
+                <option value="@SupportTicketStatus.Open" selected="@(Model.Status == SupportTicketStatus.Open)">باز</option>
+                <option value="@SupportTicketStatus.InProgress" selected="@(Model.Status == SupportTicketStatus.InProgress)">در حال بررسی</option>
+                <option value="@SupportTicketStatus.Resolved" selected="@(Model.Status == SupportTicketStatus.Resolved)">حل شده</option>
+                <option value="@SupportTicketStatus.Closed" selected="@(Model.Status == SupportTicketStatus.Closed)">بسته شده</option>
+            </select>
+            <button type="submit" class="btn btn-sm btn-primary">اعمال وضعیت</button>
+        </form>
+    </div>
+</div>
+
+@* شرح اولیه + پیوست‌ها *@
+<div class="admin-card">
+    <div class="d-flex gap-3">
+        <div class="flex-shrink-0 d-flex align-items-center justify-content-center rounded-circle"
+             style="width:40px;height:40px;background:#f3ede4;color:#8B7355;">@Html.Raw(Svg(icUser))</div>
+        <div class="flex-grow-1">
+            <div class="small text-muted mb-1">@submitterName — @Model.CreatedAt.ToPersianDateTime()</div>
+            <div style="white-space:pre-wrap;line-height:1.9;">@Model.Description</div>
+            @{ var firstAtts = Model.Attachments.Where(a => a.MessageId == null).ToList(); }
+            @if (firstAtts.Any())
+            {
+                <div class="d-flex flex-wrap gap-2 mt-3">
+                    @foreach (var att in firstAtts)
+                    {
+                        <a href="@att.FileUrl" target="_blank">
+                            @if (att.MediaType == MediaType.Image)
+                            {
+                                <img src="@(att.ThumbnailUrl ?? att.FileUrl)" style="width:60px;height:60px;object-fit:cover;border-radius:8px;border:1px solid #e5e7eb;" alt="پیوست" />
+                            }
+                            else
+                            {
+                                <span class="badge bg-light text-dark">@Html.Raw(Svg(icPaperclip)) @(att.MediaType == MediaType.Video ? "ویدیو" : "سند")</span>
+                            }
+                        </a>
+                    }
+                </div>
+            }
+        </div>
+    </div>
+</div>
+
+@* پیام‌ها *@
+@foreach (var m in Model.Messages)
+{
+    <div class="admin-card" style="@(m.IsFromAdmin ? "border-right:4px solid #10b981;" : "")">
+        <div class="d-flex gap-3">
+            <div class="flex-shrink-0 d-flex align-items-center justify-content-center rounded-circle"
+                 style="width:40px;height:40px;background:@(m.IsFromAdmin ? "#d1fae5" : "#f3ede4");color:@(m.IsFromAdmin ? "#065f46" : "#8B7355");">
+                @Html.Raw(Svg(m.IsFromAdmin ? icHeadset : icUser))
+            </div>
+            <div class="flex-grow-1">
+                <div class="small text-muted mb-1">
+                    @(m.IsFromAdmin ? "پشتیبانی" : submitterName) — @m.CreatedAt.ToPersianDateTime()
+                </div>
+                <div style="white-space:pre-wrap;line-height:1.9;">@m.Body</div>
+                @{ var msgAtts = Model.Attachments.Where(a => a.MessageId == m.Id).ToList(); }
+                @if (msgAtts.Any())
+                {
+                    <div class="d-flex flex-wrap gap-2 mt-3">
+                        @foreach (var att in msgAtts)
+                        {
+                            <a href="@att.FileUrl" target="_blank">
+                                @if (att.MediaType == MediaType.Image)
+                                {
+                                    <img src="@(att.ThumbnailUrl ?? att.FileUrl)" style="width:60px;height:60px;object-fit:cover;border-radius:8px;border:1px solid #e5e7eb;" alt="پیوست" />
+                                }
+                                else
+                                {
+                                    <span class="badge bg-light text-dark">@Html.Raw(Svg(icPaperclip)) @(att.MediaType == MediaType.Video ? "ویدیو" : "سند")</span>
+                                }
+                            </a>
+                        }
+                    </div>
+                }
+            </div>
+        </div>
+    </div>
+}
+
+@* پاسخ پشتیبانی *@
+@if (Model.Status != SupportTicketStatus.Closed)
+{
+    <div class="admin-card">
+        <h6 class="fw-800 mb-3">پاسخ پشتیبانی</h6>
+        <form asp-action="TicketReply" asp-route-id="@Model.Id" method="post" enctype="multipart/form-data">
+            @Html.AntiForgeryToken()
+            <textarea name="body" class="form-control mb-3" rows="4" required placeholder="پاسخ خود را برای کاربر بنویسید…"></textarea>
+            <div class="d-flex flex-wrap gap-2 justify-content-between align-items-center">
+                <div>
+                    <label class="small text-muted d-block mb-1">پیوست (اختیاری)</label>
+                    <input type="file" name="files" multiple accept="image/*,video/*,.pdf,.zip" class="form-control" />
+                </div>
+                <button type="submit" class="btn btn-primary">ارسال پاسخ</button>
+            </div>
+        </form>
+    </div>
+}
+else
+{
+    <div class="alert alert-secondary small">این تیکت بسته شده است. برای ادامه، ابتدا وضعیت آن را تغییر دهید.</div>
+}

@@ -46,8 +46,8 @@
                         <p class="mb-2">"@r.Comment"</p>
                     }
                     <div class="d-flex gap-3 flex-wrap small text-muted">
-                        <span>🕒 @r.CreatedAt.ToPersianDate()</span>
-                        @if (r.ServiceDate.HasValue) { <span>📅 @r.ServiceDate.Value.ToPersianDate()</span> }
+                        <span>@IconSvg.Clock @r.CreatedAt.ToPersianDate()</span>
+                        @if (r.ServiceDate.HasValue) { <span>@IconSvg.Calendar @r.ServiceDate.Value.ToPersianDate()</span> }
                     </div>
                 </div>
             }

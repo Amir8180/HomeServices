@@ -32,6 +32,13 @@ public class AppDbContext : DbContext
     public DbSet<SiteSetting> SiteSettings => Set<SiteSetting>();
     public DbSet<Media> Media => Set<Media>();
     public DbSet<Notification> Notifications => Set<Notification>();
+    public DbSet<PaymentVerificationReport> PaymentVerificationReports => Set<PaymentVerificationReport>();
+    public DbSet<WorkCompletionReport> WorkCompletionReports => Set<WorkCompletionReport>();
+    public DbSet<WorkCompletionAttachment> WorkCompletionAttachments => Set<WorkCompletionAttachment>();
+    public DbSet<ExpertPayout> ExpertPayouts => Set<ExpertPayout>();
+    public DbSet<SupportTicket> SupportTickets => Set<SupportTicket>();
+    public DbSet<SupportTicketMessage> SupportTicketMessages => Set<SupportTicketMessage>();
+    public DbSet<SupportTicketAttachment> SupportTicketAttachments => Set<SupportTicketAttachment>();
 
     private IDbContextTransaction? _currentTransaction;
 

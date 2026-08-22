@@ -32,4 +32,7 @@ public class Order : AuditableEntity
     public Proposal Proposal { get; set; } = null!;
     public ICollection<Payment> Payments { get; set; } = new List<Payment>();
     public Review? Review { get; set; }
+    public ICollection<PaymentVerificationReport> PaymentReports { get; set; } = new List<PaymentVerificationReport>();
+    public ICollection<WorkCompletionReport> CompletionReports { get; set; } = new List<WorkCompletionReport>();
+    public ExpertPayout? Payout { get; set; }
 }

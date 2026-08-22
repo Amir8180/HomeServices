@@ -177,7 +177,7 @@
      ========================================================================= */
 
   const Modal = (() => {
-    let backdrop, currentModal;
+    let backdrop, currentModal, hideTimer, showRaf;
 
     function getBackdrop() {
       if (!backdrop) {
@@ -196,17 +196,26 @@
 
       if (!modal) return;
 
+      // اگر مودال دیگری باز است، اول بسته شود
+      if (currentModal && currentModal !== modal) close(currentModal);
+
       const bd = getBackdrop();
+      clearTimeout(hideTimer);
+      cancelAnimationFrame(showRaf);
       bd.style.display = 'block';
       modal.style.display = 'flex';
       document.body.style.overflow = 'hidden';
 
-      requestAnimationFrame(() => requestAnimationFrame(() => {
-        bd.classList.add('show');
-        modal.classList.add('show');
-      }));
-
+      const inner = modal.querySelector('.modal') || modal;
       currentModal = modal;
+      modal._inner = inner;
+
+      // محافظ مسابقه rAF: فقط اگر هنوز همین مودال باز است انیمیشن اجرا شود
+      showRaf = requestAnimationFrame(() => requestAnimationFrame(() => {
+        if (currentModal !== modal) return;
+        bd.classList.add('show');
+        inner.classList.add('show');
+      }));
 
       // ESC to close
       const onKey = (e) => { if (e.key === 'Escape') closeAll(); };
@@ -225,17 +234,20 @@
 
       if (!modal) return;
 
-      modal.classList.remove('show');
+      const inner = modal._inner || modal.querySelector('.modal') || modal;
+      inner.classList.remove('show');
       backdrop?.classList.remove('show');
       document.body.style.overflow = '';
 
-      setTimeout(() => {
+      clearTimeout(hideTimer);
+      hideTimer = setTimeout(() => {
         modal.style.display = 'none';
-        if (backdrop) backdrop.style.display = 'none';
+        // بک‌دراپ فقط وقتی هیچ مودالی باز نیست کاملاً مخفی شود
+        if (!currentModal && backdrop) backdrop.style.display = 'none';
       }, 300);
 
       if (modal._escHandler) off(document, 'keydown', modal._escHandler);
-      currentModal = null;
+      if (currentModal === modal) currentModal = null;
     }
 
     function closeAll() { close(currentModal); }
@@ -251,6 +263,11 @@
       } = options;
 
       return new Promise((resolve) => {
+        // اگر مودال تأیید دیگری باز است، اول بسته شود
+        if (currentModal && currentModal.classList && currentModal.classList.contains('modal-wrap')) {
+          close(currentModal);
+        }
+
         const id = 'modal-confirm-' + Date.now();
         const wrap = document.createElement('div');
         wrap.className = 'modal-wrap';
@@ -273,11 +290,25 @@
         `;
 
         document.body.appendChild(wrap);
-        open(wrap);
 
-        on(wrap.querySelector('.js-modal-confirm'), 'click', () => { close(wrap); wrap.remove(); resolve(true); });
-        on(wrap.querySelector('.js-modal-cancel'), 'click', () => { close(wrap); wrap.remove(); resolve(false); });
-        on(wrap.querySelector('.js-modal-close'), 'click', () => { close(wrap); wrap.remove(); resolve(false); });
+        const bd = getBackdrop();
+        let done = false;
+        const finish = (result) => {
+          if (done) return;                    // فقط یک‌بار resolve شود
+          done = true;
+          off(bd, 'click', onBackdrop);        // جلوگیری از نشت شنونده
+          close(wrap);
+          wrap.remove();
+          resolve(result);
+        };
+        const onBackdrop = () => finish(false);
+
+        on(wrap.querySelector('.js-modal-confirm'), 'click', () => finish(true));
+        on(wrap.querySelector('.js-modal-cancel'),  'click', () => finish(false));
+        on(wrap.querySelector('.js-modal-close'),   'click', () => finish(false));
+        on(bd, 'click', onBackdrop);
+
+        open(wrap);
       });
     }
 
@@ -533,13 +564,39 @@
 
       // Loading state on form submit
       $$('form[data-loading]').forEach(form => {
+        const reset = () => {
+          $$('[type="submit"]', form).forEach(b => { b.classList.remove('loading'); b.disabled = false; });
+          LoadingBar.done();
+        };
+
         on(form, 'submit', () => {
+          // فرم نامعتبر؟ اعتبارسنجی ارسال را لغو می‌کند؛ لودینگ نباید شروع شود
+          // (وگرنه دکمه و نوار پیشرفت برای همیشه قفل می‌ماند)
+          if (!form.checkValidity()) { reset(); return; }
+
           const btn = form.querySelector('[type="submit"]');
           if (btn) {
             btn.classList.add('loading');
             btn.disabled = true;
           }
           if (form.dataset.loading === 'bar') LoadingBar.start();
+        });
+
+        // اعتبارسنجی سمت کلاینت ناموفق ماند → هر حالت لودینگی فوراً رفع شود
+        on(form, 'invalid-form', reset);
+        if (window.jQuery) jQuery(form).on('invalid-form.validate', reset);
+      });
+
+      // Toggle password visibility (eye icon)
+      $$('[data-toggle-password]').forEach(btn => {
+        on(btn, 'click', () => {
+          const input = document.querySelector(btn.dataset.togglePassword);
+          if (!input) return;
+          const show = input.type === 'password';
+          input.type = show ? 'text' : 'password';
+          btn.classList.toggle('is-visible', show);
+          btn.setAttribute('aria-label', show ? 'مخفی‌کردن رمز عبور' : 'نمایش رمز عبور');
+          input.focus({ preventScroll: true });
         });
       });
 
@@ -575,7 +632,7 @@
             confirmText: form.dataset.confirmOk      || 'تأیید',
             danger:      form.dataset.confirmDanger  === 'true',
           });
-          if (ok) { form.removeEventListener('submit', arguments.callee); form.submit(); }
+          if (ok) { form.submit(); }
         });
       });
     }

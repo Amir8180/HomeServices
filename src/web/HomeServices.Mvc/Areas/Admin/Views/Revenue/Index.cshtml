@@ -1,0 +1,103 @@
+@using HomeServices.Mvc.Extensions
+@using HomeServices.Shared.Common
+@model (SiteRevenueSummaryDto Summary, PagedResult<ExpertPayoutDto> Payouts)
+@{
+    ViewData["Title"] = "درآمد سایت";
+    var period = ViewBag.Period as string ?? "daily";
+    var summary = Model.Summary;
+    var payouts = Model.Payouts;
+}
+<style>
+.rev-grid { display:grid; grid-template-columns:repeat(auto-fit,minmax(170px,1fr)); gap:14px; margin-bottom:24px; }
+.rev-card { background:white; border:1px solid #e5e7eb; border-radius:14px; padding:18px; text-align:center; }
+.rev-card .amount { font-size:1.4rem; font-weight:800; color:#b45309; }
+.rev-card .label { font-size:12px; color:#6b7280; margin-top:4px; }
+.period-btns { display:flex; gap:8px; }
+.period-btns .btn { font-size:12px; }
+.chart-box { background:white; border:1px solid #e5e7eb; border-radius:14px; padding:20px; margin-bottom:24px; }
+.rev-table { width:100%; border-collapse:collapse; font-size:13px; }
+.rev-table th { background:#f9fafb; padding:10px; text-align:right; font-weight:600; color:#6b7280; border-bottom:2px solid #e5e7eb; }
+.rev-table td { padding:10px; border-bottom:1px solid #f3f4f6; }
+</style>
+
+<div class="rev-grid">
+    <div class="rev-card"><div class="amount">@summary.TodayRevenue.ToString("N0")</div><div class="label">درآمد امروز (تومان)</div></div>
+    <div class="rev-card"><div class="amount">@summary.ThisWeekRevenue.ToString("N0")</div><div class="label">درآمد این هفته</div></div>
+    <div class="rev-card"><div class="amount">@summary.ThisMonthRevenue.ToString("N0")</div><div class="label">درآمد این ماه</div></div>
+    <div class="rev-card"><div class="amount">@summary.ThisYearRevenue.ToString("N0")</div><div class="label">درآمد امسال</div></div>
+    <div class="rev-card"><div class="amount" style="color:#111827;">@summary.TotalRevenue.ToString("N0")</div><div class="label">کل درآمد سایت (کمیسیون ۱۰٪)</div></div>
+</div>
+
+<div class="chart-box">
+    <div style="display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:10px; margin-bottom:16px;">
+        <h5 style="margin:0; font-weight:700;">نمودار درآمد سایت</h5>
+        <div class="period-btns">
+            <a asp-action="Index" asp-route-period="daily" class="btn btn-sm @(period == "daily" ? "btn-primary" : "btn-outline-secondary")">روزانه (ساعتی)</a>
+            <a asp-action="Index" asp-route-period="weekly" class="btn btn-sm @(period == "weekly" ? "btn-primary" : "btn-outline-secondary")">هفتگی</a>
+            <a asp-action="Index" asp-route-period="monthly" class="btn-sm btn @(period == "monthly" ? "btn-primary" : "btn-outline-secondary")">ماهانه</a>
+        </div>
+    </div>
+    <canvas id="revenueChart" height="220"></canvas>
+</div>
+
+<div class="admin-card">
+    <h5 style="font-weight:700; margin-bottom:14px;">سابقه کمیسیون‌های دریافتی (@summary.TotalPayouts رکورد)</h5>
+    @if (payouts.Items.Count == 0)
+    {
+        <div class="text-center py-4" style="color:#6b7280;">هنوز درآمدی ثبت نشده است.</div>
+    }
+    else
+    {
+        <div style="overflow-x:auto;">
+            <table class="rev-table">
+                <thead><tr>
+                    <th>شماره تسویه</th><th>سفارش</th><th>خدمت</th><th>مبلغ سفارش</th><th>کمیسیون سایت (۱۰٪)</th><th>دستمزد کارشناس</th><th>تاریخ</th>
+                </tr></thead>
+                <tbody>
+                    @foreach (var p in payouts.Items)
+                    {
+                        <tr>
+                            <td><strong>@p.PayoutNumber</strong></td>
+                            <td>@p.OrderNumber</td>
+                            <td>@p.ServiceTitle</td>
+                            <td>@p.GrossAmount.ToString("N0") تومان</td>
+                            <td style="color:#b45309; font-weight:700;">@p.CommissionAmount.ToString("N0") تومان</td>
+                            <td>@p.NetAmount.ToString("N0") تومان</td>
+                            <td>@(p.PaidAt?.ToPersianDate() ?? "—")</td>
+                        </tr>
+                    }
+                </tbody>
+            </table>
+        </div>
+    }
+</div>
+
+@section Scripts {
+<script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
+<script>
+    const data = @Html.Raw(System.Text.Json.JsonSerializer.Serialize(summary.ChartData.Select(c => new { c.Label, c.Amount })));
+    new Chart(document.getElementById('revenueChart'), {
+        type: 'line',
+        data: {
+            labels: data.map(d => d.label),
+            datasets: [{
+                label: 'درآمد سایت (تومان)',
+                data: data.map(d => d.amount),
+                borderColor: '#b45309',
+                backgroundColor: 'rgba(180,83,9,0.15)',
+                fill: true,
+                tension: 0.3,
+                pointRadius: 3,
+            }]
+        },
+        options: {
+            responsive: true,
+            plugins: {
+                legend: { display: false },
+                tooltip: { callbacks: { label: (ctx) => ctx.parsed.y.toLocaleString('fa-IR') + ' تومان' } }
+            },
+            scales: { y: { beginAtZero: true } }
+        }
+    });
+</script>
+}

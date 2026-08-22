@@ -48,6 +48,8 @@ public static class DisplayExtensions
         OrderStatus.Completed => "تکمیل شده",
         OrderStatus.Cancelled => "لغو شده",
         OrderStatus.Disputed => "مورد اختلاف",
+        OrderStatus.WaitingPaymentVerification => "در انتظار تأیید پرداخت",
+        OrderStatus.CompletionReview => "در بررسی اتمام کار",
         _ => s.ToString(),
     };
 
@@ -66,6 +68,7 @@ public static class DisplayExtensions
         PaymentMethod.Online => "آنلاین",
         PaymentMethod.Cash => "نقدی",
         PaymentMethod.Wallet => "کیف پول",
+        PaymentMethod.CardToCard => "کارت به کارت",
         _ => m.ToString(),
     };
 
@@ -84,6 +87,75 @@ public static class DisplayExtensions
         ReviewStatus.Approved => "تأیید شده",
         ReviewStatus.Rejected => "رد شده",
         _ => s.ToString(),
+    };
+
+    public static string ToDisplay(this PaymentVerificationStatus s) => s switch
+    {
+        PaymentVerificationStatus.PendingReview => "بررسی نشده",
+        PaymentVerificationStatus.Verified => "پرداخت شده",
+        PaymentVerificationStatus.Rejected => "عدم پرداخت",
+        _ => s.ToString(),
+    };
+
+    public static string ToDisplay(this CompletionReviewStatus s) => s switch
+    {
+        CompletionReviewStatus.PendingReview => "بررسی نشده",
+        CompletionReviewStatus.Approved => "تأیید شده",
+        CompletionReviewStatus.Rejected => "عدم تأیید",
+        _ => s.ToString(),
+    };
+
+    public static string ToDisplay(this AttachmentUploader u) => u switch
+    {
+        AttachmentUploader.Expert => "کارشناس",
+        AttachmentUploader.Customer => "مشتری",
+        _ => u.ToString(),
+    };
+
+    public static string ToDisplay(this SupportTicketStatus s) => s switch
+    {
+        SupportTicketStatus.Open => "باز",
+        SupportTicketStatus.InProgress => "در حال بررسی",
+        SupportTicketStatus.Resolved => "حل شده",
+        SupportTicketStatus.Closed => "بسته شده",
+        _ => s.ToString(),
+    };
+
+    public static string TicketStatusClass(this SupportTicketStatus s) => s switch
+    {
+        SupportTicketStatus.Open => "badge-warning-soft",
+        SupportTicketStatus.InProgress => "badge-brand",
+        SupportTicketStatus.Resolved => "badge-success-soft",
+        SupportTicketStatus.Closed => "badge-muted-soft",
+        _ => "badge-soft",
+    };
+
+    public static string ToDisplay(this SupportTicketCategory c) => c switch
+    {
+        SupportTicketCategory.OrderIssue => "مشکل در سفارش",
+        SupportTicketCategory.Payment => "امور مالی و پرداخت",
+        SupportTicketCategory.Technical => "مشکل فنی سایت",
+        SupportTicketCategory.Account => "حساب کاربری",
+        SupportTicketCategory.Suggestion => "پیشنهاد و انتقاد",
+        SupportTicketCategory.Other => "سایر",
+        _ => c.ToString(),
+    };
+
+    public static string ToDisplay(this SupportTicketPriority p) => p switch
+    {
+        SupportTicketPriority.Low => "کم",
+        SupportTicketPriority.Normal => "معمولی",
+        SupportTicketPriority.High => "زیاد",
+        SupportTicketPriority.Urgent => "فوری",
+        _ => p.ToString(),
+    };
+
+    public static string PriorityClass(this SupportTicketPriority p) => p switch
+    {
+        SupportTicketPriority.Urgent => "badge-danger-soft",
+        SupportTicketPriority.High => "badge-warning-soft",
+        SupportTicketPriority.Normal => "badge-brand",
+        _ => "badge-muted-soft",
     };
 
     /// <summary>

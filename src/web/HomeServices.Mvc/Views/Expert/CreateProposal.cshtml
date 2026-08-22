@@ -18,12 +18,12 @@
                 <h5 class="fw-800">@request.Title</h5>
                 <p class="text-muted small mb-2">@request.Description</p>
                 <div class="d-flex gap-3 flex-wrap small text-muted">
-                    @if (!string.IsNullOrEmpty(request.CategoryName)) { <span>🏷️ @request.CategoryName</span> }
-                    @if (!string.IsNullOrEmpty(request.City)) { <span>📍 @request.City</span> }
+                    @if (!string.IsNullOrEmpty(request.CategoryName)) { <span>@IconSvg.Tag @request.CategoryName</span> }
+                    @if (!string.IsNullOrEmpty(request.City)) { <span>@IconSvg.Pin @request.City</span> }
                     <span class="badge-soft badge-info-soft">@request.Urgency.ToDisplay()</span>
                     @if (request.BudgetMin.HasValue || request.BudgetMax.HasValue)
                     {
-                        <span>💰 بودجه: @(@request.BudgetMin?.ToString("N0") ?? "—") - @(request.BudgetMax?.ToString("N0") ?? "—")</span>
+                        <span>@IconSvg.Money بودجه: @(@request.BudgetMin?.ToString("N0") ?? "—") - @(request.BudgetMax?.ToString("N0") ?? "—")</span>
                     }
                 </div>
             </div>

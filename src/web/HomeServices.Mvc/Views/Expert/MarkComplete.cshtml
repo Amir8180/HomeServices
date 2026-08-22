@@ -1,0 +1,45 @@
+@model HomeServices.Mvc.Controllers.MarkCompleteViewModel
+@{
+    ViewData["Title"] = "اعلام اتمام کار";
+}
+@section Styles {
+<style>
+.mc-page { padding:var(--space-8) 0 var(--space-20); max-width:640px; margin-inline:auto; }
+.mc-card { background:white; border:1px solid var(--color-border-subtle); border-radius:var(--radius-2xl); padding:var(--space-8); }
+</style>
+}
+<div class="mc-page">
+    <div class="hs-container">
+        <nav style="font-size:var(--text-sm);color:var(--color-text-tertiary);margin-bottom:var(--space-6);">
+            <a asp-controller="Orders" asp-action="Details" asp-route-id="@Model.OrderId" style="color:inherit;text-decoration:none;">سفارش</a> /
+            <span>اعلام اتمام کار</span>
+        </nav>
+        <div class="mc-card">
+            <h3 style="font-size:var(--text-lg);font-weight:var(--font-black);margin-bottom:var(--space-2);">اعلام وضعیت اتمام کار</h3>
+            <p style="font-size:var(--text-sm);color:var(--color-text-secondary);line-height:1.8;margin-bottom:var(--space-4);">لطفاً وضعیت کار را اعلام کرده و در صورت امکان، مستندات (تصویر یا ویدیو) بارگذاری نمایید تا پشتیبانی بتواند به‌عنوان میانجی بررسی و قضاوت کند.</p>
+            <form asp-action="MarkComplete" method="post" enctype="multipart/form-data">
+                @Html.AntiForgeryToken()
+                <input type="hidden" asp-for="OrderId" />
+                <div style="display:flex;gap:var(--space-3);margin-bottom:var(--space-5);">
+                    <label style="cursor:pointer;">
+                        <input type="radio" asp-for="Confirmed" value="true" style="margin-left:4px;" />
+                        <span style="font-weight:var(--font-semibold);color:var(--success-600);">کار به‌طور کامل انجام شده است</span>
+                    </label>
+                    <label style="cursor:pointer;">
+                        <input type="radio" asp-for="Confirmed" value="false" style="margin-left:4px;" />
+                        <span style="font-weight:var(--font-semibold);color:var(--danger-600);">کار تکمیل نشده / وجود مشکل</span>
+                    </label>
+                </div>
+                <div style="margin-bottom:var(--space-4);">
+                    <label asp-for="Note" style="font-size:var(--text-sm);font-weight:var(--font-semibold);display:block;margin-bottom:var(--space-1);">توضیحات / دلایل</label>
+                    <textarea asp-for="Note" class="form-control" rows="4" placeholder="توضیحات خود را بنویسید..."></textarea>
+                </div>
+                <div style="margin-bottom:var(--space-5);">
+                    <label style="font-size:var(--text-sm);font-weight:var(--font-semibold);display:block;margin-bottom:var(--space-1);">مستندات (حداکثر ۵ فایل)</label>
+                    <input type="file" asp-for="Files" multiple accept="image/*,video/*" class="form-control" />
+                </div>
+                <button type="submit" class="btn btn-primary btn-block">ثبت اعلام وضعیت</button>
+            </form>
+        </div>
+    </div>
+</div>

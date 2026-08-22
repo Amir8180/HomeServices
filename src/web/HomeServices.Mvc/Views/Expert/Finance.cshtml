@@ -1,0 +1,88 @@
+@model ExpertIncomeSummaryDto
+@using HomeServices.Mvc.Extensions
+@{
+    ViewData["Title"] = "مدیریت مالی";
+    var period = ViewBag.Period as string ?? "daily";
+}
+@section Styles {
+<style>
+.finance-page { padding:var(--space-6) 0 var(--space-20); }
+.summary-grid { display:grid;grid-template-columns:repeat(auto-fit,minmax(180px,1fr));gap:var(--space-4);margin-bottom:var(--space-8); }
+.summary-card { background:white;border:1px solid var(--color-border-subtle);border-radius:var(--radius-xl);padding:var(--space-5);text-align:center; }
+.summary-card .amount { font-size:clamp(1.25rem,2.5vw,1.75rem);font-weight:var(--font-black);color:var(--primary-700); }
+.summary-card .label { font-size:var(--text-xs);color:var(--color-text-tertiary);margin-top:var(--space-1); }
+.chart-box { background:white;border:1px solid var(--color-border-subtle);border-radius:var(--radius-xl);padding:var(--space-6);margin-bottom:var(--space-6); }
+.chart-box h3 { font-size:var(--text-base);font-weight:var(--font-bold);margin-bottom:var(--space-4); }
+.period-btns { display:flex;gap:var(--space-2);margin-bottom:var(--space-5); }
+.period-btns .btn { font-size:var(--text-xs); }
+.period-btns .btn.active { background:var(--primary-700);color:white;border-color:var(--primary-700); }
+</style>
+}
+@section Scripts {
+<script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
+<script>
+    const chartData = @Html.Raw(System.Text.Json.JsonSerializer.Serialize(Model.ChartData.Select(c => new { c.Label, c.Amount })));
+    const labels = chartData.map(d => d.label);
+    const amounts = chartData.map(d => d.amount);
+
+    const ctx = document.getElementById('incomeChart');
+    if (ctx) {
+        new Chart(ctx, {
+            type: 'bar',
+            data: {
+                labels,
+                datasets: [{
+                    label: 'درآمد (تومان)',
+                    data: amounts,
+                    backgroundColor: 'rgba(252,86,71,0.7)',
+                    borderColor: 'rgba(252,86,71,1)',
+                    borderRadius: 8,
+                    maxBarThickness: 40,
+                }]
+            },
+            options: {
+                responsive: true,
+                plugins: {
+                    legend: { display: false },
+                    tooltip: {
+                        callbacks: {
+                            label: function(ctx) { return ctx.parsed.y.toLocaleString('fa-IR') + ' تومان'; }
+                        }
+                    }
+                },
+                scales: { y: { beginAtZero: true } }
+            }
+        });
+    }
+</script>
+}
+
+<div class="finance-page">
+    <div class="hs-container">
+        <h2 style="font-size:var(--text-xl);font-weight:var(--font-black);margin-bottom:var(--space-6);">مدیریت مالی</h2>
+
+        <div class="summary-grid">
+            <div class="summary-card"><div class="amount">@Model.TodayIncome.ToString("N0")</div><div class="label">درآمد امروز (تومان)</div></div>
+            <div class="summary-card"><div class="amount">@Model.ThisWeekIncome.ToString("N0")</div><div class="label">درآمد این هفته</div></div>
+            <div class="summary-card"><div class="amount">@Model.ThisMonthIncome.ToString("N0")</div><div class="label">درآمد این ماه</div></div>
+            <div class="summary-card"><div class="amount">@Model.ThisYearIncome.ToString("N0")</div><div class="label">درآمد امسال</div></div>
+            <div class="summary-card"><div class="amount" style="color:var(--gray-900);">@Model.TotalIncome.ToString("N0")</div><div class="label">کل درآمد</div></div>
+        </div>
+
+        <div class="chart-box">
+            <div style="display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:var(--space-3);">
+                <h3>نمودار درآمد</h3>
+                <div class="period-btns">
+                    <a asp-action="Finance" asp-route-period="daily" class="btn btn-sm @(period=="daily"?"active":"")">روزانه</a>
+                    <a asp-action="Finance" asp-route-period="weekly" class="btn btn-sm @(period=="weekly"?"active":"")">هفتگی</a>
+                    <a asp-action="Finance" asp-route-period="monthly" class="btn btn-sm @(period=="monthly"?"active":"")">ماهانه</a>
+                </div>
+            </div>
+            <canvas id="incomeChart" height="250"></canvas>
+        </div>
+
+        <div style="text-align:center;margin-top:var(--space-4);">
+            <a asp-action="Payouts" class="btn btn-outline-primary">مشاهده لیست پرداخت‌ها و فاکتور</a>
+        </div>
+    </div>
+</div>

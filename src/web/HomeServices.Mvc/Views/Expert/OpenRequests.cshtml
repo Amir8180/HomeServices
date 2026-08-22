@@ -48,7 +48,7 @@
     @if (!Model.Items.Any())
     {
         <div class="empty-state dashboard-card">
-            <div class="icon">🔍</div>
+            <div class="icon">@IconSvg.Search</div>
             <h5 class="fw-800">درخواستی یافت نشد</h5>
             <p class="text-muted">فیلترها را تغییر دهید یا بعداً بررسی کنید.</p>
         </div>
@@ -71,19 +71,19 @@
                             </div>
                             <p class="text-muted small mb-2">@(r.Description.Length > 140 ? r.Description.Substring(0, 140) + "..." : r.Description)</p>
                             <div class="d-flex gap-3 flex-wrap small text-muted">
-                                @if (!string.IsNullOrEmpty(r.CategoryName)) { <span>🏷️ @r.CategoryName</span> }
-                                @if (!string.IsNullOrEmpty(r.City)) { <span>📍 @r.City</span> }
+                                @if (!string.IsNullOrEmpty(r.CategoryName)) { <span>@IconSvg.Tag @r.CategoryName</span> }
+                                @if (!string.IsNullOrEmpty(r.City)) { <span>@IconSvg.Pin @r.City</span> }
                                 @if (r.BudgetMin.HasValue || r.BudgetMax.HasValue)
                                 {
-                                    <span>💰 @(@r.BudgetMin?.ToString("N0") ?? "—") - @(r.BudgetMax?.ToString("N0") ?? "—") تومان</span>
+                                    <span>@IconSvg.Money @(@r.BudgetMin?.ToString("N0") ?? "—") - @(r.BudgetMax?.ToString("N0") ?? "—") تومان</span>
                                 }
-                                <span>🕒 @r.CreatedAt.ToPersianDate()</span>
+                                <span>@IconSvg.Clock @r.CreatedAt.ToPersianDate()</span>
                             </div>
                         </div>
                         <div class="d-flex flex-column gap-1">
                             @if (myIds.Contains(r.Id))
                             {
-                                <a asp-action="MyProposals" class="btn btn-sm btn-outline-brand">پیشنهادهای من</a>
+                                <a asp-action="MyJobs" asp-route-status="Pending" class="btn btn-sm btn-outline-brand">سفارشات من</a>
                             }
                             else
                             {

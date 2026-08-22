@@ -83,5 +83,25 @@ public class MappingProfile : Profile
 
         // ----- Media -----
         CreateMap<Media, MediaDto>();
+
+        // ----- Support workflow -----
+        CreateMap<PaymentVerificationReport, PaymentVerificationReportDto>()
+            .ForMember(d => d.OrderNumber, o => o.MapFrom(s => s.Order != null ? s.Order.OrderNumber : ""));
+
+        CreateMap<WorkCompletionReport, WorkCompletionReportDto>()
+            .ForMember(d => d.OrderNumber, o => o.MapFrom(s => s.Order != null ? s.Order.OrderNumber : ""))
+            .ForMember(d => d.OrderAmount, o => o.MapFrom(s => s.Order != null ? s.Order.TotalAmount : 0));
+
+        CreateMap<WorkCompletionAttachment, WorkCompletionAttachmentDto>();
+
+        CreateMap<ExpertPayout, ExpertPayoutDto>();
+
+        // ----- Support ticketing -----
+        CreateMap<SupportTicket, SupportTicketDto>()
+            .ForMember(d => d.OrderNumber, o => o.MapFrom(s => s.Order != null ? s.Order.OrderNumber : null))
+            .ForMember(d => d.MessageCount, o => o.MapFrom(s => s.Messages.Count));
+
+        CreateMap<SupportTicketMessage, SupportTicketMessageDto>();
+        CreateMap<SupportTicketAttachment, SupportTicketAttachmentDto>();
     }
 }

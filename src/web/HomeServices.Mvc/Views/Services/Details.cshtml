@@ -75,7 +75,7 @@
                     <div style="display:flex;flex-wrap:wrap;gap:var(--space-5);font-size:var(--text-sm);color:var(--color-text-secondary);margin-bottom:var(--space-5);">
                         @if (Model.EstimatedDurationMinutes.HasValue)
                         {
-                            <span>⏱ @(Model.EstimatedDurationMinutes.Value/60) ساعت تخمینی</span>
+                            <span>@(Model.EstimatedDurationMinutes.Value/60) ساعت تخمینی</span>
                         }
                         <span>🏷️ @(Model.CategoryName ?? "خدمات عمومی")</span>
                         <span>💳 @(Model.IsFixedPrice ? "قیمت ثابت" : "قیمت توافقی")</span>
@@ -89,7 +89,7 @@
                 @* What's included *@
                 <div style="background:white;border:1px solid var(--color-border-subtle);border-radius:var(--radius-2xl);padding:var(--space-8);margin-bottom:var(--space-5);" data-reveal="up">
                     <h3 style="font-size:var(--text-xl);font-weight:var(--font-bold);margin-bottom:var(--space-5);">✨ این خدمت شامل چیست؟</h3>
-                    @foreach (var f in new[]{("کارشناسان تأییدشده","کلیه متخصصان دارای مدارک و سوابق معتبر"),("ضمانت کیفیت","رضایت کامل یا بازگشت وجه"),("پشتیبانی ۲۴ ساعته","همواره در کنار شما هستیم"),("پرداخت امن","درگاه بانکی رمزگذاری‌شده")})
+                    @foreach (var f in new[]{("کارشناسان تأییدشده","کلیه متخصصان دارای مدارک و سوابق معتبر"),("ضمانت کیفیت","رضایت کامل یا بازگشت وجه"),("پشتیبانی ۲۴ ساعته","همواره در کنار شما هستیم"),("پرداخت آسان","کارت به کارت با تأیید پشتیبانی")})
                     {
                         <div class="feature-row">
                             <div class="feature-icon">✓</div>
@@ -152,7 +152,7 @@
                         @if (Model.EstimatedDurationMinutes.HasValue)
                         {
                             <div class="booking-meta__row">
-                                <span class="booking-meta__label">⏱ زمان تخمینی</span>
+                                <span class="booking-meta__label">زمان تخمینی</span>
                                 <span class="booking-meta__value">@(Model.EstimatedDurationMinutes.Value/60) ساعت</span>
                             </div>
                         }

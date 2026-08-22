@@ -8,13 +8,19 @@
     var acceptedProposals= ViewBag.AcceptedProposalsCount is int ap ? ap  : 0;
     var activeOrders     = ViewBag.ActiveOrdersCount     is int ao  ? ao  : 0;
     var completedOrders  = ViewBag.CompletedOrdersCount  is int co  ? co  : 0;
-    var pendingPayout    = ViewBag.PendingPayout    is decimal pp ? pp : 0m;
     var totalEarnings    = ViewBag.TotalEarnings    is decimal te ? te : 0m;
+    var todayIncome      = ViewBag.TodayIncome      is decimal ti ? ti : 0m;
+    var winRate          = ViewBag.WinRate          is int wr ? wr : 0;
+    var completionRate   = ViewBag.CompletionRate   is int cr ? cr : 0;
     var jobs             = ViewBag.ActiveOrders     as IReadOnlyList<OrderDto> ?? Array.Empty<OrderDto>();
     var recentProposals  = ViewBag.RecentProposals as IReadOnlyList<ProposalDto> ?? Array.Empty<ProposalDto>();
-    var totalProposals   = openProposals + acceptedProposals;
-    var winRate          = totalProposals > 0 ? (int)(acceptedProposals * 100.0 / totalProposals) : 0;
+    var trend            = ViewBag.MonthlyTrend as List<IncomeChartPointDto> ?? new List<IncomeChartPointDto>();
     var avgResponse      = profile.ResponseTimeMinutes ?? 45;
+
+    // نگاشت ماه‌های میلادیِ نمودار به نام کوتاه شمسی
+    var pc = new System.Globalization.PersianCalendar();
+    var persianMonths = new[] { "فروردین","اردیبهشت","خرداد","تیر","مرداد","شهریور","مهر","آبان","آذر","دی","بهمن","اسفند" };
+    var trendMax = trend.Count > 0 ? trend.Max(t => t.Amount) : 0;
 }
 @section Styles {
 <style>
@@ -107,9 +113,9 @@
             </div>
         }
 
-        @* Stats *@
+        @* Stats — هر کارت با فیلتر وضعیتِ مربوط به صفحه مقصد لینک می‌شود *@
         <div class="estats-grid" data-stagger>
-            <a asp-action="MyProposals" class="stat-tile" style="--tile-color:var(--warning-400);" data-reveal="up">
+            <a asp-action="MyJobs" asp-route-status="Pending" class="stat-tile" style="--tile-color:var(--warning-400);" data-reveal="up">
                 <div class="stat-tile__icon" style="background:var(--warning-100);">
                     <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" style="width:22px;height:22px;"><path d="M21 15a2 2 0 01-2 2H7l-4 4V5a2 2 0 012-2h14a2 2 0 012 2z"/></svg>
                 </div>
@@ -117,30 +123,30 @@
                 <div class="stat-tile__lbl">پیشنهاد در انتظار</div>
                 <div class="stat-tile__sub">نیاز به پاسخ</div>
             </a>
-            <div class="stat-tile" style="--tile-color:var(--success-400);" data-reveal="up">
+            <a asp-action="MyJobs" asp-route-status="Accepted" class="stat-tile" style="--tile-color:var(--success-400);" data-reveal="up">
                 <div class="stat-tile__icon" style="background:var(--success-100);">
                     <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" style="width:22px;height:22px;"><path d="M22 11.08V12a10 10 0 11-5.93-9.14"/><polyline points="22 4 12 14.01 9 11.01"/></svg>
                 </div>
                 <div class="stat-tile__val" data-counter="@acceptedProposals">@acceptedProposals</div>
                 <div class="stat-tile__lbl">پیشنهاد پذیرفته</div>
                 <div class="stat-tile__sub">نرخ برد: @winRate٪</div>
-            </div>
-            <a asp-action="MyJobs" class="stat-tile" style="--tile-color:var(--info-400);" data-reveal="up">
+            </a>
+            <a asp-action="MyJobs" asp-route-status="Active" class="stat-tile" style="--tile-color:var(--info-400);" data-reveal="up">
                 <div class="stat-tile__icon" style="background:var(--info-100);">
                     <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" style="width:22px;height:22px;"><path d="M14.7 6.3a1 1 0 000 1.4l1.6 1.6a1 1 0 001.4 0l3.77-3.77a6 6 0 01-7.94 7.94l-6.91 6.91a2.12 2.12 0 01-3-3l6.91-6.91a6 6 0 017.94-7.94l-3.76 3.76z"/></svg>
                 </div>
                 <div class="stat-tile__val" data-counter="@activeOrders">@activeOrders</div>
                 <div class="stat-tile__lbl">سفارش فعال</div>
-                <div class="stat-tile__sub">در حال اجرا</div>
+                <div class="stat-tile__sub">در جریان</div>
             </a>
-            <div class="stat-tile" style="--tile-color:var(--primary-400);" data-reveal="up">
+            <a asp-action="MyJobs" asp-route-status="Completed" class="stat-tile" style="--tile-color:var(--primary-400);" data-reveal="up">
                 <div class="stat-tile__icon" style="background:var(--primary-100);">
                     <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" style="width:22px;height:22px;"><polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"/></svg>
                 </div>
                 <div class="stat-tile__val" data-counter="@completedOrders">@completedOrders</div>
                 <div class="stat-tile__lbl">تکمیل‌شده</div>
                 <div class="stat-tile__sub">موفقیت‌آمیز</div>
-            </div>
+            </a>
         </div>
 
         <div class="row g-5" style="--bs-gutter-x:1.5rem">
@@ -148,33 +154,37 @@
 
                 @* Earnings *@
                 <div class="earnings-card" data-reveal="up">
-                    <div style="font-size:var(--text-xs);text-transform:uppercase;letter-spacing:.08em;opacity:.8;margin-bottom:var(--space-5);">درآمد و مالی</div>
+                    <div style="display:flex;align-items:center;justify-content:space-between;gap:var(--space-3);margin-bottom:var(--space-5);">
+                        <span style="font-size:var(--text-xs);text-transform:uppercase;letter-spacing:.08em;opacity:.8;">درآمد و مالی</span>
+                        <a asp-action="Finance" class="btn btn-sm" style="background:rgba(255,255,255,.18);color:white;border:1.5px solid rgba(255,255,255,.4);text-decoration:none;">@IconSvg.Wallet مدیریت مالی</a>
+                    </div>
                     <div class="earnings-card__inner">
                         <div>
                             <div class="earnings-val" data-counter="@((int)totalEarnings)">@totalEarnings.ToString("N0")</div>
-                            <div class="earnings-lbl">درآمد کل (تومان)</div>
+                            <div class="earnings-lbl">درآمد کل تسویه‌شده (تومان)</div>
                         </div>
                         <div>
-                            <div class="earnings-val">@pendingPayout.ToString("N0")</div>
-                            <div class="earnings-lbl">در انتظار واریز (تومان)</div>
+                            <div class="earnings-val" data-counter="@((int)todayIncome)">@todayIncome.ToString("N0")</div>
+                            <div class="earnings-lbl">درآمد امروز (تومان)</div>
                         </div>
                     </div>
                 </div>
 
-                @* 6-month chart *@
+                @* 6-month chart — درآمد خالص واقعی از دیتابیس *@
                 <div class="dash-card" data-reveal="up">
                     <div class="dash-card__header"><span class="dash-card__title">روند ۶ ماه اخیر</span></div>
-                    @{
-                        var months  = new[]{"فر","ارد","خرد","تیر","مرد","شهر"};
-                        var heights = new[]{40,55,48,70,80,100};
-                    }
                     <div class="bar-chart" id="earningsChart">
-                        @for (int i=0;i<6;i++)
+                        @for (int i = 0; i < trend.Count; i++)
                         {
-                            <div class="bar-col">
-                                <div class="bar-col__fill" data-target-height="@heights[i]"
-                                     style="height:0;background:@(i==5?"linear-gradient(180deg,var(--primary-500),var(--accent-500))":"var(--primary-100)");border-radius:var(--radius-md) var(--radius-md) 0 0;"></div>
-                                <div class="bar-col__label">@months[i]</div>
+                            var t = trend[i];
+                            var parts = t.Label.Split('-');
+                            var monthDate = new DateTime(int.Parse(parts[0]), int.Parse(parts[1]), 1);
+                            var monthName = persianMonths[pc.GetMonth(monthDate) - 1];
+                            var heightPct = trendMax > 0 ? Math.Max(4, (int)Math.Round((double)t.Amount * 100.0 / (double)trendMax)) : 4;
+                            <div class="bar-col" title="@monthName: @t.Amount.ToString("N0") تومان">
+                                <div class="bar-col__fill" data-target-height="@heightPct"
+                                     style="height:0;background:@(i == trend.Count - 1 ? "linear-gradient(180deg,var(--primary-500),var(--accent-500))" : "var(--primary-100)");border-radius:var(--radius-md) var(--radius-md) 0 0;"></div>
+                                <div class="bar-col__label">@(monthName.Length > 3 ? monthName.Substring(0, 3) : monthName)</div>
                             </div>
                         }
                     </div>
@@ -222,8 +232,8 @@
                 {
                     <div class="dash-card" data-reveal="up">
                         <div class="dash-card__header">
-                            <span class="dash-card__title">💬 پیشنهادهای اخیر</span>
-                            <a asp-action="MyProposals" class="btn btn-secondary btn-sm">همه ←</a>
+                            <span class="dash-card__title">@IconSvg.Message پیشنهادهای اخیر</span>
+                            <a asp-action="MyJobs" asp-route-status="Pending" class="btn btn-secondary btn-sm">همه ←</a>
                         </div>
                         <div class="hs-table-wrap">
                             <table class="hs-table">
@@ -269,32 +279,32 @@
                         }
                     </div>
                     <div style="display:flex;flex-direction:column;gap:var(--space-2);font-size:var(--text-sm);margin-bottom:var(--space-5);">
-                        <div style="display:flex;justify-content:space-between;"><span style="color:var(--color-text-secondary);">📍 شهر</span><span style="font-weight:var(--font-semibold);">@(profile.City ?? "—")</span></div>
-                        <div style="display:flex;justify-content:space-between;"><span style="color:var(--color-text-secondary);">✅ پروژه</span><span style="font-weight:var(--font-semibold);">@profile.JobsCompleted</span></div>
-                        <div style="display:flex;justify-content:space-between;"><span style="color:var(--color-text-secondary);">⏱ پاسخ</span><span style="font-weight:var(--font-semibold);">@avgResponse دقیقه</span></div>
+                        <div style="display:flex;justify-content:space-between;"><span style="color:var(--color-text-secondary);">@IconSvg.Pin شهر</span><span style="font-weight:var(--font-semibold);">@(profile.City ?? "—")</span></div>
+                        <div style="display:flex;justify-content:space-between;"><span style="color:var(--color-text-secondary);">@IconSvg.Check پروژه</span><span style="font-weight:var(--font-semibold);">@profile.JobsCompleted</span></div>
+                        <div style="display:flex;justify-content:space-between;"><span style="color:var(--color-text-secondary);">@IconSvg.Clock پاسخ</span><span style="font-weight:var(--font-semibold);">@avgResponse دقیقه</span></div>
                     </div>
                     <a asp-action="Profile" class="btn btn-secondary btn-block">ویرایش پروفایل</a>
                 </div>
 
-                @* Metrics *@
+                @* Metrics — همهٔ اعداد از دیتابیس واقعی محاسبه می‌شوند *@
                 <div class="dash-card" data-reveal="left">
-                    <div class="dash-card__header"><span class="dash-card__title">⚡ عملکرد</span></div>
+                    <div class="dash-card__header"><span class="dash-card__title">@IconSvg.Zap عملکرد</span></div>
                     <div class="metric-pill">
                         <span class="metric-pill__label">نرخ برد پیشنهادها</span>
                         <span class="metric-pill__val" style="color:var(--success-600);">@winRate٪</span>
                     </div>
                     <div class="metric-pill">
-                        <span class="metric-pill__label">نرخ تکمیل</span>
-                        <span class="metric-pill__val" style="color:var(--primary-700);">@(completedOrders>0?"98٪":"—")</span>
+                        <span class="metric-pill__label">نرخ تکمیل سفارش‌ها</span>
+                        <span class="metric-pill__val" style="color:var(--primary-700);">@(activeOrders + completedOrders > 0 ? completionRate + "٪" : "—")</span>
                     </div>
                     <div class="metric-pill">
                         <span class="metric-pill__label">زمان پاسخ</span>
                         <span class="metric-pill__val" style="color:@(avgResponse<60?"var(--success-600)":"var(--warning-600)");">@avgResponse دقیقه</span>
                     </div>
 
-                    @* Circular success rate *@
+                    @* Circular completion rate — از تعداد واقعی سفارش‌های تکمیل‌شده *@
                     @{
-                        var rate    = completedOrders > 0 ? 98 : 0;
+                        var rate    = completionRate;
                         var radius  = 38;
                         var circum  = (int)(2 * Math.PI * radius);
                         var dash    = (int)(circum * rate / 100.0);
@@ -309,15 +319,15 @@
                             <div class="circle-prog__val">@rate٪</div>
                         </div>
                         <div>
-                            <div style="font-weight:var(--font-bold);font-size:var(--text-sm);">نرخ موفقیت</div>
-                            <div style="font-size:var(--text-xs);color:var(--color-text-tertiary);">از @profile.JobsCompleted پروژه</div>
+                            <div style="font-weight:var(--font-bold);font-size:var(--text-sm);">سفارش‌های تکمیل‌شده</div>
+                            <div style="font-size:var(--text-xs);color:var(--color-text-tertiary);">@completedOrders از @(ViewBag.TotalOrders is int tot ? tot : activeOrders + completedOrders) سفارش</div>
                         </div>
                     </div>
                 </div>
 
                 @* Tip *@
                 <div style="background:linear-gradient(135deg,var(--primary-50),var(--accent-50));border:1px solid var(--color-border-subtle);border-radius:var(--radius-2xl);padding:var(--space-6);" data-reveal="left">
-                    <div style="font-size:1.75rem;margin-bottom:var(--space-3);">💡</div>
+                    <div style="color:var(--primary-600);font-size:1.75rem;margin-bottom:var(--space-3);line-height:1;">@IconSvg.Lightbulb</div>
                     <div style="font-size:var(--text-sm);font-weight:var(--font-bold);margin-bottom:var(--space-2);">نکته برای کارشناسان</div>
                     <p style="font-size:var(--text-sm);color:var(--color-text-secondary);line-height:1.6;margin:0 0 var(--space-4);">پاسخ سریع و پیشنهاد رقابتی، شانس پذیرش را تا ۳ برابر افزایش می‌دهد.</p>
                     <a asp-action="OpenRequests" class="btn btn-primary btn-sm btn-block">مشاهده درخواست‌ها ←</a>

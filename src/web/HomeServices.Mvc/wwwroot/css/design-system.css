@@ -276,25 +276,13 @@ body {
 }
 
 /* ==========================================================================
-   11. DARK MODE SUPPORT (Future Enhancement)
-   ========================================================================== */
+   11. COLOR SCHEME
+   ==========================================================================
+   حالت تیره سیستم‌عامل نادیده گرفته می‌شود؛ طراحی سایت مبتنی بر پالت روشن است
+   و فعال‌سازی ناقص prefers-color-scheme باعث ناخوانا شدن منوها می‌شد. */
 
-@media (prefers-color-scheme: dark) {
-    :root {
-        --color-background: var(--gray-900);
-        --color-surface: var(--gray-800);
-        --color-surface-elevated: var(--gray-700);
-        --color-surface-sunken: var(--gray-900);
-        
-        --color-border: var(--gray-700);
-        --color-border-subtle: var(--gray-800);
-        --color-border-strong: var(--gray-600);
-        
-        --color-text-primary: var(--gray-50);
-        --color-text-secondary: var(--gray-400);
-        --color-text-tertiary: var(--gray-500);
-        --color-text-disabled: var(--gray-600);
-    }
+:root {
+    color-scheme: light;
 }
 
 /* ==========================================================================

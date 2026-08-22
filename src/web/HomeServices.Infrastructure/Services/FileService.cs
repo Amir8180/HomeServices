@@ -34,6 +34,11 @@ public class FileService : IFileService
         "image/jpeg", "image/jpg", "image/png", "image/webp", "image/gif"
     };
 
+    private static readonly HashSet<string> AllowedVideoContentTypes = new(StringComparer.OrdinalIgnoreCase)
+    {
+        "video/mp4", "video/webm", "video/quicktime"
+    };
+
     public FileService(
         AppDbContext db,
         IMapper mapper,
@@ -115,6 +120,83 @@ public class FileService : IFileService
 
         _logger.LogInformation("Saved media {Id} ({File}) for {EntityType}.", media.Id, safeName, entityType);
 
+        return _mapper.Map<MediaDto>(media);
+    }
+
+    /// <summary>
+    /// Saves any media file (image or video) to disk and records it in the Media table.
+    /// For images, a JPEG thumbnail is generated; for videos, no thumbnail is generated.
+    /// </summary>
+    public async Task<MediaDto> SaveMediaAsync(
+        Stream stream,
+        string fileName,
+        string contentType,
+        long fileSize,
+        MediaType mediaType,
+        MediaEntityType? entityType,
+        Guid? uploadedBy,
+        CancellationToken cancellationToken = default)
+    {
+        var isImage = AllowedContentTypes.Contains(contentType);
+        var isVideo = AllowedVideoContentTypes.Contains(contentType);
+        if (!isImage && !isVideo)
+            throw new InvalidOperationException($"Unsupported content type '{contentType}'.");
+        if (fileSize > MaxFileBytes)
+            throw new InvalidOperationException($"File exceeds the {MaxFileBytes / (1024 * 1024)} MB limit.");
+
+        var now = DateTime.UtcNow;
+        var relativeDir = Path.Combine(UploadRoot, entityType?.ToString() ?? "misc", now.ToString("yyyy"), now.ToString("MM"));
+        var absoluteDir = Path.Combine(_env.WebRootPath, relativeDir);
+        Directory.CreateDirectory(absoluteDir);
+
+        var safeName = Path.GetFileName(fileName);
+        var uniqueName = $"{now:yyyyMMddHHmmssfff}_{Guid.NewGuid():N}{Path.GetExtension(safeName)}";
+        var absolutePath = Path.Combine(absoluteDir, uniqueName);
+
+        await using (var fs = new FileStream(absolutePath, FileMode.Create, FileAccess.Write, FileShare.None))
+        {
+            await stream.CopyToAsync(fs, cancellationToken);
+        }
+
+        string? thumbnailRelativeUrl = null;
+        if (isImage)
+        {
+            try
+            {
+                using var image = await SixLabors.ImageSharp.Image.LoadAsync(absolutePath, cancellationToken);
+                image.Mutate(ctx => ctx.Resize(new ResizeOptions
+                {
+                    Size = new Size(ThumbnailWidth, 0),
+                    Mode = ResizeMode.Max,
+                }));
+                var thumbName = $"thumb_{Path.GetFileNameWithoutExtension(uniqueName)}.jpg";
+                var thumbPath = Path.Combine(absoluteDir, thumbName);
+                await image.SaveAsJpegAsync(thumbPath, cancellationToken);
+                thumbnailRelativeUrl = $"/{relativeDir.Replace('\\', '/')}/{thumbName}";
+            }
+            catch (Exception ex)
+            {
+                _logger.LogWarning(ex, "Thumbnail generation failed for {File}.", uniqueName);
+            }
+        }
+
+        var originalRelativeUrl = $"/{relativeDir.Replace('\\', '/')}/{uniqueName}";
+
+        var media = new Media
+        {
+            FileName = safeName,
+            OriginalUrl = originalRelativeUrl,
+            ThumbnailUrl = thumbnailRelativeUrl ?? originalRelativeUrl,
+            ContentType = contentType,
+            FileSizeBytes = fileSize,
+            MediaType = mediaType,
+            EntityType = entityType,
+            UploadedBy = uploadedBy,
+        };
+
+        _db.Media.Add(media);
+        await _db.SaveChangesAsync(cancellationToken);
+        _logger.LogInformation("Saved media {Id} ({File}, {Type}) for {EntityType}.", media.Id, safeName, mediaType, entityType);
         return _mapper.Map<MediaDto>(media);
     }
 

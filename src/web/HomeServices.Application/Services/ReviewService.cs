@@ -71,6 +71,13 @@ public class ReviewService : IReviewService
         return entity == null ? null : _mapper.Map<ReviewDto>(entity);
     }
 
+    public async Task<ReviewDto?> GetByOrderIdAsync(int orderId, CancellationToken cancellationToken = default)
+    {
+        var entity = await _uow.Repository<Review>().GetAllNoTracking()
+            .FirstOrDefaultAsync(r => r.OrderId == orderId, cancellationToken);
+        return entity == null ? null : _mapper.Map<ReviewDto>(entity);
+    }
+
     public async Task<ReviewDto> CreateAsync(CreateReviewDto dto, Guid customerId, CancellationToken cancellationToken = default)
     {
         // Validate ownership + completion.

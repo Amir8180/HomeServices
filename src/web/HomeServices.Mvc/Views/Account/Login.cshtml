@@ -10,9 +10,6 @@
     min-height:100vh;
 }
 .auth-form-wrap { width:100%; max-width:420px; }
-.auth-brand { display:flex; align-items:center; gap:var(--space-2-5); margin-bottom:var(--space-10); }
-.auth-brand__icon { width:40px; height:40px; background:var(--gradient-primary); border-radius:var(--radius-xl); display:flex; align-items:center; justify-content:center; font-size:1.25rem; box-shadow:var(--shadow-brand); }
-.auth-brand__name { font-size:var(--text-xl); font-weight:var(--font-bold); color:var(--gray-900); }
 .auth-title { font-size:var(--text-4xl); font-weight:var(--font-black); letter-spacing:-.04em; margin-bottom:var(--space-2); line-height:1.1; }
 .auth-sub { font-size:var(--text-base); color:var(--color-text-secondary); margin-bottom:var(--space-8); }
 .auth-visual {
@@ -22,7 +19,7 @@
 }
 @@media(max-width:768px) { .auth-visual { display:none; } }
 .auth-visual__content { text-align:center; color:white; padding:var(--space-10); position:relative; z-index:1; max-width:420px; }
-.auth-visual__icon { font-size:5rem; margin-bottom:var(--space-6); display:block; animation:float 4s ease-in-out infinite; }
+.auth-visual__icon { width:80px; height:80px; margin:0 auto var(--space-6); display:flex; align-items:center; justify-content:center; animation:float 4s ease-in-out infinite; }
 .auth-visual__title { font-size:var(--text-4xl); font-weight:var(--font-black); color:white; letter-spacing:-.04em; margin-bottom:var(--space-4); line-height:1.1; }
 .auth-visual__sub { font-size:var(--text-base); opacity:.85; line-height:var(--leading-relaxed); margin-bottom:var(--space-8); }
 .auth-trust { display:flex; flex-direction:column; gap:var(--space-3); }
@@ -30,18 +27,21 @@
 .auth-visual::before { content:''; position:absolute; inset:-50%; background:radial-gradient(ellipse,rgba(255,255,255,.08) 0%,transparent 60%); animation:float 12s ease-in-out infinite; }
 .divider-text { display:flex; align-items:center; gap:var(--space-3); color:var(--color-text-tertiary); font-size:var(--text-sm); margin:var(--space-5) 0; }
 .divider-text::before, .divider-text::after { content:''; flex:1; height:1px; background:var(--color-border); }
+/* کپچا */
+.captcha-row { display:flex; align-items:center; gap:var(--space-3); }
+.captcha-question {
+    flex-shrink:0; padding:0.65rem 1rem; border-radius:var(--radius-lg);
+    background:var(--primary-50); border:1.5px dashed var(--primary-300);
+    color:var(--primary-800); font-weight:var(--font-extrabold); font-size:var(--text-base);
+    letter-spacing:.08em; user-select:none;
+}
+.captcha-row .form-control { flex:1; text-align:center; font-weight:var(--font-bold); }
 </style>
 }
 
 <div class="auth-page">
     <div class="auth-panel">
         <div class="auth-form-wrap animate-fade-in-up">
-            <a class="auth-brand" asp-controller="Home" asp-action="Index">
-                <div class="auth-brand__icon">
-                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" style="width:20px;height:20px;"><path d="M3 9.5L12 3l9 6.5V20a1 1 0 01-1 1H4a1 1 0 01-1-1V9.5z"/><path d="M9 21V12h6v9"/></svg>
-                </div>
-                <span class="auth-brand__name">خدمات منزل</span>
-            </a>
             <h1 class="auth-title">خوش آمدید</h1>
             <p class="auth-sub">وارد حساب کاربری خود شوید.</p>
 
@@ -62,9 +62,28 @@
 
                 <div class="form-group" style="margin-bottom:var(--space-5);">
                     <label asp-for="Password" class="form-label">رمز عبور</label>
-                    <input asp-for="Password" class="form-control" placeholder="••••••••" autocomplete="current-password" />
+                    <div class="password-field">
+                        <input asp-for="Password" class="form-control" placeholder="••••••••" autocomplete="current-password" style="padding-left:2.75rem;" />
+                        <button type="button" class="password-toggle" data-toggle-password="#Password" tabindex="-1" aria-label="نمایش رمز عبور">
+                            <svg class="icon-eye-off" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" style="width:18px;height:18px;"><path d="M17.94 17.94A10.07 10.07 0 0 1 12 20c-7 0-11-8-11-8a18.45 18.45 0 0 1 5.06-5.94M9.9 4.24A9.12 9.12 0 0 1 12 4c7 0 11 8 11 8a18.5 18.5 0 0 1-2.16 3.19m-6.72-1.07a3 3 0 1 1-4.24-4.24"/><line x1="1" y1="1" x2="23" y2="23"/></svg>
+                            <svg class="icon-eye" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" style="width:18px;height:18px;"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/><circle cx="12" cy="12" r="3"/></svg>
+                        </button>
+                    </div>
                     <span asp-validation-for="Password" class="form-error"></span>
                 </div>
+
+                @* کپچای ریاضی *@
+                <div class="form-group" style="margin-bottom:var(--space-5);">
+                    <label asp-for="CaptchaAnswer" class="form-label">تأیید انسان بودن</label>
+                    <div class="captcha-row">
+                        <span class="captcha-question" aria-label="سؤال کپچا">@Model.CaptchaA + @Model.CaptchaB = ؟</span>
+                        <input asp-for="CaptchaAnswer" class="form-control" placeholder="پاسخ" inputmode="numeric" autocomplete="off" />
+                    </div>
+                    <span asp-validation-for="CaptchaAnswer" class="form-error"></span>
+                </div>
+                <input type="hidden" asp-for="CaptchaA" />
+                <input type="hidden" asp-for="CaptchaB" />
+                <input type="hidden" asp-for="CaptchaHash" />
 
                 <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:var(--space-6);">
                     <label class="form-check" style="cursor:pointer;">
@@ -97,7 +116,7 @@
             <div class="auth-trust">
                 <div class="auth-trust-item">
                     <span class="trust-check"><svg viewBox="0 0 24 24" fill="none" stroke="white" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" style="width:12px;height:12px;"><polyline points="20 6 9 17 4 12"/></svg></span>
-                    بیش از ۵۰۰ کارشناس تأییدشده
+                    @(ViewBag.VerifiedExperts ?? 0) کارشناس تأییدشده
                 </div>
                 <div class="auth-trust-item">
                     <span class="trust-check"><svg viewBox="0 0 24 24" fill="none" stroke="white" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" style="width:12px;height:12px;"><polyline points="20 6 9 17 4 12"/></svg></span>
